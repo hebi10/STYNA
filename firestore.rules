@@ -63,6 +63,66 @@ service cloud.firestore {
       ];
     }
 
+    function qnaCreateAllowedKeys() {
+      return [
+        'userId',
+        'userEmail',
+        'userName',
+        'category',
+        'title',
+        'content',
+        'images',
+        'isSecret',
+        'status',
+        'views',
+        'isNotified',
+        'createdAt',
+        'updatedAt',
+        'productId',
+        'productName',
+        'passwordHash',
+        'passwordSalt'
+      ];
+    }
+
+    function qnaOwnerUpdateAllowedKeys() {
+      return [
+        'category',
+        'title',
+        'content',
+        'images',
+        'isSecret',
+        'updatedAt',
+        'productId',
+        'productName',
+        'passwordHash',
+        'passwordSalt'
+      ];
+    }
+
+    function reviewCreateAllowedKeys() {
+      return [
+        'userId',
+        'userName',
+        'productId',
+        'productName',
+        'rating',
+        'content',
+        'images',
+        'createdAt',
+        'updatedAt'
+      ];
+    }
+
+    function reviewOwnerUpdateAllowedKeys() {
+      return [
+        'rating',
+        'content',
+        'images',
+        'updatedAt'
+      ];
+    }
+
     function isValidSelfUserCreate(userId) {
       return isOwner(userId) &&
         request.resource.data.keys().hasOnly(userCreateAllowedKeys()) &&
@@ -74,6 +134,43 @@ service cloud.firestore {
       return isOwner(userId) &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(userUpdateAllowedKeys());
+    }
+
+    function isValidOwnerQnaCreate() {
+      return isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasOnly(qnaCreateAllowedKeys()) &&
+        (!request.resource.data.keys().hasAny(['status']) ||
+          request.resource.data.status == 'waiting') &&
+        (!request.resource.data.keys().hasAny(['views']) ||
+          request.resource.data.views == 0) &&
+        (!request.resource.data.keys().hasAny(['isNotified']) ||
+          request.resource.data.isNotified == false);
+    }
+
+    function isValidOwnerQnaUpdate() {
+      return isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        resource.data.status == 'waiting' &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(qnaOwnerUpdateAllowedKeys());
+    }
+
+    function isValidOwnerReviewCreate() {
+      return isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasOnly(reviewCreateAllowedKeys());
+    }
+
+    function isValidOwnerReviewUpdate() {
+      return isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.productId == resource.data.productId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(reviewOwnerUpdateAllowedKeys());
     }
 
     match /categories/{categoryId} {
@@ -174,9 +271,9 @@ service cloud.firestore {
 
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isSignedIn() &&
-        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidOwnerReviewCreate() || isAdmin();
+      allow update: if isValidOwnerReviewUpdate() || isAdmin();
+      allow delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
     }
 
     match /user_coupons/{userCouponId} {
@@ -200,12 +297,12 @@ service cloud.firestore {
     }
 
     match /qna/{qnaId} {
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if isValidOwnerQnaCreate() || isAdmin();
       allow read: if isAdmin() ||
         (isSignedIn() && resource.data.userId == request.auth.uid) ||
         (resource.data.isSecret != true);
-      allow update, delete: if isAdmin() ||
-        (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow update: if isValidOwnerQnaUpdate() || isAdmin();
+      allow delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
     }
 
     match /inquiries/{inquiryId} {
@@ -215,7 +312,7 @@ service cloud.firestore {
     }
 
     match /coupons/{couponId} {
-      allow read: if isSignedIn();
+      allow read: if isAdmin();
       allow write: if isAdmin();
     }
 

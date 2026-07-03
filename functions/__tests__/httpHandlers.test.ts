@@ -2,6 +2,12 @@ jest.mock("firebase-functions/v2/https", () => ({
   onRequest: (_options: unknown, handler: unknown) => handler,
 }));
 
+jest.mock("firebase-functions/params", () => ({
+  defineSecret: jest.fn(() => ({
+    value: jest.fn(() => "test-secret"),
+  })),
+}));
+
 jest.mock("../src/utils/auth", () => ({
   verifyAuthContext: jest.fn(),
   verifyAuth: jest.fn(),
@@ -40,13 +46,14 @@ import * as admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import { points } from "../src/handlers/points";
 import { coupon } from "../src/handlers/coupon";
+import { chat } from "../src/handlers/chat";
 import { adminUsers } from "../src/handlers/adminUsers";
 import { verifyAuthContext, verifyAuth, requireAdmin } from "../src/utils/auth";
 
 type Handler = (req: {
   method: string;
   body?: Record<string, unknown>;
-  headers: { authorization?: string };
+  headers: Record<string, string | undefined>;
 }, res: MockResponse) => Promise<void>;
 
 interface MockResponse {
@@ -71,6 +78,7 @@ describe("sensitive function cache headers", () => {
   test.each([
     ["points", points as unknown as Handler],
     ["coupon", coupon as unknown as Handler],
+    ["chat", chat as unknown as Handler],
     ["adminUsers", adminUsers as unknown as Handler],
   ])("%s sets no-store headers before returning", async (_name, handler) => {
     const response = createResponse();
@@ -80,6 +88,38 @@ describe("sensitive function cache headers", () => {
     expect(response.set).toHaveBeenCalledWith("Cache-Control", "no-store, max-age=0");
     expect(response.set).toHaveBeenCalledWith("Pragma", "no-cache");
     expect(response.set).toHaveBeenCalledWith("Expires", "0");
+  });
+});
+
+describe("chat AI guard", () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        choices: [{ message: { content: "AI response" } }],
+      }),
+    }) as never;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test("rate limits repeated AI requests from the same client", async () => {
+    const requests = Array.from({ length: 21 }, () => createResponse());
+
+    for (const response of requests) {
+      await (chat as unknown as Handler)({
+        method: "POST",
+        headers: { "x-forwarded-for": "203.0.113.10" } as never,
+        body: { message: "배송 문의", useAI: true },
+      }, response);
+    }
+
+    expect(requests[20].status).toHaveBeenCalledWith(429);
   });
 });
 

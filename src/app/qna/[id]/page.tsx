@@ -3,7 +3,6 @@
 import { useCallback, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '@/context/authProvider';
 import { useQnAAccessCheck } from '@/shared/hooks/useQnaQuery';
 import { QnA } from '@/shared/types/qna';
 import styles from './page.module.css';
@@ -11,7 +10,6 @@ import styles from './page.module.css';
 export default function QnADetailPage() {
   const router = useRouter();
   const params = useParams();
-  const { user } = useAuth();
   const [qna, setQna] = useState<QnA | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -263,12 +261,6 @@ export default function QnADetailPage() {
         <button onClick={() => router.push('/qna')} className={styles.listButton}>
           목록으로
         </button>
-
-        {user?.uid === qna.userId && qna.status === 'waiting' && (
-          <button onClick={() => router.push(`/qna/edit/${qna.id}`)} className={styles.editButton}>
-            수정
-          </button>
-        )}
       </div>
     </div>
   );

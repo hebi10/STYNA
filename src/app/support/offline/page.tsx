@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useOfflineContent } from "@/shared/hooks/useSiteContent";
 import styles from "./page.module.css";
 
@@ -61,12 +60,17 @@ export default function OfflinePage() {
                     </div>
 
                     <div className={styles.storeActions}>
-                      <Link href={`/support/offline/${store.id}`} className={`${styles.actionButton} ${styles.primaryAction}`}>
+                      <span className={`${styles.actionButton} ${styles.primaryAction}`} aria-disabled="true">
                         상세보기
-                      </Link>
-                      <button className={`${styles.actionButton} ${styles.secondaryAction}`}>
+                      </span>
+                      <a
+                        href={`https://map.naver.com/p/search/${encodeURIComponent(store.address)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`${styles.actionButton} ${styles.secondaryAction}`}
+                      >
                         길찾기
-                      </button>
+                      </a>
                     </div>
                   </div>
                 </div>

@@ -19,10 +19,12 @@ function initializeAdminApp() {
     return admin.app();
   }
 
-  const serviceAccountPath = path.join(__dirname, "serviceAccountKey.json");
   const projectId = resolveProjectId();
+  const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS
+    ? path.resolve(process.cwd(), process.env.GOOGLE_APPLICATION_CREDENTIALS)
+    : "";
 
-  if (fs.existsSync(serviceAccountPath)) {
+  if (serviceAccountPath && fs.existsSync(serviceAccountPath)) {
     const serviceAccount = require(serviceAccountPath);
 
     return admin.initializeApp({

@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useToggleWishlist, useWishlistItems } from '@/shared/hooks/useUserActivityQuery';
 import { getProductPricing } from '@/shared/utils/productPricing';
 import styles from './ProductCard.module.css';
@@ -38,6 +38,7 @@ export default function ProductCard({
   stock = 0,
   badgePlacement = 'default',
 }: ProductCardProps) {
+  const router = useRouter();
   const { user } = useAuthUser();
   const { data: wishlistItems = [] } = useWishlistItems(user?.uid || null);
   const toggleWishlistMutation = useToggleWishlist(user?.uid || null);
@@ -74,8 +75,15 @@ export default function ProductCard({
   };
 
   return (
-    <Link
-      href={`/products/${id}`}
+    <article
+      role="link"
+      tabIndex={0}
+      onClick={() => router.push(`/products/${id}`)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          router.push(`/products/${id}`);
+        }
+      }}
       className={[
         styles.card,
         badgePlacement === 'belowRank' ? styles.cardBadgeBelowRank : '',
@@ -161,6 +169,6 @@ export default function ProductCard({
           </div>
         )}
       </div>
-    </Link>
+    </article>
   );
 }

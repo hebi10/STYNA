@@ -468,14 +468,18 @@ export class ProductService {
         }
 
         inspectedCount += docs.length;
-        nextCursor = docs[docs.length - 1];
-
         const candidates = docs.map((productDoc) =>
           this.normalizeProduct(productDoc.id, productDoc.data())
         );
 
         const filtered = this.filterByKeyword(candidates, keyword);
         collected = [...collected, ...filtered];
+        const returnedItems = collected.slice(0, normalizedPageSize);
+        const lastReturnedItem = returnedItems[returnedItems.length - 1];
+        const lastReturnedDoc = lastReturnedItem
+          ? docs.find((productDoc) => productDoc.id === lastReturnedItem.id)
+          : null;
+        nextCursor = lastReturnedDoc || docs[docs.length - 1];
         cursor = docs[docs.length - 1];
 
         if (collected.length >= normalizedPageSize || docs.length < queryLimit) {

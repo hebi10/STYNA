@@ -2,14 +2,18 @@ import { onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import type { Response } from "express";
 import { verifyAuthContext, requireAdmin, AuthError } from "../utils/auth";
-import { applyNoStoreHeaders } from "../utils/http";
+import { applyNoStoreHeaders, SENSITIVE_FUNCTION_CORS } from "../utils/http";
 
 const SIGNUP_BONUS_AMOUNT = 5000;
 const SIGNUP_BONUS_DESCRIPTION = "신규 회원가입 적립";
 
+function toHistoryDocId(type: string, orderId?: string): string {
+  return `${type}_${orderId || ""}`.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 160);
+}
+
 export const points = onRequest(
   {
-    cors: true,
+    cors: SENSITIVE_FUNCTION_CORS,
     region: "us-central1",
     memory: "256MiB",
     timeoutSeconds: 60,
@@ -97,12 +101,20 @@ async function mutateBalance(params: {
   return admin.firestore().runTransaction(async (transaction) => {
     const userRef = admin.firestore().collection("users").doc(targetUserId);
     const userSnap = await transaction.get(userRef);
+    const historyRef = orderId
+      ? userRef.collection("pointHistory").doc(toHistoryDocId(type, orderId))
+      : userRef.collection("pointHistory").doc();
+    const historySnap = orderId ? await transaction.get(historyRef) : null;
 
     if (!userSnap.exists) {
       throw new Error("User document was not found.");
     }
 
     const currentBalance = userSnap.data()?.pointBalance ?? 0;
+    if (historySnap?.exists) {
+      return { newBalance: currentBalance, alreadyApplied: true };
+    }
+
     if (direction === "decrement" && currentBalance < amount) {
       throw new Error(`Insufficient point balance. current=${currentBalance}`);
     }
@@ -111,7 +123,7 @@ async function mutateBalance(params: {
       direction === "increment" ? currentBalance + amount : currentBalance - amount;
 
     transaction.update(userRef, { pointBalance: newBalance });
-    transaction.set(userRef.collection("pointHistory").doc(), {
+    transaction.set(historyRef, {
       type,
       amount,
       description,
@@ -121,7 +133,7 @@ async function mutateBalance(params: {
       expired: false,
     });
 
-    return { newBalance };
+    return { newBalance, alreadyApplied: false };
   });
 }
 

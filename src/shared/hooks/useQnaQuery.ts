@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { QnAService } from '@/shared/services/qnaService';
-import { SimpleQnAService } from '@/shared/services/simpleQnAService';
 import type { CreateQnAData, QnA, QnAAnswer, QnAFilter } from '@/shared/types/qna';
 
 export const qnaKeys = {
@@ -25,7 +24,10 @@ export function useQnAList(filters: QnAFilter, page = 1, limitCount = 50) {
 export function useAdminQnAs(limitCount = 100) {
   return useQuery({
     queryKey: qnaKeys.admin(limitCount),
-    queryFn: () => SimpleQnAService.getAllQnAs(limitCount),
+    queryFn: async () => {
+      const { qnas } = await QnAService.getQnAList({}, 1, limitCount);
+      return qnas;
+    },
     staleTime: 60 * 1000,
   });
 }
@@ -33,7 +35,7 @@ export function useAdminQnAs(limitCount = 100) {
 export function useUserSimpleQnAs(userId: string | null) {
   return useQuery({
     queryKey: qnaKeys.user(userId || ''),
-    queryFn: () => SimpleQnAService.getUserQnAs(userId!),
+    queryFn: () => QnAService.getUserQnAs(userId!),
     enabled: !!userId,
     staleTime: 60 * 1000,
   });
@@ -55,7 +57,7 @@ export function useCreateSimpleQnA(
 
   return useMutation({
     mutationFn: (data: CreateQnAData) =>
-      SimpleQnAService.createQnA(user!.uid, user!.email || '', user!.displayName || 'User', data),
+      QnAService.createQnA(user!.uid, user!.email || '', user!.displayName || 'User', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qnaKeys.all });
     },

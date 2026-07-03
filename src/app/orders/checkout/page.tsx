@@ -43,6 +43,11 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [checkoutRecoveryReason, setCheckoutRecoveryReason] = useState<string | null>(null);
+  const [clientOrderId] = useState(() =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
 
   const addresses = useMemo(
     () => buildCheckoutDeliveryAddresses(userData, user?.displayName),
@@ -130,6 +135,7 @@ export default function CheckoutPage() {
     setIsProcessing(true);
     try {
       const response = await createOrder.mutateAsync({
+        clientOrderId,
         items: orderData.items.map((item) => ({
           productId: item.productId,
           id: item.id,

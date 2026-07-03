@@ -1,6 +1,7 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { secrets } from "../config/environment";
 import { getMenuResponse, getAIFallbackResponse } from "../chatResponses";
+import { applyNoStoreHeaders, SENSITIVE_FUNCTION_CORS } from "../utils/http";
 
 interface ChatRequest {
   message: string;
@@ -43,6 +44,9 @@ const DEFAULT_OPENAI_CHAT_MODEL = "gpt-4o-mini";
 const MAX_MESSAGE_LENGTH = 1200;
 const MAX_HISTORY_ITEMS = 10;
 const MAX_HISTORY_CONTENT_LENGTH = 800;
+const AI_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const AI_RATE_LIMIT_MAX_REQUESTS = 20;
+const aiRequestLog = new Map<string, number[]>();
 
 /**
  * POST /chat
@@ -51,16 +55,13 @@ const MAX_HISTORY_CONTENT_LENGTH = 800;
  */
 export const chat = onRequest(
   {
-    cors: [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "https://hebimall.firebaseapp.com",
-      "https://hebimall.web.app",
-    ],
+    cors: SENSITIVE_FUNCTION_CORS,
     region: "us-central1",
     secrets: [secrets.OPENAI_API_KEY],
   },
   async (req, res) => {
+    applyNoStoreHeaders(res);
+
     if (req.method === "OPTIONS") {
       res.status(204).send("");
       return;
@@ -92,6 +93,11 @@ export const chat = onRequest(
       }
 
       // AI 미사용 시 메뉴 기반 응답
+      if (useAI && isAiRateLimited(getClientKey(req))) {
+        res.status(429).json({ success: false, error: "Too many AI chat requests." });
+        return;
+      }
+
       let apiKey: string | undefined;
       try {
         apiKey = secrets.OPENAI_API_KEY.value();
@@ -144,6 +150,29 @@ export const chat = onRequest(
     }
   }
 );
+
+function getClientKey(req: { headers?: Record<string, unknown>; ip?: string; socket?: { remoteAddress?: string } }): string {
+  const forwardedFor = req.headers?.["x-forwarded-for"];
+  if (typeof forwardedFor === "string" && forwardedFor.trim()) {
+    return forwardedFor.split(",")[0].trim();
+  }
+
+  return req.ip || req.socket?.remoteAddress || "unknown";
+}
+
+function isAiRateLimited(clientKey: string, now = Date.now()): boolean {
+  const recentRequests = (aiRequestLog.get(clientKey) ?? [])
+    .filter(timestamp => now - timestamp < AI_RATE_LIMIT_WINDOW_MS);
+
+  if (recentRequests.length >= AI_RATE_LIMIT_MAX_REQUESTS) {
+    aiRequestLog.set(clientKey, recentRequests);
+    return true;
+  }
+
+  recentRequests.push(now);
+  aiRequestLog.set(clientKey, recentRequests);
+  return false;
+}
 
 function sanitizeConversationHistory(
   conversationHistory: ChatRequest["conversationHistory"] = [],

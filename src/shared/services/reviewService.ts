@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/shared/libs/firebase/firebase';
 import { Review, ReviewSummary } from '@/shared/types/review';
+import { syncProductReviewData } from '@/shared/utils/syncProductReviews';
 
 export class ReviewService {
   // 리뷰 컬렉션 경로: reviews/{productId}
@@ -34,6 +35,7 @@ export class ReviewService {
       };
 
       const docRef = await addDoc(reviewsCollection, reviewData);
+      await syncProductReviewData(productId);
       
       const createdReview: Review = {
         id: docRef.id,
@@ -63,6 +65,7 @@ export class ReviewService {
       let reviewQuery = query(
         reviewsCollection,
         where('productId', '==', productId),
+        orderBy('createdAt', 'desc'),
         limit(pageSize)
       );
 
@@ -301,6 +304,7 @@ export class ReviewService {
     try {
       const reviewDoc = doc(db, 'reviews', reviewId);
       await deleteDoc(reviewDoc);
+      await syncProductReviewData(productId);
 
     } catch (error) {
  console.error('리뷰 삭제 실패:', error);

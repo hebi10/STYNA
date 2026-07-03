@@ -18,9 +18,11 @@ import {
   toTodayString,
 } from "../domain/orderDomain";
 import { AuthContext, AuthError, verifyAuthContext } from "../utils/auth";
+import { SENSITIVE_FUNCTION_CORS } from "../utils/http";
 
 interface RawCreateOrderRequest {
   action?: unknown;
+  clientOrderId?: unknown;
   items?: unknown;
   deliveryAddress?: unknown;
   paymentMethod?: unknown;
@@ -103,6 +105,37 @@ const ALLOWED_ORDER_STATUS_TRANSITIONS: Record<string, string[]> = {
 };
 
 const CUSTOMER_CANCELLABLE_STATUSES = new Set(["pending", "confirmed"]);
+
+function normalizeClientOrderId(value: unknown): string {
+  return toStringValue(value).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+}
+
+function mapOrderResponse(
+  orderId: string,
+  orderData: admin.firestore.DocumentData,
+  fallbackCreatedAt: Date = new Date()
+) {
+  const products = Array.isArray(orderData.products) ? orderData.products : [];
+  const createdAt = orderData.createdAt?.toDate?.() instanceof Date
+    ? orderData.createdAt.toDate()
+    : fallbackCreatedAt;
+
+  return {
+    orderId,
+    orderNumber: toStringValue(orderData.orderNumber),
+    totalAmount: toNumber(orderData.totalAmount, 0),
+    discountAmount: toNumber(orderData.discountAmount, 0),
+    deliveryFee: toNumber(orderData.deliveryFee, 0),
+    finalAmount: toNumber(orderData.finalAmount, 0),
+    pointUsed: toNumber(orderData.pointUsed, 0),
+    paymentMethod: toStringValue(orderData.paymentMethod),
+    status: toStringValue(orderData.status) || "pending",
+    createdAt: createdAt.toISOString(),
+    products,
+    shippingAddress: orderData.shippingAddress || orderData.deliveryAddress,
+    deliveryAddress: orderData.deliveryAddress || orderData.shippingAddress,
+  };
+}
 
 function applyNoStoreHeaders(response: Response): void {
   Object.entries(NO_STORE_HEADERS).forEach(([key, value]) => {
@@ -325,7 +358,7 @@ async function cancelOrderInTransaction(
 
 export const order = onRequest(
   {
-    cors: true,
+    cors: SENSITIVE_FUNCTION_CORS,
     region: "us-central1",
     memory: "256MiB",
     timeoutSeconds: 120,
@@ -376,6 +409,17 @@ export const order = onRequest(
         const ordersRef = admin.firestore().collection("orders");
         const now = admin.firestore.FieldValue.serverTimestamp();
         const nowDate = new Date();
+        const clientOrderId = normalizeClientOrderId(payload.clientOrderId);
+        const orderRef = clientOrderId
+          ? ordersRef.doc(`${authContext.uid}_${clientOrderId}`)
+          : ordersRef.doc();
+
+        if (clientOrderId) {
+          const existingOrderSnap = await transaction.get(orderRef);
+          if (existingOrderSnap.exists) {
+            return mapOrderResponse(orderRef.id, existingOrderSnap.data() || {}, nowDate);
+          }
+        }
 
         const userRef = usersRef.doc(authContext.uid);
         const userSnap = await transaction.get(userRef);
@@ -505,10 +549,10 @@ export const order = onRequest(
         const cartRef = admin.firestore().collection("carts").doc(authContext.uid);
         const cartSnap = cartItemIdsToRemove.size > 0 ? await transaction.get(cartRef) : null;
 
-        const orderRef = ordersRef.doc();
         const orderId = orderRef.id;
         const orderData = {
           userId: authContext.uid,
+          ...(clientOrderId ? { clientOrderId } : {}),
           orderNumber: `ORD-${toTodayString(nowDate).replace(/-/g, "")}-${orderId.slice(0, 6).toUpperCase()}`,
           products: resolvedItems,
           totalAmount: subtotal,

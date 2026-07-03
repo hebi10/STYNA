@@ -1,7 +1,7 @@
 
 
 import AdminEventList from "./_components/AdminEventList";
-import styles from "./page.module.css";
+import styles from "../_components/AdminSimplePage.module.css";
 
 export default function AdminEventsPage() {
   return (

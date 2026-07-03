@@ -23,6 +23,7 @@ interface CreateOrderItemRequest {
 }
 
 export interface CreateOrderRequest {
+  clientOrderId?: string;
   items: CreateOrderItemRequest[];
   deliveryAddress: {
     id: string;
@@ -182,12 +183,15 @@ export class OrderService {
   static async getUserOrders(userId: string, limitCount: number = 20): Promise<Order[]> {
     try {
       const ordersRef = collection(db, this.COLLECTION_NAME);
-      const simpleQuery = query(ordersRef, where('userId', '==', userId), limit(limitCount));
+      const simpleQuery = query(
+        ordersRef,
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
+      );
       const querySnapshot = await getDocs(simpleQuery);
 
-      return querySnapshot.docs
-        .map((orderDoc) => this.normalizeOrder(orderDoc.id, orderDoc.data()))
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      return querySnapshot.docs.map((orderDoc) => this.normalizeOrder(orderDoc.id, orderDoc.data()));
     } catch (error) {
       console.error('Failed to load user orders:', error);
 

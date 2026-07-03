@@ -11,6 +11,8 @@ const {
 const DEFAULT_OPTIONS = {
   execute: false,
   logDir: "migration-logs",
+  logPath: "",
+  latestLog: false,
   quality: 75,
 };
 
@@ -51,6 +53,12 @@ function parseArgs(argv) {
         break;
       case "log-dir":
         options.logDir = String(value);
+        break;
+      case "log":
+        options.logPath = String(value);
+        break;
+      case "latest-log":
+        options.latestLog = true;
         break;
       default:
         break;
@@ -297,20 +305,27 @@ async function validateContentImages(options = DEFAULT_OPTIONS) {
     console.log(`  - ${item.collection}/${item.documentId}: ${item.path}`);
   });
 
+  if (nonWebpImages.length > 0) {
+    process.exitCode = 1;
+  }
+
   return { projectId, nonWebpImages };
 }
 
 async function deleteOriginalsFromLog(options = DEFAULT_OPTIONS) {
-  const absoluteLogDir = path.resolve(process.cwd(), options.logDir);
-  const entries = await fs.promises.readdir(absoluteLogDir, { withFileTypes: true });
-  const logs = entries
-    .filter((entry) => entry.isFile() && /^content-image-webp-\d+\.json$/.test(entry.name))
-    .map((entry) => path.join(absoluteLogDir, entry.name))
-    .sort();
-  const latestLogPath = logs.at(-1);
+  let latestLogPath = options.logPath ? path.resolve(process.cwd(), options.logPath) : "";
+  if (!latestLogPath && options.latestLog) {
+    const absoluteLogDir = path.resolve(process.cwd(), options.logDir);
+    const entries = await fs.promises.readdir(absoluteLogDir, { withFileTypes: true });
+    const logs = entries
+      .filter((entry) => entry.isFile() && /^content-image-webp-\d+\.json$/.test(entry.name))
+      .map((entry) => path.join(absoluteLogDir, entry.name))
+      .sort();
+    latestLogPath = logs.at(-1) || "";
+  }
 
   if (!latestLogPath) {
-    throw new Error("Content image migration log not found.");
+    throw new Error("delete-originals requires --log=<path> or --latest-log.");
   }
 
   const log = JSON.parse(await fs.promises.readFile(latestLogPath, "utf8"));

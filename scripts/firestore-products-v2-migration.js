@@ -420,6 +420,15 @@ async function validateMigration(options) {
     });
   }
 
+  if (
+    summary.missingProducts.length > 0 ||
+    summary.mismatchedCategories.length > 0 ||
+    summary.mismatchedFields.length > 0 ||
+    summary.orphanDestinationProducts.length > 0
+  ) {
+    process.exitCode = 1;
+  }
+
   return summary;
 }
 

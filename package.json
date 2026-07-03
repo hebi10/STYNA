@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit --pretty false --incremental false -p tsconfig.json",
     "ci": "npm run typecheck && npm run lint && npm run test && npm run functions:build",
     "verify": "npm run typecheck && npm run lint -- --max-warnings=0 && npm run test && npm run functions:build && npm run build",
-    "seed": "npm run seed:all",
+    "seed": "node -e \"console.error('Refusing to seed the live Firestore by default. Run a specific seed:* script intentionally.'); process.exit(1)\"",
     "seed:all": "node scripts/seed-all.js",
     "seed:categories": "node scripts/seed-categories-fixed.js",
     "seed:products": "node scripts/seed-products-fixed.js",
@@ -33,7 +33,7 @@
     "firestore:ai-summary": "node scripts/firestore-ai-summary.js",
     "cleanup:legacy-products:backup": "node scripts/firestore-legacy-products-cleanup.js backup",
     "cleanup:legacy-products:dry-run": "node scripts/firestore-legacy-products-cleanup.js dry-run",
-    "cleanup:legacy-products:execute": "node scripts/firestore-legacy-products-cleanup.js execute",
+    "cleanup:legacy-products:execute": "node -e \"console.error('Pass a verified backup explicitly: node scripts/firestore-legacy-products-cleanup.js execute --backup=tmp/backup.json'); process.exit(1)\"",
     "migrate:product-images:analyze": "node scripts/product-image-webp-migration.js analyze",
     "migrate:product-images:dry-run": "node scripts/product-image-webp-migration.js migrate",
     "migrate:product-images:execute": "node scripts/product-image-webp-migration.js migrate --execute",
@@ -42,7 +42,7 @@
     "migrate:content-images:analyze": "node scripts/content-image-webp-migration.js analyze",
     "migrate:content-images:dry-run": "node scripts/content-image-webp-migration.js migrate",
     "migrate:content-images:execute": "node scripts/content-image-webp-migration.js migrate --execute",
-    "migrate:content-images:delete-originals": "node scripts/content-image-webp-migration.js delete-originals",
+    "migrate:content-images:delete-originals": "node scripts/content-image-webp-migration.js delete-originals --latest-log",
     "migrate:content-images:validate": "node scripts/content-image-webp-migration.js validate",
     "test": "jest --runInBand",
     "test:functions": "jest --runInBand functions/__tests__",
@@ -72,5 +72,9 @@
     "jest-environment-jsdom": "^30.2.0",
     "ts-jest": "^29.4.6",
     "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "8.5.10",
+    "uuid": "11.1.1"
   }
 }

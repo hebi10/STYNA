@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useQnAList } from '@/shared/hooks/useQnaQuery';
 import { QnA, QnAFilter } from '@/shared/types/qna';
@@ -15,7 +15,11 @@ export default function QnAListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState<Record<string, number>>({});
-  const { refetch: refetchQnAs } = useQnAList({ isSecret: false }, 1, 50);
+  const qnaFilters = useMemo<QnAFilter>(() => ({
+    isSecret: false,
+    ...(selectedCategory !== 'all' ? { category: selectedCategory as QnA['category'] } : {}),
+  }), [selectedCategory]);
+  const { refetch: refetchQnAs } = useQnAList(qnaFilters, currentPage, 50);
 
   const categories = [
     { value: 'all', label: '전체' },
@@ -30,18 +34,10 @@ export default function QnAListPage() {
       setLoading(true);
       setError(null);
 
-      const filters: QnAFilter = { isSecret: false };
-      if (selectedCategory !== 'all') {
-        filters.category = selectedCategory as QnA['category'];
-      }
-
       const { data: result } = await refetchQnAs();
       if (!result) return;
 
       let filteredQnas = result.qnas;
-      if (filters.category) {
-        filteredQnas = filteredQnas.filter(qna => qna.category === filters.category);
-      }
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         filteredQnas = filteredQnas.filter(qna =>
@@ -59,7 +55,7 @@ export default function QnAListPage() {
     } finally {
       setLoading(false);
     }
-  }, [refetchQnAs, searchTerm, selectedCategory]);
+  }, [refetchQnAs, searchTerm]);
 
   const loadStats = useCallback(async () => {
     try {
@@ -75,7 +71,7 @@ export default function QnAListPage() {
 
   useEffect(() => {
     loadQnAs();
-  }, [selectedCategory, loadQnAs]);
+  }, [currentPage, selectedCategory, loadQnAs]);
 
   useEffect(() => {
     if (qnas.length > 0) {

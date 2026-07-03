@@ -314,8 +314,6 @@ export class CouponService {
       }
 
       // 제한 적용
-      userCoupons = userCoupons.slice(0, limitCount);
-
       const couponMap = await this.getCouponsByIds(userCoupons.map(userCoupon => userCoupon.couponId));
       const userCouponViews: UserCouponView[] = [];
       
@@ -346,7 +344,7 @@ export class CouponService {
         });
       }
       
-      return userCouponViews;
+      return userCouponViews.slice(0, limitCount);
     } catch (error) {
  console.error(' 사용자 쿠폰 목록 조회 실패:', error);
       throw new Error('쿠폰 목록을 불러오는데 실패했습니다.');

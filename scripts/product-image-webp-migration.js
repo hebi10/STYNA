@@ -451,6 +451,10 @@ async function validateProducts(options) {
     console.log(`  - ${item.productId}: ${item.path}`);
   });
 
+  if (summary.nonWebpProductImageCount > 0) {
+    process.exitCode = 1;
+  }
+
   return summary;
 }
 

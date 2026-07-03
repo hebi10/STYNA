@@ -4,7 +4,6 @@
 - `src/shared/types/qna.ts`
 - `src/shared/utils/qnaSecret.ts`
 - `src/shared/services/qnaService.ts`
-- `src/shared/services/simpleQnAService.ts`
 - `src/app/qna/page.tsx`
 - `src/app/qna/[id]/page.tsx`
 - `src/app/mypage/qa/page.tsx`

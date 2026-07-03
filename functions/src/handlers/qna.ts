@@ -1,6 +1,5 @@
 import { onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import type { Response } from "express";
 import { randomBytes } from "crypto";
 import {
   ensureString,
@@ -10,27 +9,43 @@ import {
   verifyQnASecret,
 } from "../domain/qnaDomain";
 import { AuthError, verifyAuthContext } from "../utils/auth";
+import { applyNoStoreHeaders, SENSITIVE_FUNCTION_CORS } from "../utils/http";
 
 interface VerifySecretRequest {
   qnaId?: unknown;
   password?: unknown;
 }
 
-const NO_STORE_HEADERS = {
-  "Cache-Control": "no-store, max-age=0",
-  Pragma: "no-cache",
-  Expires: "0",
-};
+const PASSWORD_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const PASSWORD_RATE_LIMIT_MAX_ATTEMPTS = 10;
+const passwordAttemptLog = new Map<string, number[]>();
 
-function applyNoStoreHeaders(res: Response): void {
-  Object.entries(NO_STORE_HEADERS).forEach(([key, value]) => {
-    res.set(key, value);
-  });
+function getClientKey(req: { headers?: Record<string, unknown>; ip?: string; socket?: { remoteAddress?: string } }): string {
+  const forwardedFor = req.headers?.["x-forwarded-for"];
+  if (typeof forwardedFor === "string" && forwardedFor.trim()) {
+    return forwardedFor.split(",")[0].trim();
+  }
+
+  return req.ip || req.socket?.remoteAddress || "unknown";
+}
+
+function isPasswordRateLimited(key: string, now = Date.now()): boolean {
+  const recentAttempts = (passwordAttemptLog.get(key) ?? [])
+    .filter(timestamp => now - timestamp < PASSWORD_RATE_LIMIT_WINDOW_MS);
+
+  if (recentAttempts.length >= PASSWORD_RATE_LIMIT_MAX_ATTEMPTS) {
+    passwordAttemptLog.set(key, recentAttempts);
+    return true;
+  }
+
+  recentAttempts.push(now);
+  passwordAttemptLog.set(key, recentAttempts);
+  return false;
 }
 
 export const qna = onRequest(
   {
-    cors: true,
+    cors: SENSITIVE_FUNCTION_CORS,
     region: "us-central1",
     memory: "256MiB",
     timeoutSeconds: 60,
@@ -87,6 +102,11 @@ export const qna = onRequest(
 
       if (isSecret) {
         const isOwnerOrAdmin = actorIsAdmin || isOwner;
+        if (!isOwnerOrAdmin && password && isPasswordRateLimited(`${qnaId}:${getClientKey(req)}`)) {
+          res.status(429).json({ success: false, error: "Too many password attempts." });
+          return;
+        }
+
         const hasAccess = isOwnerOrAdmin || verifyQnASecret(qnaData, password);
 
         if (!hasAccess) {

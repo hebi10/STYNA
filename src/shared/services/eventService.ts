@@ -10,7 +10,9 @@ import {
   where, 
   orderBy, 
   Timestamp,
-  writeBatch 
+  writeBatch,
+  runTransaction,
+  increment
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../libs/firebase/firebase';
@@ -23,6 +25,10 @@ import { Event, EventFilter, EventParticipant } from '../types/event';
 const EVENTS_COLLECTION = 'events';
 const EVENT_PARTICIPANTS_COLLECTION = 'eventParticipants';
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
+
+function getEventParticipantDocId(eventId: string, userId: string): string {
+  return `${eventId}_${userId}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 180);
+}
 
 export type EventRuntimeStatus = 'ongoing' | 'upcoming' | 'ended';
 export type EventParticipationErrorCode =
@@ -430,51 +436,61 @@ export class EventService {
   // 이벤트 참여
   static async participateInEvent(eventId: string, userId: string, userName: string): Promise<void> {
     try {
-      // 이미 참여했는지 확인
-      const isAlreadyParticipated = await this.checkEventParticipation(eventId, userId);
-      if (isAlreadyParticipated) {
-        throw new EventParticipationError('already_participated');
-      }
+      const eventRef = doc(db, EVENTS_COLLECTION, eventId);
+      const participantRef = doc(
+        db,
+        EVENT_PARTICIPANTS_COLLECTION,
+        getEventParticipantDocId(eventId, userId)
+      );
 
-      // 이벤트 정보 확인
-      const event = await this.getEventById(eventId);
-      if (!event) {
-        throw new EventParticipationError('event_not_found');
-      }
+      await runTransaction(db, async (transaction) => {
+        const eventSnapshot = await transaction.get(eventRef);
+        const participantSnapshot = await transaction.get(participantRef);
 
-      // 이벤트 상태 확인
-      const now = new Date();
-      if (now < event.startDate) {
-        throw new EventParticipationError('event_not_started');
-      }
-      if (now > event.endDate) {
-        throw new EventParticipationError('event_ended');
-      }
-      if (!event.isActive) {
-        throw new EventParticipationError('event_inactive');
-      }
+        if (participantSnapshot.exists()) {
+          throw new EventParticipationError('already_participated');
+        }
+        if (!eventSnapshot.exists()) {
+          throw new EventParticipationError('event_not_found');
+        }
 
-      // manual 타입 쿠폰 이벤트는 참여 불가
-      if (event.eventType === 'coupon' && event.couponType === 'manual') {
-        throw new EventParticipationError('manual_coupon');
-      }
+        const eventData = eventSnapshot.data();
+        const startDate = eventData.startDate.toDate();
+        const endDate = eventData.endDate.toDate();
+        const now = new Date();
 
-      // 최대 참여자 수 확인
-      if (event.hasMaxParticipants && event.maxParticipants && event.participantCount >= event.maxParticipants) {
-        throw new EventParticipationError('max_participants');
-      }
+        if (now < startDate) {
+          throw new EventParticipationError('event_not_started');
+        }
+        if (now > endDate) {
+          throw new EventParticipationError('event_ended');
+        }
+        if (!eventData.isActive) {
+          throw new EventParticipationError('event_inactive');
+        }
+        if (eventData.eventType === 'coupon' && eventData.couponType === 'manual') {
+          throw new EventParticipationError('manual_coupon');
+        }
+        if (
+          eventData.hasMaxParticipants &&
+          eventData.maxParticipants &&
+          (eventData.participantCount || 0) >= eventData.maxParticipants
+        ) {
+          throw new EventParticipationError('max_participants');
+        }
 
-      // 참여자 추가
-      await addDoc(collection(db, EVENT_PARTICIPANTS_COLLECTION), {
-        eventId,
-        userId,
-        userName,
-        participatedAt: Timestamp.now(),
-        couponUsed: false,
+        transaction.set(participantRef, {
+          eventId,
+          userId,
+          userName,
+          participatedAt: Timestamp.now(),
+          couponUsed: false,
+        });
+        transaction.update(eventRef, {
+          participantCount: increment(1),
+          updatedAt: Timestamp.now(),
+        });
       });
-
-      // 참여자 수 증가
-      await this.incrementParticipantCount(eventId);
     } catch (error) {
       console.error('Error participating in event:', error);
       throw error;

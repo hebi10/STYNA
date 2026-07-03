@@ -4,6 +4,7 @@ import "./utils/firebaseInit";
 import { onRequest } from "firebase-functions/v2/https";
 import * as path from "path";
 import { secrets } from "./config/environment";
+import { SENSITIVE_FUNCTION_CORS } from "./utils/http";
 
 // ── 핸들러 ──
 export { points } from "./handlers/points";
@@ -37,7 +38,7 @@ export const nextjsServer = onRequest(
     memory: "2GiB",
     timeoutSeconds: 60,
     invoker: "public",
-    cors: true,
+    cors: SENSITIVE_FUNCTION_CORS,
     secrets: [secrets.OPENAI_API_KEY],
   },
   async (req, res) => {

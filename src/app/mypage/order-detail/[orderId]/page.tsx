@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/authProvider';
-import { useOrder } from '@/shared/hooks/useOrders';
+import { useCancelOrder, useOrder } from '@/shared/hooks/useOrders';
 import { Order } from '@/shared/types/order';
 import styles from './page.module.css';
 
@@ -23,6 +23,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string>('');
   const { refetch: refetchOrder } = useOrder(orderId || null);
+  const cancelOrder = useCancelOrder(user?.uid);
 
   // params Promise를 resolve
   useEffect(() => {
@@ -65,6 +66,14 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
     }
     void loadOrderDetails();
   }, [user, loading, orderId, router, loadOrderDetails]);
+
+  const handleCancelOrder = async () => {
+    if (!order) return;
+    if (!confirm('주문을 취소하시겠습니까?')) return;
+
+    await cancelOrder.mutateAsync({ orderId: order.id, reason: '고객 직접 취소' });
+    await loadOrderDetails();
+  };
 
   const getProductImageSrc = (imageUrl?: string) => {
     if (imageUrl && imageUrl.includes('firebasestorage.googleapis.com')) {
@@ -286,19 +295,29 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
           주문 목록으로 돌아가기
         </Link>
         {order.status === 'pending' && (
-          <button className={styles.cancelButton}>
+          <button
+            type="button"
+            className={styles.cancelButton}
+            onClick={handleCancelOrder}
+            disabled={cancelOrder.isPending}
+          >
             주문 취소
           </button>
         )}
         {(order.status === 'shipped' || order.status === 'delivered') && order.trackingNumber && (
-          <button className={styles.trackingButton}>
+          <a
+            href={`https://search.naver.com/search.naver?query=${encodeURIComponent(order.trackingNumber)}`}
+            target="_blank"
+            rel="noreferrer"
+            className={styles.trackingButton}
+          >
             배송 조회
-          </button>
+          </a>
         )}
-        {order.status === 'delivered' && (
-          <button className={styles.reviewButton}>
+        {order.status === 'delivered' && order.products[0]?.productId && (
+          <Link href={`/products/${order.products[0].productId}#reviews`} className={styles.reviewButton}>
             리뷰 작성
-          </button>
+          </Link>
         )}
       </div>
     </div>

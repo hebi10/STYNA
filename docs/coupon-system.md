@@ -28,7 +28,7 @@ src/app/mypage/coupons/               # 쿠폰 페이지
 functions/src/handlers/coupon.ts      # Cloud Functions HTTP handler
 functions/src/domain/couponDomain.ts  # 쿠폰 코드/만료/상태 순수 로직
 functions/__tests__/couponDomain.test.ts # 쿠폰 도메인 단위 테스트
-scripts/seed-coupons.ts              # 시드 데이터
+scripts/seed-coupons.js              # 시드 데이터
 ```
 
 ## 기능

@@ -2,13 +2,10 @@ import {
   collection,
   getDocs,
   doc,
-  updateDoc,
   query,
   orderBy,
   where,
   limit,
-  addDoc,
-  serverTimestamp,
   getDoc,
   QueryDocumentSnapshot,
   DocumentSnapshot,
@@ -30,7 +27,7 @@ async function getIdToken(): Promise<string> {
   return user.getIdToken();
 }
 
-async function callAdminUsersAPI(action: string, data: Record<string, unknown>): Promise<void> {
+async function callAdminUsersAPI<T = unknown>(action: string, data: Record<string, unknown>): Promise<T> {
   const token = await getIdToken();
   const response = await fetch('/api/admin/users', {
     method: 'POST',
@@ -41,7 +38,7 @@ async function callAdminUsersAPI(action: string, data: Record<string, unknown>):
     body: JSON.stringify({ action, ...data }),
   });
 
-  let result: { success?: boolean; error?: string } = {};
+  let result: { success?: boolean; error?: string; data?: T } = {};
   try {
     result = await response.json();
   } catch {
@@ -51,6 +48,7 @@ async function callAdminUsersAPI(action: string, data: Record<string, unknown>):
   if (!response.ok || !result.success) {
     throw new Error(result.error || '관리자 권한 요청에 실패했습니다.');
   }
+  return result.data as T;
 }
 
 async function callPointsAPI(action: string, data: Record<string, unknown>): Promise<void> {
@@ -214,11 +212,7 @@ export class AdminUserService {
     status: 'active' | 'inactive' | 'banned'
   ): Promise<void> {
     try {
-      const userRef = doc(db, COLLECTION_NAME, userId);
-      await updateDoc(userRef, {
-        status,
-        updatedAt: serverTimestamp(),
-      });
+      await callAdminUsersAPI('setStatus', { userId, status });
     } catch (error) {
  console.error('Error updating user status:', error);
       throw error;
@@ -241,12 +235,7 @@ export class AdminUserService {
   // 사용자 삭제 (실제로는 상태를 deleted로 변경)
   static async deleteUser(userId: string): Promise<void> {
     try {
-      const userRef = doc(db, COLLECTION_NAME, userId);
-      await updateDoc(userRef, {
-        status: 'deleted',
-        deletedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      await callAdminUsersAPI('delete', { userId });
     } catch (error) {
  console.error('Error deleting user:', error);
       throw error;
@@ -261,34 +250,8 @@ export class AdminUserService {
     status?: 'active' | 'inactive';
   }): Promise<string> {
     try {
-      const newUser = {
-        name: userData.name.trim(),
-        email: userData.email.trim().toLowerCase(),
-        role: userData.role || 'user',
-        status: userData.status || 'active',
-        orders: 0,
-        totalSpent: 0,
-        pointBalance: 0,
-        isAdmin: (userData.role || 'user') === 'admin',
-        joinDate: new Date().toISOString().split('T')[0],
-        lastLogin: serverTimestamp(),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        phone: '',
-        gender: 'male',
-        grade: 'bronze',
-        addresses: [],
-        preferences: {
-          favoriteCategories: [],
-          favoriteBrands: [],
-          sizes: {},
-          newsletter: false,
-          smsMarketing: false,
-        }
-      };
-
-      const docRef = await addDoc(collection(db, COLLECTION_NAME), newUser);
-      return docRef.id;
+      const result = await callAdminUsersAPI<{ userId: string }>('create', userData);
+      return result.userId;
     } catch (error) {
  console.error(' Error creating user:', error);
       throw error;

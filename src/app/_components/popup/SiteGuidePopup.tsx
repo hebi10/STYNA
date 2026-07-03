@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import styles from './SiteGuidePopup.module.css';
 import Link from 'next/link';
 
@@ -13,16 +13,32 @@ const SiteGuidePopup: React.FC<SiteGuidePopupProps> = ({
   isOpen,
   onClose,
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
     <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.popup} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={styles.popup}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="site-guide-title"
+        onClick={(e) => e.stopPropagation()}
+      >
 
         {/* 헤더 */}
         <div className={styles.header}>
           <div className={styles.logoSection}>
-            <h2>STYNA</h2>
+            <h2 id="site-guide-title">STYNA</h2>
             <span className={styles.subtitle}>쇼핑 안내</span>
           </div>
           <button className={styles.closeButton} onClick={onClose} aria-label="닫기">

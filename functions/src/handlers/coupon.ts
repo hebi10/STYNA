@@ -8,7 +8,7 @@ import {
   normalizeCouponCode,
 } from "../domain/couponDomain";
 import { verifyAuth, requireAdmin, AuthError } from "../utils/auth";
-import { applyNoStoreHeaders } from "../utils/http";
+import { applyNoStoreHeaders, SENSITIVE_FUNCTION_CORS } from "../utils/http";
 
 function getDb() {
   return getFirestore();
@@ -26,7 +26,7 @@ class CouponRequestError extends Error {
 
 export const coupon = onRequest(
   {
-    cors: true,
+    cors: SENSITIVE_FUNCTION_CORS,
     region: "us-central1",
     memory: "256MiB",
     timeoutSeconds: 60,
@@ -425,61 +425,85 @@ async function handleUse(
   }
 
   const db = getDb();
-  const userCouponDoc = await db.collection("user_coupons").doc(userCouponId).get();
-
-  if (!userCouponDoc.exists) {
-    res.status(404).json({ success: false, error: "User coupon does not exist." });
-    return;
-  }
-
-  const userCoupon = userCouponDoc.data();
-  if (userCoupon?.uid !== userId) {
-    res.status(403).json({ success: false, error: "You can only use your own coupons." });
-    return;
-  }
-
-  if (!isAvailableUserCouponStatus(userCoupon?.status)) {
-    res.status(409).json({ success: false, error: "Coupon is not available." });
-    return;
-  }
-
-  const couponDoc = await db.collection("coupons").doc(userCoupon.couponId).get();
-  if (!couponDoc.exists) {
-    res.status(404).json({ success: false, error: "Coupon master document does not exist." });
-    return;
-  }
-
-  const couponData = couponDoc.data();
   const today = new Date();
+  const usedDate = today.toISOString().split("T")[0];
 
-  if (couponHasExpired(couponData?.expiryDate, today)) {
-    await db.collection("user_coupons").doc(userCouponId).update({
-      status: "기간만료",
-      expiredDate: today.toISOString().split("T")[0],
-      updatedAt: FieldValue.serverTimestamp(),
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const userCouponRef = db.collection("user_coupons").doc(userCouponId);
+      const userCouponDoc = await transaction.get(userCouponRef);
+
+      if (!userCouponDoc.exists) {
+        throw new CouponRequestError(404, "User coupon does not exist.");
+      }
+
+      const userCoupon = userCouponDoc.data();
+      if (userCoupon?.uid !== userId) {
+        throw new CouponRequestError(403, "You can only use your own coupons.");
+      }
+
+      if (!isAvailableUserCouponStatus(userCoupon?.status)) {
+        throw new CouponRequestError(409, "Coupon is not available.");
+      }
+
+      const couponRef = db.collection("coupons").doc(userCoupon.couponId);
+      const orderRef = db.collection("orders").doc(orderId);
+      const couponDoc = await transaction.get(couponRef);
+      const orderDoc = await transaction.get(orderRef);
+
+      if (!couponDoc.exists) {
+        throw new CouponRequestError(404, "Coupon master document does not exist.");
+      }
+
+      if (!orderDoc.exists || orderDoc.data()?.userId !== userId) {
+        throw new CouponRequestError(403, "You can only use coupons on your own orders.");
+      }
+
+      const couponData = couponDoc.data();
+      if (couponHasExpired(couponData?.expiryDate, today)) {
+        transaction.update(userCouponRef, {
+          status: "기간만료",
+          expiredDate: usedDate,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        return { expired: true, couponName: couponData?.name };
+      }
+
+      transaction.update(userCouponRef, {
+        status: "사용완료",
+        usedDate,
+        orderId,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      return { expired: false, couponName: couponData?.name };
     });
-    res.status(410).json({ success: false, error: "Coupon has expired." });
+
+    if (result.expired) {
+      res.status(410).json({ success: false, error: "Coupon has expired." });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        message: "Coupon used successfully.",
+        userCouponId,
+        couponName: result.couponName,
+        usedDate,
+        orderId,
+      },
+    });
     return;
+  } catch (error) {
+    if (error instanceof CouponRequestError) {
+      res.status(error.statusCode).json({ success: false, error: error.message });
+      return;
+    }
+
+    throw error;
   }
 
-  const usedDate = today.toISOString().split("T")[0];
-  await db.collection("user_coupons").doc(userCouponId).update({
-    status: "사용완료",
-    usedDate,
-    orderId,
-    updatedAt: FieldValue.serverTimestamp(),
-  });
-
-  res.status(200).json({
-    success: true,
-    data: {
-      message: "Coupon used successfully.",
-      userCouponId,
-      couponName: couponData?.name,
-      usedDate,
-      orderId,
-    },
-  });
 }
 
 async function handleCleanup(res: Response): Promise<void> {

@@ -1,7 +1,6 @@
 import { 
   collection, 
   doc, 
-  addDoc, 
   deleteDoc, 
   getDocs, 
   query, 
@@ -19,6 +18,10 @@ import { RecentProduct, WishlistItem } from '@/shared/types/userActivity';
 const RECENT_PRODUCTS_KEY = 'hebimall_recent_products';
 const WISHLIST_KEY = 'hebimall_wishlist';
 const MAX_RECENT_PRODUCTS = 20; // 최대 20개까지 저장
+
+function getUserProductDocId(userId: string, productId: string): string {
+  return `${userId}_${productId}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 180);
+}
 
 function toDateValue(value: unknown): Date {
   if (value && typeof value === 'object' && 'toDate' in value) {
@@ -95,7 +98,7 @@ export class HybridUserActivityService {
         });
       } else {
         // 새 항목 추가
-        await addDoc(recentCollection, {
+        await setDoc(doc(db, 'userRecentProducts', getUserProductDocId(userId, productId)), {
           userId,
           productId,
           viewedAt: Timestamp.now()
@@ -278,7 +281,7 @@ export class HybridUserActivityService {
       
       if (existingSnapshot.empty) {
         // 새 항목 추가
-        await addDoc(wishlistCollection, {
+        await setDoc(doc(db, 'userWishlist', getUserProductDocId(userId, productId)), {
           userId,
           productId,
           addedAt: Timestamp.now()

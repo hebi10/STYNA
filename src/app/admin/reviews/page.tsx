@@ -1,6 +1,6 @@
 
 import AdminReviewList from "./_components/AdminReviewList";
-import styles from "./page.module.css";
+import styles from "../_components/AdminSimplePage.module.css";
 
 export default function AdminReviewsPage() {
   return (

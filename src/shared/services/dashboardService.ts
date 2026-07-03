@@ -1,7 +1,7 @@
 import { CouponService } from './couponService';
 import { EventService } from './eventService';
 import { AdminUserData, AdminUserService } from './adminUserService';
-import { SimpleQnAService } from './simpleQnAService';
+import { QnAService } from './qnaService';
 import { InquiryService } from './inquiryService';
 import { OrderService } from './orderService';
 import { ProductService } from './productService';
@@ -82,7 +82,7 @@ export class DashboardService {
       CouponService.getActiveCoupons(),
       EventService.getActiveEvents(),
       AdminUserService.getAllUsersSimple(),
-      SimpleQnAService.getAllQnAs(100),
+      QnAService.getQnAList({}, 1, 100).then(({ qnas }) => qnas),
       InquiryService.getAllInquiries(100),
       ProductService.getAllProducts(),
       OrderService.getAllOrders(1000),

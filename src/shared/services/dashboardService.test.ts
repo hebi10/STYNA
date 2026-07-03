@@ -2,7 +2,7 @@ import { DashboardService } from './dashboardService';
 import { CouponService } from './couponService';
 import { EventService } from './eventService';
 import { AdminUserService } from './adminUserService';
-import { SimpleQnAService } from './simpleQnAService';
+import { QnAService } from './qnaService';
 import { InquiryService } from './inquiryService';
 import { ProductService } from './productService';
 import { OrderService } from './orderService';
@@ -25,9 +25,9 @@ jest.mock('./adminUserService', () => ({
   },
 }));
 
-jest.mock('./simpleQnAService', () => ({
-  SimpleQnAService: {
-    getAllQnAs: jest.fn(),
+jest.mock('./qnaService', () => ({
+  QnAService: {
+    getQnAList: jest.fn(),
   },
 }));
 
@@ -54,7 +54,15 @@ describe('DashboardService', () => {
     jest.mocked(CouponService.getActiveCoupons).mockResolvedValue([]);
     jest.mocked(EventService.getActiveEvents).mockResolvedValue([]);
     jest.mocked(AdminUserService.getAllUsersSimple).mockResolvedValue([]);
-    jest.mocked(SimpleQnAService.getAllQnAs).mockResolvedValue([]);
+    jest.mocked(QnAService.getQnAList).mockResolvedValue({
+      qnas: [],
+      pagination: {
+        page: 1,
+        limit: 100,
+        totalCount: 0,
+        totalPages: 0,
+      },
+    });
     jest.mocked(InquiryService.getAllInquiries).mockResolvedValue([]);
     jest.mocked(ProductService.getAllProducts).mockResolvedValue([]);
     jest.mocked(OrderService.getAllOrders).mockResolvedValue([]);
