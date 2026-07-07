@@ -214,7 +214,7 @@ const ChatWidget: React.FC = () => {
 
     switch (chatMode) {
       case 'active':
-        return isAgentConnectRequested ? '상담 연결 후 직접 입력' : '상담원 연결 후 직접 입력';
+        return isAgentConnectRequested ? '상담 연결 후 직접 입력' : '메시지 입력';
       default:
         return '채팅 상담을 시작해보세요';
     }
@@ -310,7 +310,7 @@ const ChatWidget: React.FC = () => {
   );
 
   // ── 파생 disabled 상태 ────────────────────────────
-  const isInputDisabled = chatMutation.isPending || chatMode === 'idle' || !isAgentConnectRequested;
+  const isInputDisabled = chatMutation.isPending || chatMode === 'idle';
   const isSendDisabled = !inputValue.trim() || isInputDisabled;
   const isEventPage = pathname?.startsWith('/events');
 
@@ -448,11 +448,7 @@ const ChatWidget: React.FC = () => {
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder={
-                  chatMode === 'active' && isAgentConnectRequested
-                    ? '메시지를 입력하세요...'
-                    : '상담원 연결 후 메시지를 입력하세요'
-                }
+                placeholder="메시지를 입력하세요..."
                 disabled={isInputDisabled}
                 rows={1}
               />

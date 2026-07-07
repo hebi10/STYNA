@@ -37,23 +37,18 @@ describe('ChatWidget', () => {
     jest.restoreAllMocks();
   });
 
-  test('keeps message input disabled until agent connect is requested', () => {
+  test('enables message input as soon as chat opens', () => {
     renderChatWidget();
 
     fireEvent.click(screen.getByLabelText('채팅 열기'));
-
-    expect(screen.getByPlaceholderText('상담원 연결 후 메시지를 입력하세요')).toBeDisabled();
-
-    fireEvent.click(screen.getByRole('button', { name: '상담원 연결' }));
 
     expect(screen.getByPlaceholderText('메시지를 입력하세요...')).not.toBeDisabled();
   });
 
-  test('uses local chat API route after agent connect is requested', async () => {
+  test('uses local chat API route for a direct message', async () => {
     renderChatWidget();
 
     fireEvent.click(screen.getByLabelText('채팅 열기'));
-    fireEvent.click(screen.getByRole('button', { name: '상담원 연결' }));
     fireEvent.change(screen.getByPlaceholderText('메시지를 입력하세요...'), {
       target: { value: '배송이 궁금합니다' },
     });

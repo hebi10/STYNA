@@ -112,10 +112,10 @@ describe('LoginPage transition feedback', () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/orders/checkout'));
   });
 
-  test('does not show hard-coded demo account login buttons outside development', () => {
+  test('shows demo account login buttons', () => {
     render(<LoginPage />);
 
-    expect(screen.queryByText('일반 유저 로그인')).not.toBeInTheDocument();
-    expect(screen.queryByText('관리자 로그인')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /일반 로그인/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /관리자 로그인/ })).toBeInTheDocument();
   });
 });

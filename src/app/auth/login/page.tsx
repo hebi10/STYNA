@@ -19,7 +19,6 @@ function getSafeRedirectTarget(redirect: string | null): string {
 
 export default function LoginPage() {
   const router = useRouter();
-  const showDevelopmentLogins = process.env.NODE_ENV === "development";
   const [redirectTarget, setRedirectTarget] = useState(() => {
     if (typeof window === "undefined") {
       return "/mypage";
@@ -172,34 +171,30 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        {showDevelopmentLogins && (
-          <>
-            <div className={styles.divider}>
-              <span className={styles.dividerText}>개발용 빠른 로그인</span>
-            </div>
+        <div className={styles.divider}>
+          <span className={styles.dividerText}>빠른 로그인</span>
+        </div>
 
-            <div className={styles.socialButtons}>
-              <button
-                type="button"
-                className={styles.socialButton}
-                onClick={handleKakaoLogin}
-                disabled={isSubmitting}
-              >
-                <span className={`${styles.socialBtn} ${styles.kakaoIcon}`}>U</span>
-                {isSubmitting ? "로그인 중..." : "개발용 회원 로그인"}
-              </button>
-              <button
-                type="button"
-                className={styles.socialButton}
-                onClick={handleNaverLogin}
-                disabled={isSubmitting}
-              >
-                <span className={`${styles.socialBtn} ${styles.naverIcon}`}>A</span>
-                {isSubmitting ? "로그인 중..." : "개발용 관리자 로그인"}
-              </button>
-            </div>
-          </>
-        )}
+        <div className={styles.socialButtons}>
+          <button
+            type="button"
+            className={`${styles.socialButton} ${styles.kakaoLoginButton}`}
+            onClick={handleKakaoLogin}
+            disabled={isSubmitting}
+          >
+            <span className={`${styles.socialBtn} ${styles.kakaoIcon}`}>K</span>
+            {isSubmitting ? "로그인 중..." : "일반 로그인"}
+          </button>
+          <button
+            type="button"
+            className={`${styles.socialButton} ${styles.googleLoginButton}`}
+            onClick={handleNaverLogin}
+            disabled={isSubmitting}
+          >
+            <span className={`${styles.socialBtn} ${styles.googleIcon}`}>G</span>
+            {isSubmitting ? "로그인 중..." : "관리자 로그인"}
+          </button>
+        </div>
 
         <div className={styles.link}>
           아직 계정이 없으신가요?{' '}

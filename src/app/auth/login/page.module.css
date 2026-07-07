@@ -184,6 +184,28 @@
   background-color: #fafafa;
 }
 
+.kakaoLoginButton {
+  background-color: #FEE500;
+  border-color: #FEE500;
+  color: #191919;
+}
+
+.kakaoLoginButton:hover {
+  background-color: #F5DC00;
+  border-color: #F5DC00;
+}
+
+.googleLoginButton {
+  background-color: #ffffff;
+  border-color: #dadce0;
+  color: #3c4043;
+}
+
+.googleLoginButton:hover {
+  background-color: #f8fafd;
+  border-color: #c6c9cf;
+}
+
 .socialBtn {
   display: inline-flex;
   justify-content: center;

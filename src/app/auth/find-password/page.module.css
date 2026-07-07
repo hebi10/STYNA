@@ -383,3 +383,78 @@
 .loginLink {
   color: var(--black);
 }
+
+/* auth layout already provides the page card */
+.container {
+  min-height: auto;
+  display: block;
+  padding: 0;
+  background: transparent;
+}
+
+.formWrapper {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+}
+
+.form {
+  gap: 1rem;
+}
+
+.input,
+.submitButton,
+.loginButton,
+.retryButton {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+}
+
+.submitButton {
+  margin-top: 0.5rem;
+}
+
+.footer {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.successIcon::before {
+  content: '';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid #22c55e;
+  border-radius: 50%;
+}
+
+.successIcon::after {
+  content: '';
+  position: absolute;
+  width: 0.7rem;
+  height: 1.1rem;
+  border: solid #22c55e;
+  border-width: 0 2px 2px 0;
+  transform: translate(-1.5rem, 0.75rem) rotate(45deg);
+}
+
+.successIcon {
+  position: relative;
+  display: inline-block;
+  width: 3rem;
+  height: 3rem;
+}
