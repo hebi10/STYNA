@@ -34,6 +34,12 @@ const SUPPORT_LINKS: HeaderNavItem[] = [
   { label: "고객센터", href: "/cs/faq" },
 ];
 
+const ANNOUNCEMENTS = [
+  "신규 회원 10% 쿠폰",
+  "5만원 이상 무료배송",
+  "오늘 출고 마감 14:00",
+];
+
 function toNavLabel(category: HeaderCategory) {
   return category.name;
 }
@@ -106,6 +112,19 @@ export default function Header() {
 
   return (
     <header className={`${styles.header} ${isMobileMenuOpen ? styles.headerMenuOpen : ""}`}>
+      <div className={styles.announcementBar} aria-label="쇼핑 안내">
+        <div className={styles.announcementViewport}>
+          {ANNOUNCEMENTS.map((message, index) => (
+            <span
+              key={message}
+              className={styles.announcementMessage}
+              style={{ animationDelay: `${index * 3}s` }}
+            >
+              {message}
+            </span>
+          ))}
+        </div>
+      </div>
       <div className={styles.container}>
         <div className={styles.headerContent}>
           <div className={styles.logo}>

@@ -20,6 +20,7 @@ interface CategoryCardProps {
 interface DynamicCategorySectionProps {
   maxCategories?: number;
   className?: string;
+  visualMode?: 'image' | 'text';
 }
 
 const CATEGORY_IMAGES = [
@@ -29,10 +30,26 @@ const CATEGORY_IMAGES = [
   '/category/main_category04.png',
 ];
 
-function getFallbackCategories(maxCategories: number): CategoryCardProps[] {
+const CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  tops: '매일 입기 좋은 기본 상의',
+  bottoms: '실루엣을 잡아주는 기본 하의',
+  shoes: '오래 걸어도 편한 데일리 슈즈',
+  sports: '가볍게 움직이기 좋은 액티브웨어',
+};
+
+const TEXT_MODE_CATEGORY_IDS = ['tops', 'bottoms', 'shoes', 'sports'] as const;
+
+function getCategoryDescription(category: CategoryCardProps) {
+  return category.count || CATEGORY_DESCRIPTIONS[category.id] || '상품 준비 중';
+}
+
+function getFallbackCategories(
+  maxCategories: number,
+  categoryIds: readonly string[] = DEFAULT_CATEGORY_IDS,
+): CategoryCardProps[] {
   const categoryNames = getDefaultCategoryNames();
 
-  return DEFAULT_CATEGORY_IDS.slice(0, maxCategories).map((id, index) => ({
+  return categoryIds.slice(0, maxCategories).map((id, index) => ({
     id,
     name: categoryNames[id] || id,
     slug: id,
@@ -45,40 +62,54 @@ function getFallbackCategories(maxCategories: number): CategoryCardProps[] {
 
 export default function DynamicCategorySection({ 
   maxCategories = 4, 
-  className = '' 
+  className = '',
+  visualMode = 'image',
 }: DynamicCategorySectionProps) {
-  const [categories, setCategories] = useState<CategoryCardProps[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<CategoryCardProps[]>(() =>
+    visualMode === 'text' ? getFallbackCategories(maxCategories, TEXT_MODE_CATEGORY_IDS) : [],
+  );
+  const [loading, setLoading] = useState(visualMode === 'image');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        setLoading(true);
+        setLoading(visualMode === 'image');
         const categoryData = await CategoryOrderService.getMainPageCategories(maxCategories);
         setCategories(categoryData);
         setError(null);
       } catch (err) {
         console.error('카테고리 로딩 실패:', err);
-        setError('카테고리를 불러오는데 실패했습니다.');
-        
-        setCategories(getFallbackCategories(maxCategories));
+        if (visualMode === 'image') {
+          setError('카테고리를 불러오는데 실패했습니다.');
+          setCategories(getFallbackCategories(maxCategories));
+        } else {
+          setError(null);
+          setCategories(getFallbackCategories(maxCategories, TEXT_MODE_CATEGORY_IDS));
+        }
       } finally {
         setLoading(false);
       }
     };
 
     loadCategories();
-  }, [maxCategories]);
+  }, [maxCategories, visualMode]);
 
   if (loading) {
     return (
       <div className={`${styles.categoryGrid} ${className}`}>
         {Array.from({ length: maxCategories }).map((_, index) => (
-          <div key={index} className={`${styles.categoryCard} ${styles.loading}`}>
-            <div className={styles.categoryImageWrapper}>
-              <div className={`${styles.categoryImagePlaceholder} ${styles.loadingShimmer}`}></div>
-            </div>
+          <div
+            key={index}
+            className={`${styles.categoryCard} ${styles.loading} ${
+              visualMode === 'text' ? styles.categoryCardTextOnly : ''
+            }`}
+          >
+            {visualMode === 'image' ? (
+              <div className={styles.categoryImageWrapper}>
+                <div className={`${styles.categoryImagePlaceholder} ${styles.loadingShimmer}`}></div>
+              </div>
+            ) : null}
             <div className={styles.categoryInfo}>
               <span className={styles.categoryLabel}>로딩 중...</span>
               <span className={styles.categoryCount}>상품 수 확인 중</span>
@@ -106,26 +137,30 @@ export default function DynamicCategorySection({
   return (
     <div className={`${styles.categoryGrid} ${className}`}>
       {categories.map((category) => (
-        <Link 
+        <Link
           key={category.id} 
           href={category.href} 
-          className={styles.categoryCard}
+          className={`${styles.categoryCard} ${
+            visualMode === 'text' ? styles.categoryCardTextOnly : ''
+          }`}
         >
-          <div className={styles.categoryImageWrapper}>
-            <div className={styles.categoryImagePlaceholder}>
-              <Image
-                src={category.image}
-                alt={category.name}
-                fill
-                style={{ objectFit: 'cover' }}
-                className={styles.categoryImage}
-              />
+          {visualMode === 'image' ? (
+            <div className={styles.categoryImageWrapper}>
+              <div className={styles.categoryImagePlaceholder}>
+                <Image
+                  src={category.image}
+                  alt={category.name}
+                  fill
+                  style={{ objectFit: 'cover' }}
+                  className={styles.categoryImage}
+                />
+              </div>
             </div>
-          </div>
+          ) : null}
           <div className={styles.categoryInfo}>
             <span className={styles.categoryLabel}>{category.name}</span>
             <span className={styles.categoryCount}>
-              {category.count || '상품 준비 중'}
+              {getCategoryDescription(category)}
             </span>
           </div>
         </Link>

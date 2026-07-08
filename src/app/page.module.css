@@ -11,20 +11,78 @@
   padding: 0 1rem;
 }
 
+.sectionEyebrow {
+  margin: 0 0 0.45rem;
+  color: #697386;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+}
+
+.sectionDescription {
+  max-width: 45rem;
+  margin: 0.6rem 0 0;
+  color: #697386;
+  font-size: 0.9rem;
+  line-height: 1.75;
+}
+
+.curationStrip {
+  padding: 1.25rem 0;
+  background: #fff;
+  border-top: 1px solid #e2e2e2;
+  border-bottom: 1px solid #e2e2e2;
+}
+
+.curationGrid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 1rem;
+}
+
+.curationItem {
+  min-width: 0;
+  padding-right: 1rem;
+  border-right: 1px solid #dedede;
+}
+
+.curationItem:last-child {
+  border-right: 0;
+  padding-right: 0;
+}
+
+.curationItem h2,
+.noteTitle {
+  margin: 0;
+  color: #111;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.curationItem p:not(.sectionEyebrow),
+.noteText {
+  margin: 0.45rem 0 0;
+  color: #697386;
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+
 .categorySection {
-  padding: 2.6rem 0 2.2rem;
+  padding: 2rem 0 1.8rem;
   background: #f7f7f7;
 }
 
 .productBand,
 .rankingBand {
-  padding: 2.3rem 0;
+  padding: 1.9rem 0;
   background: #f7f7f7;
   scroll-margin-top: 6rem;
 }
 
 .rankingBand {
-  padding-top: 2.7rem;
+  padding-top: 2rem;
 }
 
 .compactHeader {
@@ -34,6 +92,66 @@
   margin-bottom: 1rem;
   padding-bottom: 0.8rem;
   border-bottom: 1px solid #13233a;
+}
+
+.mdNoteSection,
+.reviewHighlight {
+  padding: 2rem 0;
+  background: #f7f7f7;
+}
+
+.noteGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
+  gap: 1.5rem;
+  align-items: end;
+}
+
+.comboGrid,
+.reviewGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.comboGrid article,
+.reviewGrid article {
+  min-width: 0;
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid #dedede;
+}
+
+.comboGrid span {
+  display: block;
+  margin-bottom: 0.65rem;
+  color: #697386;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.comboGrid strong {
+  display: block;
+  color: #111;
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+.comboGrid p,
+.reviewGrid p {
+  margin: 0.5rem 0 0;
+  color: #697386;
+  font-size: 0.84rem;
+  line-height: 1.7;
+}
+
+.reviewGrid span {
+  display: block;
+  margin-top: 0.75rem;
+  color: #111;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .sectionTitle {
@@ -65,6 +183,18 @@
 
 .categoryCard:hover {
   border-color: #111;
+}
+
+.categoryCardTextOnly {
+  display: grid;
+  min-height: 118px;
+  align-content: end;
+}
+
+.categoryCardTextOnly .categoryInfo {
+  min-height: 118px;
+  align-content: end;
+  border-top: 0;
 }
 
 .categoryImageWrapper {
@@ -118,9 +248,9 @@
 }
 
 .saleNotice {
-  margin: 2rem 0 1.2rem;
-  padding: 1.5rem 0;
-  background: #eef0f4;
+  margin: 0;
+  padding: 1.7rem 0;
+  background: #111;
 }
 
 .saleNoticeInner {
@@ -134,13 +264,13 @@
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
-  color: #0a1628;
+  color: #fff;
 }
 
 .saleNoticeText {
   margin: 0.45rem 0 0;
   font-size: 0.86rem;
-  color: #697386;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .saleNoticeActions {
@@ -168,6 +298,16 @@
 .retryButton:hover {
   background: #111;
   border-color: #111;
+}
+
+.saleNotice .sectionEyebrow {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.saleNotice .promoButton {
+  border-color: #fff;
+  background: #fff;
+  color: #111;
 }
 
 .serviceInfo {
@@ -237,6 +377,27 @@
 }
 
 @media (max-width: 1024px) {
+  .curationGrid,
+  .noteGrid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .curationItem {
+    padding: 0.85rem 0;
+    border-right: 0;
+    border-bottom: 1px solid #dedede;
+  }
+
+  .curationItem:first-child {
+    padding-top: 0;
+  }
+
+  .curationItem:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
   .serviceGrid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -272,6 +433,11 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 1rem;
+  }
+
+  .comboGrid,
+  .reviewGrid {
+    grid-template-columns: 1fr;
   }
 
   .saleNoticeActions,

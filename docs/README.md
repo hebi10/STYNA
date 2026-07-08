@@ -23,5 +23,6 @@
 - Firestore 상품 마이그레이션 계획 : firestore-migration-plan.md
 - Firestore AI 요약 Export : firestore-ai-summary.md
 - Firestore 최적화 실행 계획 : superpowers/plans/2026-06-30-firestore-optimization.md
+- 메인 편집형 쇼핑몰 개편 실행 계획 : superpowers/plans/2026-07-08-main-editorial-shopping-mall.md
 - 품질 게이트/CI 스크립트 정리 : quality-gates.md
 - 정적 콘텐츠 Firestore 관리 : static-content.md

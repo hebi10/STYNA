@@ -21,6 +21,10 @@ interface ProductCardProps {
   reviewCount?: number;
   stock?: number;
   badgePlacement?: 'default' | 'belowRank';
+  operationLabel?: string;
+  shippingLabel?: string;
+  reviewLabel?: string;
+  mdComment?: string;
 }
 
 export default function ProductCard({
@@ -37,6 +41,10 @@ export default function ProductCard({
   reviewCount,
   stock = 0,
   badgePlacement = 'default',
+  operationLabel,
+  shippingLabel,
+  reviewLabel,
+  mdComment,
 }: ProductCardProps) {
   const { wishlistItems, addToWishlist, removeFromWishlist } = useUserActivity();
   const { user } = useAuthUser();
@@ -103,6 +111,9 @@ export default function ProductCard({
         
         {/* 배지들 */}
         <div className={styles.badges}>
+          {operationLabel && (
+            <span className={`${styles.badge} ${styles.badgeOperation}`}>{operationLabel}</span>
+          )}
           {isNew && (
             <span className={`${styles.badge} ${styles.badgeNew}`}>NEW</span>
           )}
@@ -138,6 +149,15 @@ export default function ProductCard({
       <div className={styles.info}>
         <p className={styles.brand}>{brand}</p>
         <h3 className={styles.name}>{name}</h3>
+
+        {(shippingLabel || reviewLabel) && (
+          <div className={styles.operatingLabels}>
+            {shippingLabel && <span>{shippingLabel}</span>}
+            {reviewLabel && <span>{reviewLabel}</span>}
+          </div>
+        )}
+
+        {mdComment && <p className={styles.mdComment}>{mdComment}</p>}
         
         <div className={styles.priceContainer}>
           {pricing.listPrice > pricing.salePrice && (

@@ -32,12 +32,56 @@ const CATEGORY_IMAGES = [
   '/category/main_category04.png',
 ];
 
+type SortedCategory = { id: string; name: string; order: number };
+
+const MAIN_PAGE_CATEGORY_PRIORITY = ['tops', 'bottoms', 'shoes', 'sports'];
+const MAIN_PAGE_CATEGORY_ALIASES: Record<string, string> = {
+  top: 'tops',
+  clothing: 'tops',
+  pants: 'bottoms',
+  shoe: 'shoes',
+};
+
 function nameToId(name: string): string {
   return Object.entries(DEFAULT_CATEGORY_NAMES).find(([, label]) => label === name)?.[0] || name;
 }
 
 function categoryName(id: string, rawName?: string): string {
   return DEFAULT_CATEGORY_NAMES[rawName?.toLowerCase() || ''] || DEFAULT_CATEGORY_NAMES[id] || rawName || id;
+}
+
+function normalizeMainPageCategoryId(id: string): string {
+  const normalizedId = id.toLowerCase();
+  return MAIN_PAGE_CATEGORY_ALIASES[normalizedId] || normalizedId;
+}
+
+export function getCuratedMainPageCategories(
+  categories: SortedCategory[],
+  maxCount: number,
+): SortedCategory[] {
+  const byCuratedId = new Map<string, SortedCategory>();
+
+  categories.forEach((category) => {
+    const curatedId = normalizeMainPageCategoryId(category.id);
+
+    if (!MAIN_PAGE_CATEGORY_PRIORITY.includes(curatedId) || byCuratedId.has(curatedId)) {
+      return;
+    }
+
+    byCuratedId.set(curatedId, {
+      ...category,
+      id: curatedId,
+      name: categoryName(curatedId, category.name),
+    });
+  });
+
+  return MAIN_PAGE_CATEGORY_PRIORITY
+    .map((id, index) => byCuratedId.get(id) || {
+      id,
+      name: DEFAULT_CATEGORY_NAMES[id] || id,
+      order: index,
+    })
+    .slice(0, maxCount);
 }
 
 export class CategoryOrderService {
@@ -156,8 +200,9 @@ export class CategoryOrderService {
     count: string;
   }[]> {
     const categories = await this.getSortedCategories();
+    const curatedCategories = getCuratedMainPageCategories(categories, maxCount);
 
-    return categories.slice(0, maxCount).map((category, index) => ({
+    return curatedCategories.map((category, index) => ({
       id: category.id,
       name: category.name,
       slug: category.id,
