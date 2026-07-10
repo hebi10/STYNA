@@ -37,3 +37,8 @@
 - `productService.mainBannerFallback.test.ts`에서 Firestore에 상품 ID 문서가 없을 때 로컬 fallback 상품 데이터가 반환되지 않는지 확인한다.
 - Firestore의 `products/{productId}.mainImage`, `images`, `detailImages`는 `/products/main-banner/*` 같은 로컬 경로가 아니라 `https://firebasestorage.googleapis.com/...` URL이어야 한다.
 - 배너 이미지를 바꾸면 브라우저에서 좌측 상품 중심 이미지, 우측 모델 중심 이미지, 좌우 7% 미리보기, 가로 이동 전환을 확인한다.
+# 슬라이드 상호작용
+
+- 좌우 이동 버튼은 회전한 CSS 도형 대신 문자 화살표를 사용하며, 버튼 중앙에 정렬한다.
+- 배너 영역은 좌우로 48px 이상 드래그하면 한 장씩 이동한다. 세로 스크롤과 상품 링크의 일반 클릭은 유지한다.
+- 현재 슬라이드 번호는 브라우저 세션에 저장한다. 상품 상세를 열었다가 뒤로 가기로 돌아오면 마지막으로 보던 배너를 복원한다.

@@ -4,6 +4,7 @@ const { admin, db, projectId } = require("./util-firestore-admin");
 const {
   buildWebpStoragePath,
   convertStorageImageToWebp,
+  getWebpCacheControl,
   parseFirebaseStorageUrl,
   writeMigrationLog,
 } = require("./webp-migration-utils");
@@ -77,6 +78,7 @@ function collectProductImageUrls(productData) {
   const seen = new Set();
   const candidates = [
     ...(Array.isArray(productData.images) ? productData.images : []),
+    ...(Array.isArray(productData.detailImages) ? productData.detailImages : []),
     productData.mainImage,
   ];
 
@@ -163,6 +165,13 @@ function replaceProductImageUrls(
         ),
       ]
     : productData.images;
+  const nextDetailImages = Array.isArray(productData.detailImages)
+    ? [
+        ...new Set(
+          productData.detailImages.map((imageUrl) => replacements.get(imageUrl) || imageUrl)
+        ),
+      ]
+    : productData.detailImages;
   let nextMainImage =
     typeof productData.mainImage === "string"
       ? replacements.get(productData.mainImage) || productData.mainImage
@@ -180,6 +189,13 @@ function replaceProductImageUrls(
   const update = {};
   if (Array.isArray(productData.images) && nextImages.some((url, index) => url !== productData.images[index])) {
     update.images = nextImages;
+  }
+
+  if (
+    Array.isArray(productData.detailImages) &&
+    nextDetailImages.some((url, index) => url !== productData.detailImages[index])
+  ) {
+    update.detailImages = nextDetailImages;
   }
 
   if (nextMainImage !== productData.mainImage) {
@@ -591,6 +607,7 @@ module.exports = {
   collectProductImageUrls,
   deleteOriginalsFromLog,
   getProductIdFromProductImagePath,
+  getWebpCacheControl,
   loadHistoricalConvertedImageUrlsByProductId,
   migrateProducts,
   parseFirebaseStorageUrl,

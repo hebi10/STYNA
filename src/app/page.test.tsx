@@ -63,9 +63,12 @@ describe('Home editorial composition', () => {
     expect(markup).toContain('출근룩을 가볍게 완성하는 여름 셋업');
     expect(markup).toContain('MD 기준');
     expect(markup).toContain("MD&#x27;S NOTE");
-    expect(markup).toContain('최근 7일간 리뷰 수와 장바구니 저장 수를 기준으로 집계했습니다.');
-    expect(markup).toContain('REVIEW HIGHLIGHT');
-    expect(markup).toContain('7월 멤버십 위크');
+    expect(markup).toContain('등록된 리뷰 수를 기준으로 정렬한 상위 8개 상품');
+    expect(markup).toContain('PORTFOLIO DEMO');
+    expect(markup).toContain('아래 문구와 평점은 포트폴리오 데모용 예시이며 실제 고객 리뷰가 아닙니다.');
+    expect(markup).toContain('현재 적용 가능한 혜택은 이벤트 페이지에서 확인하세요.');
+    expect(markup).not.toContain('최근 7일간 리뷰 수와 장바구니 저장 수를 기준으로 집계했습니다.');
+    expect(markup).not.toContain('07.14까지');
     expect(markup).toContain('category visual mode: image');
   });
 

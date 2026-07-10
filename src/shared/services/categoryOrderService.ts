@@ -10,6 +10,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from '@/shared/libs/firebase/firebase';
+import { CATEGORY_IMAGE_URLS } from '@/shared/constants/categoryImages';
 import { DEFAULT_CATEGORY_IDS, getDefaultCategoryNames } from '@/shared/utils/categoryUtils';
 
 export interface CategoryOrderConfig {
@@ -25,13 +26,6 @@ export interface CategoryOrderConfig {
 const CATEGORY_ORDER_COLLECTION = 'categoryOrder';
 const DEFAULT_CATEGORY_NAMES = getDefaultCategoryNames();
 const DEFAULT_ORDER_NAMES = DEFAULT_CATEGORY_IDS.map((id) => DEFAULT_CATEGORY_NAMES[id]).filter(Boolean);
-const CATEGORY_IMAGES = [
-  '/category/main_category01.png',
-  '/category/main_category02.png',
-  '/category/main_category03.png',
-  '/category/main_category04.png',
-];
-
 type SortedCategory = { id: string; name: string; order: number };
 
 const MAIN_PAGE_CATEGORY_PRIORITY = ['tops', 'bottoms', 'shoes', 'sports'];
@@ -208,7 +202,7 @@ export class CategoryOrderService {
       slug: category.id,
       href: `/categories/${category.id}`,
       icon: '',
-      image: CATEGORY_IMAGES[index] || CATEGORY_IMAGES[0],
+      image: CATEGORY_IMAGE_URLS[index] || CATEGORY_IMAGE_URLS[0],
       count: '',
     }));
   }

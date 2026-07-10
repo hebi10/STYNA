@@ -1,5 +1,6 @@
 const {
   buildWebpStoragePath,
+  getWebpCacheControl,
   collectProductImageUrls,
   isConvertibleProductImageUrl,
   parseFirebaseStorageUrl,
@@ -7,6 +8,10 @@ const {
 } = require("./product-image-webp-migration");
 
 describe("product image WebP migration helpers", () => {
+  test("marks migrated versioned WebP objects as immutable cacheable resources", () => {
+    expect(getWebpCacheControl()).toBe("public, max-age=31536000, immutable");
+  });
+
   test("parses Firebase Storage download URLs into bucket and object path", () => {
     const parsed = parseFirebaseStorageUrl(
       "https://firebasestorage.googleapis.com/v0/b/hebimall.firebasestorage.app/o/images%2Ftops%2Fp1%2F1710000000000_0.jpg?alt=media&token=abc"
@@ -43,23 +48,33 @@ describe("product image WebP migration helpers", () => {
   test("collects unique product image URLs from images and mainImage", () => {
     const urls = collectProductImageUrls({
       images: ["https://example.com/a.jpg", "https://example.com/a.jpg"],
+      detailImages: ["https://example.com/detail.jpg"],
       mainImage: "https://example.com/b.jpg",
     });
 
-    expect(urls).toEqual(["https://example.com/a.jpg", "https://example.com/b.jpg"]);
+    expect(urls).toEqual([
+      "https://example.com/a.jpg",
+      "https://example.com/detail.jpg",
+      "https://example.com/b.jpg",
+    ]);
   });
 
   test("replaces product images and mainImage using the migration map", () => {
     const product = {
       images: ["old-a", "old-b"],
+      detailImages: ["old-detail"],
       mainImage: "old-b",
       name: "테스트 상품",
     };
 
-    const replaced = replaceProductImageUrls(product, new Map([["old-b", "new-b"]]));
+    const replaced = replaceProductImageUrls(product, new Map([
+      ["old-b", "new-b"],
+      ["old-detail", "new-detail"],
+    ]));
 
     expect(replaced).toEqual({
       images: ["old-a", "new-b"],
+      detailImages: ["new-detail"],
       mainImage: "new-b",
     });
   });

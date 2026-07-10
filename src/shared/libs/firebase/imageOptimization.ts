@@ -2,7 +2,29 @@ export const IMAGE_OPTIMIZATION = {
   outputMimeType: 'image/webp',
   quality: 0.75,
   extension: 'webp',
+  maxDimension: 1600,
+  cacheControl: 'public, max-age=31536000, immutable',
 } as const;
+
+export const getOptimizedImageDimensions = (width: number, height: number) => {
+  const longestEdge = Math.max(width, height);
+
+  if (longestEdge <= IMAGE_OPTIMIZATION.maxDimension) {
+    return { width, height };
+  }
+
+  const scale = IMAGE_OPTIMIZATION.maxDimension / longestEdge;
+
+  return {
+    width: Math.round(width * scale),
+    height: Math.round(height * scale),
+  };
+};
+
+export const getImageUploadMetadata = (contentType: string) => ({
+  contentType,
+  cacheControl: IMAGE_OPTIMIZATION.cacheControl,
+});
 
 export const getOptimizedWebpFileName = (fileName: string): string => {
   const trimmedName = fileName.trim() || 'image';
@@ -62,8 +84,12 @@ export const optimizeImageForUpload = async (file: File): Promise<File> => {
   try {
     const image = await loadImage(previewUrl);
     const canvas = document.createElement('canvas');
-    canvas.width = image.naturalWidth || image.width;
-    canvas.height = image.naturalHeight || image.height;
+    const dimensions = getOptimizedImageDimensions(
+      image.naturalWidth || image.width,
+      image.naturalHeight || image.height,
+    );
+    canvas.width = dimensions.width;
+    canvas.height = dimensions.height;
 
     const context = canvas.getContext('2d');
     if (!context) {

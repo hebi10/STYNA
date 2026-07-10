@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import MainBanner from './MainBanner';
 
 jest.mock('./MainBanner.module.css', () => ({
@@ -12,11 +12,10 @@ jest.mock('./MainBanner.module.css', () => ({
 jest.mock('next/image', () => ({
   __esModule: true,
   default: (props: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean }) => {
-    const { alt, ...imageProps } = props;
-    delete imageProps.priority;
+    const { alt, priority, ...imageProps } = props;
     delete (imageProps as React.ImgHTMLAttributes<HTMLImageElement> & { fill?: boolean }).fill;
 
-    return React.createElement('img', { alt, ...imageProps });
+    return React.createElement('img', { alt, 'data-priority': String(Boolean(priority)), ...imageProps });
   },
 }));
 
@@ -92,14 +91,13 @@ const expectedCards = [
 describe('MainBanner', () => {
   afterEach(() => {
     jest.useRealTimers();
+    window.sessionStorage.clear();
   });
 
-  test('renders five two-up product banner sets with Firebase Storage images and product detail links', () => {
+  test('renders five two-up product banner sets with Firebase Storage links', () => {
     const { container } = render(<MainBanner />);
     const links = Array.from(container.querySelectorAll<HTMLAnchorElement>('a.bannerCard'));
     const uniqueHrefs = new Set(links.map((link) => link.getAttribute('href')));
-    const images = Array.from(container.querySelectorAll<HTMLImageElement>('img'));
-    const uniqueImages = new Set(images.map((image) => image.getAttribute('src')));
 
     expect(screen.getByLabelText('메인 상품 배너')).toBeInTheDocument();
     expect(container.querySelectorAll('.bannerPair')).toHaveLength(7);
@@ -109,14 +107,21 @@ describe('MainBanner', () => {
 
     expectedCards.forEach((card) => {
       expect(uniqueHrefs.has(card.href)).toBe(true);
-      expect(uniqueImages.has(card.image)).toBe(true);
-      expect(screen.getAllByAltText(card.alt).length).toBeGreaterThan(0);
     });
 
     expect(links.some((link) => link.getAttribute('href')?.startsWith('/events/'))).toBe(false);
     expect(links.some((link) => link.getAttribute('href')?.startsWith('/categories/'))).toBe(false);
-    expect([...uniqueImages].every((image) => image?.startsWith('https://firebasestorage.googleapis.com/'))).toBe(true);
-    expect([...uniqueImages].some((image) => image?.startsWith('/main/'))).toBe(false);
+  });
+
+  test('preloads both visible cards and only renders images for adjacent slide sets', () => {
+    const { container } = render(<MainBanner />);
+    const images = Array.from(container.querySelectorAll<HTMLImageElement>('img'));
+    const priorityImages = images.filter((image) => image.dataset.priority === 'true');
+
+    expect(images).toHaveLength(6);
+    expect(priorityImages).toHaveLength(2);
+    expect(images.every((image) => image.src.startsWith('https://firebasestorage.googleapis.com/'))).toBe(true);
+    expect(images.some((image) => image.src.includes('mesh-low-profile-sneakers'))).toBe(false);
   });
 
   test('moves the horizontal track by one two-up set on next navigation', () => {
@@ -155,5 +160,35 @@ describe('MainBanner', () => {
     });
 
     expect(track?.style.getPropertyValue('--track-index')).toBe('3');
+  });
+
+  test('moves one slide when the banner is dragged left', () => {
+    const { container } = render(<MainBanner />);
+    const viewport = container.querySelector<HTMLElement>('.bannerViewport');
+    const track = container.querySelector<HTMLElement>('.bannerTrack');
+
+    fireEvent(viewport!, new MouseEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      clientX: 320,
+    }));
+    fireEvent(viewport!, new MouseEvent('pointerup', {
+      bubbles: true,
+      button: 0,
+      clientX: 180,
+    }));
+
+    expect(track?.style.getPropertyValue('--track-index')).toBe('2');
+  });
+
+  test('restores the last viewed slide from session storage', async () => {
+    window.sessionStorage.setItem('hebimall.main-banner.active-index', '2');
+    const { container } = render(<MainBanner />);
+    const track = container.querySelector<HTMLElement>('.bannerTrack');
+
+    await waitFor(() => {
+      expect(track?.style.getPropertyValue('--track-index')).toBe('3');
+      expect(container.querySelectorAll('.paginationDot')[2]).toHaveAttribute('aria-current', 'true');
+    });
   });
 });

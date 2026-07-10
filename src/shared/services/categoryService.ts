@@ -19,6 +19,7 @@ import {
 } from 'firebase/storage';
 import { db, storage } from '@/shared/libs/firebase/firebase';
 import {
+  getImageUploadMetadata,
   getOptimizedWebpStorageFileName,
   optimizeImageForUpload,
 } from '@/shared/libs/firebase/imageOptimization';
@@ -183,9 +184,11 @@ export class CategoryService {
       const fileName = getOptimizedWebpStorageFileName(file.name, `${categoryId}_${timestamp}`);
       const storageRef = ref(storage, `categories/${fileName}`);
       
-      const snapshot = await uploadBytes(storageRef, optimizedFile, {
-        contentType: optimizedFile.type,
-      });
+      const snapshot = await uploadBytes(
+        storageRef,
+        optimizedFile,
+        getImageUploadMetadata(optimizedFile.type),
+      );
       const downloadURL = await getDownloadURL(snapshot.ref);
       
       return downloadURL;

@@ -56,4 +56,5 @@
 - 비밀 QnA는 비밀번호 공유 검증을 폐기하고 작성자 또는 custom claim 관리자만 읽을 수 있게 변경했다. 작성자는 본문 편집 필드만 바꿀 수 있으며 답변·조회수·작성자·생성일은 변경할 수 없다.
 - Functions 공통 인증은 유효한 Firebase ID 토큰뿐 아니라 `users/{uid}.status`도 확인한다. `inactive`·`banned` 계정은 403으로 거부한다.
 - 리뷰 작성자는 자신의 리뷰 본문·평점·이미지 등 편집 필드만 수정할 수 있다. `productId`, `userId`, `createdAt` 변경과 임의 필드 추가는 Firestore 규칙에서 차단한다.
+- 리뷰 생성은 클라이언트 Firestore 쓰기를 허용하지 않고 `/api/review` Function에서만 처리한다. Function은 로그인 계정, 주문 소유권, 배송 완료(또는 구매 확정) 상태, 주문 상품·사이즈·색상 일치를 transaction으로 검증하며 같은 주문 상품 옵션에는 결정적 문서 ID로 1회만 생성한다. 기존 레거시 리뷰의 공개 조회와 작성자 수정·삭제 권한은 유지한다.
 - `npm run test:rules`는 Firestore Emulator에서 이 권한 행렬을 검증한다. 현재 로컬 실행에는 Java 런타임이 필요하다.

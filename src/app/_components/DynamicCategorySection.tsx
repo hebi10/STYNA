@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from "next/link";
 import Image from "next/image";
 import { CategoryOrderService } from '@/shared/services/categoryOrderService';
+import { CATEGORY_IMAGE_URLS } from '@/shared/constants/categoryImages';
 import { DEFAULT_CATEGORY_IDS, getDefaultCategoryNames } from '@/shared/utils/categoryUtils';
 import styles from '../page.module.css';
 
@@ -22,13 +23,6 @@ interface DynamicCategorySectionProps {
   className?: string;
   visualMode?: 'image' | 'text';
 }
-
-const CATEGORY_IMAGES = [
-  '/category/main_category01.png',
-  '/category/main_category02.png',
-  '/category/main_category03.png',
-  '/category/main_category04.png',
-];
 
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   tops: '매일 입기 좋은 기본 상의',
@@ -55,7 +49,7 @@ function getFallbackCategories(
     slug: id,
     href: `/categories/${id}`,
     icon: '',
-    image: CATEGORY_IMAGES[index] || CATEGORY_IMAGES[0],
+    image: CATEGORY_IMAGE_URLS[index] || CATEGORY_IMAGE_URLS[0],
     count: '',
   }));
 }

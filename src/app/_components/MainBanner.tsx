@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { CSSProperties, TransitionEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties, PointerEvent, TransitionEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import styles from './MainBanner.module.css';
 
 const SLIDE_DELAY_MS = 4500;
+const DRAG_THRESHOLD_PX = 48;
+const ACTIVE_SLIDE_STORAGE_KEY = 'hebimall.main-banner.active-index';
 const STORAGE_BUCKET = 'hebimall.firebasestorage.app';
 
 const storageUrl = (path: string) =>
@@ -114,8 +116,37 @@ export default function MainBanner() {
   const [trackIndex, setTrackIndex] = useState(1);
   const [rotationKey, setRotationKey] = useState(0);
   const [isJumping, setIsJumping] = useState(false);
+  const [isSlideStateReady, setIsSlideStateReady] = useState(false);
+  const pointerStartXRef = useRef<number | null>(null);
+  const didDragRef = useRef(false);
 
   useEffect(() => {
+    const storedIndex = Number(window.sessionStorage.getItem(ACTIVE_SLIDE_STORAGE_KEY));
+    const isValidStoredIndex = Number.isInteger(storedIndex)
+      && storedIndex >= 0
+      && storedIndex < bannerPairs.length;
+
+    if (isValidStoredIndex) {
+      setActiveIndex(storedIndex);
+      setTrackIndex(storedIndex + 1);
+    }
+
+    setIsSlideStateReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isSlideStateReady) {
+      return;
+    }
+
+    window.sessionStorage.setItem(ACTIVE_SLIDE_STORAGE_KEY, String(activeIndex));
+  }, [activeIndex, isSlideStateReady]);
+
+  useEffect(() => {
+    if (!isSlideStateReady) {
+      return undefined;
+    }
+
     const timer = window.setInterval(() => {
       const nextIndex = (activeIndex + 1) % bannerPairs.length;
 
@@ -124,7 +155,7 @@ export default function MainBanner() {
     }, SLIDE_DELAY_MS);
 
     return () => window.clearInterval(timer);
-  }, [activeIndex, rotationKey]);
+  }, [activeIndex, isSlideStateReady, rotationKey]);
 
   useEffect(() => {
     if (!isJumping) {
@@ -173,6 +204,55 @@ export default function MainBanner() {
     setRotationKey((key) => key + 1);
   };
 
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button > 0) {
+      return;
+    }
+
+    pointerStartXRef.current = event.clientX;
+    didDragRef.current = false;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const startX = pointerStartXRef.current;
+    pointerStartXRef.current = null;
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+
+    if (startX === null) {
+      return;
+    }
+
+    const dragDistance = event.clientX - startX;
+    if (Math.abs(dragDistance) < DRAG_THRESHOLD_PX) {
+      return;
+    }
+
+    didDragRef.current = true;
+    if (dragDistance < 0) {
+      showNext();
+    } else {
+      showPrevious();
+    }
+
+    window.setTimeout(() => {
+      didDragRef.current = false;
+    }, 0);
+  };
+
+  const handlePointerCancel = () => {
+    pointerStartXRef.current = null;
+  };
+
+  const handleBannerClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!didDragRef.current) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   const handleTrackTransitionEnd = (event: TransitionEvent<HTMLDivElement>) => {
     if (event.target !== event.currentTarget || event.propertyName !== 'transform') {
       return;
@@ -196,7 +276,13 @@ export default function MainBanner() {
   return (
     <section className={styles.bannerSection} aria-label="메인 상품 배너">
       <div className={styles.bannerStage}>
-        <div className={styles.bannerViewport}>
+        <div
+          className={styles.bannerViewport}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+          onClickCapture={handleBannerClickCapture}
+        >
           <div
             className={`${styles.bannerTrack} ${isJumping ? styles.bannerTrackJumping : ''}`}
             style={trackStyle}
@@ -205,6 +291,7 @@ export default function MainBanner() {
             {carouselPairs.map((pair, index) => {
               const realIndex = (index - 1 + bannerPairs.length) % bannerPairs.length;
               const isActive = realIndex === activeIndex && index === trackIndex;
+              const shouldRenderImages = Math.abs(index - trackIndex) <= 1;
 
               return (
                 <article
@@ -212,7 +299,7 @@ export default function MainBanner() {
                   className={`${styles.bannerPair} ${isActive ? styles.activePair : ''}`}
                   aria-hidden={!isActive}
                 >
-                  {[pair.left, pair.right].map((card, cardIndex) => (
+                  {[pair.left, pair.right].map((card) => (
                     <Link
                       key={card.id}
                       href={card.href}
@@ -220,14 +307,16 @@ export default function MainBanner() {
                       aria-label={card.alt}
                       tabIndex={isActive ? 0 : -1}
                     >
+                    {shouldRenderImages ? (
                       <Image
                         src={card.image}
                         alt={card.alt}
                         fill
-                        priority={index === 1 && cardIndex === 0}
+                        priority={index === trackIndex}
                         sizes="(min-width: 1920px) 826px, 43vw"
                         className={styles.bannerImage}
                       />
+                    ) : null}
                     </Link>
                   ))}
                 </article>
@@ -241,13 +330,17 @@ export default function MainBanner() {
           className={`${styles.navButton} ${styles.prevButton}`}
           aria-label="이전 배너"
           onClick={showPrevious}
-        />
+        >
+          <span aria-hidden="true">‹</span>
+        </button>
         <button
           type="button"
           className={`${styles.navButton} ${styles.nextButton}`}
           aria-label="다음 배너"
           onClick={showNext}
-        />
+        >
+          <span aria-hidden="true">›</span>
+        </button>
 
         <div className={styles.pagination} aria-label="배너 순서">
           {bannerPairs.map((pair, index) => (

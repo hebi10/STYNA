@@ -1,6 +1,6 @@
 import { storage } from './firebase';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
-import { optimizeImageForUpload } from './imageOptimization';
+import { getImageUploadMetadata, optimizeImageForUpload } from './imageOptimization';
 
 /**
  * 상품 이미지를 카테고리별로 구조화된 경로에 업로드합니다
@@ -41,9 +41,11 @@ export const uploadProductImages = async (
  console.log(` 업로드 경로: ${filePath}`);
         
         const storageRef = ref(storage, filePath);
-        const uploadTask = uploadBytesResumable(storageRef, optimizedFile, {
-          contentType: optimizedFile.type,
-        });
+        const uploadTask = uploadBytesResumable(
+          storageRef,
+          optimizedFile,
+          getImageUploadMetadata(optimizedFile.type),
+        );
         
         uploadTask.on(
           'state_changed',

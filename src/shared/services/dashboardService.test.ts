@@ -75,4 +75,68 @@ describe('DashboardService', () => {
       ],
     });
   });
+
+  it('excludes cancelled, returned, and exchanged orders from net sales aggregates', async () => {
+    const now = new Date();
+    const baseOrder = {
+      userId: 'user-1',
+      orderNumber: 'ORD-1',
+      products: [{
+        id: 'item-1',
+        productId: 'product-1',
+        productName: '테스트 상품',
+        productImage: '',
+        size: 'M',
+        color: 'black',
+        quantity: 1,
+        price: 10000,
+        discountAmount: 0,
+        brand: 'TEST',
+      }],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    jest.mocked(ProductService.getAllProducts).mockResolvedValue([{
+      id: 'product-1',
+      name: '테스트 상품',
+      description: '테스트 상품 설명',
+      brand: 'TEST',
+      price: 10000,
+      category: 'tops',
+      images: [],
+      sizes: [],
+      colors: [],
+      stock: 10,
+      rating: 0,
+      reviewCount: 0,
+      isNew: false,
+      isSale: false,
+      saleRate: 0,
+      tags: [],
+      details: {
+        material: '',
+        origin: '',
+        manufacturer: '',
+        precautions: '',
+        sizes: {},
+      },
+      createdAt: now,
+      updatedAt: now,
+    }]);
+    jest.mocked(OrderService.getAllOrders).mockResolvedValue([
+      { ...baseOrder, id: 'confirmed', status: 'confirmed', finalAmount: 10000 },
+      { ...baseOrder, id: 'cancelled', status: 'cancelled', finalAmount: 20000 },
+      { ...baseOrder, id: 'returned', status: 'returned', finalAmount: 30000 },
+      { ...baseOrder, id: 'exchanged', status: 'exchanged', finalAmount: 40000 },
+    ]);
+
+    const stats = await DashboardService.getDashboardStats();
+
+    expect(stats.totalOrders).toBe(4);
+    expect(stats.totalRevenue).toBe(10000);
+    expect(stats.excludedRevenueOrderCount).toBe(3);
+    expect(stats.categoryBreakdown).toEqual([{ categoryId: 'tops', value: 1 }]);
+    expect(stats.topSellingProducts.map((product) => product.id)).toEqual(['product-1']);
+  });
 });

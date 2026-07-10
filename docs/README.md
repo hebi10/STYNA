@@ -16,6 +16,7 @@
 - 대시보드 정리 : dashboard.md
 - 쿠폰/포인트 정책 정리 : coupon-system.md
 - 스토리지 구조 정리 : storage-structure.md
+- 이미지 전송 성능 : image-delivery-performance.md
 - API 캐시 정책 및 debug 경로 정리 : api-cache-debug-route.md
 - 환경 변수/배포 설정 : env-setup.md
 - QnA 비밀글 검증 구조 정리 : qna-secret-password.md

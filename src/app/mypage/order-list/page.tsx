@@ -7,6 +7,10 @@ import styles from './page.module.css';
 import { useAuth } from '@/context/authProvider';
 import { OrderService } from '@/shared/services/orderService';
 import { Order, OrderStatus } from '@/shared/types/order';
+import {
+  getCustomerCancellationAvailability,
+  getDeliverySearchHref,
+} from '@/shared/utils/orderPostPurchase';
 
 export default function OrderListPage() {
   const { user, loading } = useAuth();
@@ -58,12 +62,13 @@ export default function OrderListPage() {
   // 주문 취소 함수
   const handleCancelOrder = async (orderId: string, orderNumber: string, order: Order) => {
     // 취소 불가능한 상태 체크
-    if (!['pending', 'confirmed'].includes(order.status)) {
-      alert('이미 배송이 시작된 주문은 취소할 수 없습니다.\n고객센터로 문의해주세요.');
+    const cancellation = getCustomerCancellationAvailability(order.status);
+    if (!cancellation.canCancel) {
+      alert(cancellation.message || '이 주문은 취소할 수 없습니다.');
       return;
     }
 
-    const confirmMessage = `주문번호: ${orderNumber}\n총 주문금액: ${formatCurrency(order.finalAmount)}\n\n주문을 취소하시겠습니까?\n\n※ 취소 시 결제금액은 2-3일 내 환불됩니다.\n※ 사용된 포인트와 쿠폰은 즉시 복원됩니다.`;
+    const confirmMessage = `주문번호: ${orderNumber}\n총 주문금액: ${formatCurrency(order.finalAmount)}\n\n주문을 취소하시겠습니까?\n\n※ 데모 주문에는 실제 결제가 처리되지 않습니다.\n※ 사용된 포인트와 쿠폰은 즉시 복원됩니다.`;
     
     if (!confirm(confirmMessage)) {
       return;
@@ -76,7 +81,7 @@ export default function OrderListPage() {
       // 주문 목록 새로고침
       await loadOrders();
       
-      alert(`주문이 성공적으로 취소되었습니다.\n\n포인트/쿠폰이 복원되었습니다.\n결제금액은 2-3일 내 환불 예정입니다.`);
+      alert('주문이 성공적으로 취소되었습니다.\n\n사용된 포인트와 쿠폰이 복원되었습니다.\n데모 주문에는 실제 환불이 발생하지 않습니다.');
     } catch (error) {
       console.error('주문 취소 실패:', error);
       const message = error instanceof Error ? error.message : '';
@@ -347,12 +352,16 @@ export default function OrderListPage() {
                       주문상세
                     </Link>
                     {(order.status === 'shipped' || order.status === 'delivered') && (
-                      <button className={styles.actionButton}>배송조회</button>
+                      <Link href={getDeliverySearchHref(order)} className={styles.actionButton}>
+                        배송조회
+                      </Link>
                     )}
                     {order.status === 'delivered' && (
-                      <button className={styles.actionButton}>리뷰작성</button>
+                      <span className={styles.cancelNotice}>
+                        리뷰는 주문 상품 상세의 리뷰 탭에서 작성할 수 있습니다.
+                      </span>
                     )}
-                    {(order.status === 'pending' || order.status === 'confirmed') && (
+                    {getCustomerCancellationAvailability(order.status).canCancel && (
                       <button 
                         className={`${styles.actionButton} ${styles.cancel}`}
                         onClick={() => handleCancelOrder(order.id, order.orderNumber, order)}
@@ -361,11 +370,12 @@ export default function OrderListPage() {
                         {cancellingOrderId === order.id ? '취소 중...' : '주문취소'}
                       </button>
                     )}
-                    {(order.status === 'preparing' || order.status === 'shipped') && (
+                    {!getCustomerCancellationAvailability(order.status).canCancel
+                      && ['preparing', 'shipped'].includes(order.status) && (
                       <div className={styles.cancelNotice}>
                         <span className={styles.noticeIcon}></span>
                         <span className={styles.noticeText}>
-                          {order.status === 'preparing' ? '상품 준비중 - 고객센터 문의' : '배송중 - 취소 불가'}
+                          {getCustomerCancellationAvailability(order.status).message}
                         </span>
                       </div>
                     )}

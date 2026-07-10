@@ -149,4 +149,23 @@ describe('review Firestore rules', () => {
       userId: 'other-1',
     }));
   });
+
+  test('denies direct review creation even when the user claims ownership', async () => {
+    const ownerDb = testEnv.authenticatedContext('owner-1').firestore();
+
+    await assertFails(setDoc(doc(ownerDb, 'reviews', 'forged-review'), {
+      productId: 'product-1',
+      userId: 'owner-1',
+      userName: '작성자',
+      rating: 5,
+      title: '임의 작성',
+      content: '주문 검증 없는 리뷰',
+      images: [],
+      size: 'M',
+      color: 'black',
+      isRecommended: true,
+      createdAt: '2026-07-10T00:00:00.000Z',
+      updatedAt: '2026-07-10T00:00:00.000Z',
+    }));
+  });
 });

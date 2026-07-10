@@ -49,6 +49,7 @@ import { adminUsers } from "../src/handlers/adminUsers";
 import { order } from "../src/handlers/order";
 import { qna } from "../src/handlers/qna";
 import { event } from "../src/handlers/event";
+import { review } from "../src/handlers/review";
 import { AuthError, verifyAuthContext, verifyAuth, requireAdmin } from "../src/utils/auth";
 
 type Handler = (req: {
@@ -614,5 +615,142 @@ describe("event participation", () => {
       success: true,
       data: expect.objectContaining({ alreadyParticipated: true }),
     }));
+  });
+});
+
+describe("verified purchase reviews", () => {
+  beforeEach(() => {
+    jest.mocked(verifyAuthContext).mockResolvedValue({
+      uid: "user-1",
+      token: {} as never,
+      isAdmin: false,
+    });
+    jest.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+    jest.restoreAllMocks();
+  });
+
+  test("creates one review for a delivered order item and rejects a repeat", async () => {
+    const orderRef = { id: "order-1" };
+    const reviewRef = { id: "review-1" };
+    const orders = { doc: jest.fn(() => orderRef) };
+    const reviews = { doc: jest.fn(() => reviewRef) };
+    let alreadyReviewed = false;
+    const transaction = {
+      get: jest.fn(async (target: unknown) => {
+        if (target === orderRef) {
+          return {
+            exists: true,
+            data: () => ({
+              userId: "user-1",
+              status: "delivered",
+              products: [{ productId: "product-1", size: "M", color: "black", quantity: 1 }],
+            }),
+          };
+        }
+        if (target === reviewRef) {
+          return { exists: alreadyReviewed, data: () => ({}) };
+        }
+        return { exists: false, data: () => ({}) };
+      }),
+      set: jest.fn((target: unknown) => {
+        if (target === reviewRef) {
+          alreadyReviewed = true;
+        }
+      }),
+      update: jest.fn(),
+    };
+    const db = {
+      collection: jest.fn((name: string) => ({ orders, reviews }[name] || { doc: jest.fn() })),
+      runTransaction: jest.fn((callback: (tx: typeof transaction) => unknown) => callback(transaction)),
+    };
+    jest.mocked(admin.firestore).mockReturnValue(db as never);
+
+    const payload = {
+      orderId: "order-1",
+      productId: "product-1",
+      size: "M",
+      color: "black",
+      rating: 5,
+      title: "좋아요",
+      content: "배송받고 작성한 리뷰입니다.",
+      isRecommended: true,
+    };
+    const response = createResponse();
+
+    await (review as unknown as Handler)({
+      method: "POST",
+      headers: { authorization: "Bearer user-token" },
+      body: payload,
+    }, response);
+
+    expect(transaction.set).toHaveBeenCalledWith(reviewRef, expect.objectContaining({
+      orderId: "order-1",
+      productId: "product-1",
+      userId: "user-1",
+      size: "M",
+      color: "black",
+      verifiedPurchase: true,
+    }));
+    expect(response.status).toHaveBeenCalledWith(201);
+
+    const repeatedResponse = createResponse();
+    await (review as unknown as Handler)({
+      method: "POST",
+      headers: { authorization: "Bearer user-token" },
+      body: payload,
+    }, repeatedResponse);
+
+    expect(repeatedResponse.status).toHaveBeenCalledWith(409);
+  });
+
+  test.each([
+    ["an undelivered order", "shipped", "M", "black"],
+    ["an option not included in the order", "delivered", "L", "black"],
+  ])("rejects a review for %s", async (_caseName, status, size, color) => {
+    const response = createResponse();
+    const orderRef = { id: "order-1" };
+    const reviews = { doc: jest.fn(() => ({ id: "review-1" })) };
+    const transaction = {
+      get: jest.fn(async () => ({
+        exists: true,
+        data: () => ({
+          userId: "user-1",
+          status,
+          products: [{ productId: "product-1", size: "M", color: "black", quantity: 1 }],
+        }),
+      })),
+      set: jest.fn(),
+      update: jest.fn(),
+    };
+    const db = {
+      collection: jest.fn((name: string) => ({
+        orders: { doc: jest.fn(() => orderRef) },
+        reviews,
+      }[name] || { doc: jest.fn() })),
+      runTransaction: jest.fn((callback: (tx: typeof transaction) => unknown) => callback(transaction)),
+    };
+    jest.mocked(admin.firestore).mockReturnValue(db as never);
+
+    await (review as unknown as Handler)({
+      method: "POST",
+      headers: { authorization: "Bearer user-token" },
+      body: {
+        orderId: "order-1",
+        productId: "product-1",
+        size,
+        color,
+        rating: 5,
+        title: "좋아요",
+        content: "내용",
+        isRecommended: true,
+      },
+    }, response);
+
+    expect(response.status).toHaveBeenCalledWith(400);
+    expect(transaction.set).not.toHaveBeenCalled();
   });
 });

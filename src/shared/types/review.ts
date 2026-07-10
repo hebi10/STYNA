@@ -12,6 +12,8 @@ export interface Review {
   height?: number;
   weight?: number;
   isRecommended: boolean;
+  orderId?: string;
+  verifiedPurchase?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

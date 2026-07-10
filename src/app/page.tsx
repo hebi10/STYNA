@@ -2,6 +2,7 @@ import Link from "next/link";
 import MainBanner from "./_components/MainBanner";
 import ProductSection from "./_components/ProductSection";
 import DynamicCategorySection from "./_components/DynamicCategorySection";
+import { SITE_INFO } from "@/shared/constants/siteInfo";
 import styles from "./page.module.css";
 
 export default function Home() {
@@ -25,9 +26,9 @@ export default function Home() {
               <p>비침, 두께, 착용감처럼 사진만으로 놓치기 쉬운 기준을 함께 확인합니다.</p>
             </article>
             <article className={styles.curationItem}>
-              <p className={styles.sectionEyebrow}>혜택</p>
-              <h2>07.14까지 무료배송</h2>
-              <p>신규 회원 10% 쿠폰과 3만원 이상 무료배송 혜택을 함께 적용합니다.</p>
+              <p className={styles.sectionEyebrow}>PORTFOLIO DEMO</p>
+              <h2>혜택 안내 예시</h2>
+              <p>신규 회원 쿠폰과 무료배송 혜택은 포트폴리오 데모용 안내입니다.</p>
             </article>
           </div>
         </div>
@@ -102,7 +103,7 @@ export default function Home() {
           className={styles.bandSection}
           eyebrow="BEST RANKING"
           title="베스트 랭킹"
-          subtitle="최근 7일간 리뷰 수와 장바구니 저장 수를 기준으로 집계했습니다."
+          subtitle="등록된 리뷰 수를 기준으로 정렬한 상위 8개 상품"
           type="bestseller"
           maxItems={8}
           variant="ranking"
@@ -116,8 +117,11 @@ export default function Home() {
         <div className={styles.sectionContainer}>
           <div className={styles.compactHeader}>
             <div>
-              <p className={styles.sectionEyebrow}>REVIEW HIGHLIGHT</p>
-              <h2 className={styles.sectionTitle}>이번 주 고객 리뷰</h2>
+              <p className={styles.sectionEyebrow}>PORTFOLIO DEMO</p>
+              <h2 className={styles.sectionTitle}>스타일 코멘트 예시</h2>
+              <p className={styles.sectionDescription}>
+                아래 문구와 평점은 포트폴리오 데모용 예시이며 실제 고객 리뷰가 아닙니다.
+              </p>
             </div>
           </div>
           <div className={styles.reviewGrid}>
@@ -140,10 +144,10 @@ export default function Home() {
       <section className={styles.saleNotice}>
         <div className={styles.saleNoticeInner}>
           <div>
-            <p className={styles.sectionEyebrow}>SEASON EVENT</p>
-            <h2 className={styles.saleNoticeTitle}>7월 멤버십 위크</h2>
+            <p className={styles.sectionEyebrow}>PORTFOLIO DEMO</p>
+            <h2 className={styles.saleNoticeTitle}>혜택 안내 예시</h2>
             <p className={styles.saleNoticeText}>
-              신규 회원 10% 쿠폰과 무료배송 쿠폰을 07.14까지 함께 지급합니다.
+              현재 적용 가능한 혜택은 이벤트 페이지에서 확인하세요.
             </p>
           </div>
           <div className={styles.saleNoticeActions}>
@@ -173,19 +177,19 @@ export default function Home() {
         <div className={styles.serviceGrid}>
           <div className={styles.serviceItem}>
             <h2>CUSTOMER CENTER</h2>
-            <p>평일 10:00 - 17:00, 점심 12:30 - 13:30, 주말 및 공휴일 휴무</p>
+            <p>{SITE_INFO.supportPhone} · {SITE_INFO.supportHours}</p>
           </div>
           <div className={styles.serviceItem}>
-            <h2>BANK INFO</h2>
-            <p>국민 000000-00-000000, 예금주 STYNA</p>
+            <h2>CONTACT</h2>
+            <p>{SITE_INFO.supportEmail}</p>
           </div>
           <div className={styles.serviceItem}>
-            <h2>RETURN / EXCHANGE</h2>
-            <p>서울 성동구 성수이로 00, STYNA 물류센터. 교환 및 반품은 게시판 접수 후 진행됩니다.</p>
+            <h2>ORDER GUIDE</h2>
+            <p>주문 및 쿠폰 적용 흐름은 데모 데이터로 확인할 수 있습니다.</p>
           </div>
           <div className={styles.serviceItem}>
-            <h2>COMPANY</h2>
-            <p>상호명 STYNA, 대표 박도영, 사업자등록번호 000-00-00000</p>
+            <h2>PORTFOLIO</h2>
+            <p>{SITE_INFO.demoNotice}</p>
           </div>
         </div>
       </section>

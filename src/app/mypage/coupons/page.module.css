@@ -122,6 +122,13 @@
   color: #6b7280;
 }
 
+.benefitDescription {
+  margin: 0.5rem 0 0;
+  color: #6b7280;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
 .filterSection {
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border: 1px solid #e2e8f0;
@@ -563,6 +570,8 @@
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
+  display: inline-block;
+  text-decoration: none;
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
 }

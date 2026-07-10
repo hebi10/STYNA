@@ -231,6 +231,12 @@
   font-size: 11px;
 }
 
+.verifiedPurchase {
+  color: #16794d;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .reviewMeta {
   display: flex;
   align-items: center;

@@ -268,7 +268,7 @@ function DashboardContent() {
           {stats.dataAvailability.orders && stats.totalRevenue > 0 && (
             <div className={styles.metricCard}>
               <div className={styles.metricHeader}>
-                <h3>누적 매출</h3>
+                <h3>순매출</h3>
               </div>
               <div className={styles.metricValue}>
                 {formatCurrency(stats.totalRevenue)}
@@ -280,6 +280,11 @@ function DashboardContent() {
                 <span className={styles.trend}>
                   {stats.monthlyGrowth.revenue >= 0 ? '+' : ''}{stats.monthlyGrowth.revenue}% (7일)
                 </span>
+                {stats.excludedRevenueOrderCount > 0 && (
+                  <span className={styles.aggregation}>
+                    취소·반품·교환 제외 {formatNumber(stats.excludedRevenueOrderCount)}건
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -315,7 +320,7 @@ function DashboardContent() {
               <Chart
                 data={revenueChartData}
                 type="line"
-                title="최근 6개월 매출 추이"
+                title="최근 6개월 순매출 추이"
                 width={500}
                 height={250}
               />

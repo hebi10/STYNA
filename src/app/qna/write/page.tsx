@@ -1,25 +1,28 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/authProvider';
 import { SimpleQnAService } from '@/shared/services/simpleQnAService';
 import { CreateQnAData } from '@/shared/types/qna';
 import styles from './page.module.css';
 
-export default function QnAWritePage() {
+function QnAWritePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<CreateQnAData>({
-    category: 'general',
+    category: searchParams.get('productId') ? 'product' : 'general',
     title: '',
     content: '',
     isSecret: false,
     isNotified: true,
     images: [],
+    productId: searchParams.get('productId') || undefined,
+    productName: searchParams.get('productName') || undefined,
   });
 
   const categories = [
@@ -239,5 +242,13 @@ export default function QnAWritePage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function QnAWritePage() {
+  return (
+    <Suspense fallback={<div className={styles.container}>문의 작성 화면을 준비하는 중입니다.</div>}>
+      <QnAWritePageContent />
+    </Suspense>
   );
 }

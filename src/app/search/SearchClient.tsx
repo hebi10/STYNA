@@ -22,6 +22,7 @@ interface SearchState {
 }
 
 type SearchCursor = QueryDocumentSnapshot<DocumentData> | null;
+type SearchCategory = { id: string; name: string };
 
 const ITEMS_PER_PAGE = 20;
 
@@ -54,7 +55,8 @@ export default function SearchClient() {
   const [cursorByPage, setCursorByPage] = useState<Record<number, SearchCursor>>({ 1: null });
   const [cacheByPage, setCacheByPage] = useState<Record<number, Product[]>>({});
   const [hasMoreByPage, setHasMoreByPage] = useState<Record<number, boolean>>({});
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<SearchCategory[]>([]);
+  const urlQuery = searchParams?.get('q')?.trim() || '';
 
   const queryInput = useMemo((): ProductQueryInput => ({
     keyword: state.committedQuery,
@@ -146,7 +148,7 @@ export default function SearchClient() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const categories = await ProductService.getCategories();
+        const categories = await ProductService.getCategoriesWithNames();
         setAvailableCategories(categories);
       } catch {
         setAvailableCategories([]);
@@ -157,7 +159,7 @@ export default function SearchClient() {
   }, []);
 
   useEffect(() => {
-    const nextQuery = searchParams?.get('q')?.trim() || '';
+    const nextQuery = urlQuery;
 
     if (nextQuery !== state.committedQuery) {
       setState((prev) => ({
@@ -168,11 +170,13 @@ export default function SearchClient() {
       }));
       resetPaging();
     }
-  }, [searchParams, state.committedQuery, resetPaging]);
+  }, [urlQuery, state.committedQuery, resetPaging]);
 
   useEffect(() => {
     if (!state.committedQuery) {
-      setState((prev) => ({ ...prev, hasSearched: false, results: [], loading: false }));
+      if (!urlQuery) {
+        setState((prev) => ({ ...prev, hasSearched: false, results: [], loading: false }));
+      }
       return;
     }
 
@@ -211,7 +215,7 @@ export default function SearchClient() {
     return () => {
       isActive = false;
     };
-  }, [state.committedQuery, state.filters, state.sortBy, queryInput]);
+  }, [state.committedQuery, state.filters, state.sortBy, queryInput, urlQuery]);
 
   const handleSortChange = useCallback((value: string) => {
     const [field, order] = value.split('-') as [ProductSort['field'], ProductSort['order']];
@@ -283,7 +287,7 @@ export default function SearchClient() {
             <div className={styles.resultsHeader}>
               <div className={styles.resultsInfo}>
                 <h2 className={styles.resultsTitle}>{`'${state.committedQuery}' 검색 결과`}</h2>
-                <p className={styles.resultsCount}>{`총 ${state.results.length}개`}</p>
+                <p className={styles.resultsCount} role="status">{`현재 페이지 결과 ${state.results.length}개`}</p>
               </div>
 
               <div className={styles.controlsWrapper}>
@@ -312,9 +316,9 @@ export default function SearchClient() {
                   className={styles.filterSelect}
                 >
                   <option value="">전체</option>
-                  {availableCategories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
+                  {availableCategories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
                     </option>
                   ))}
                 </select>
@@ -429,8 +433,8 @@ export default function SearchClient() {
                   </button>
                 </div>
 
-                <div className={styles.resultInfo} aria-live="polite">
-                  {state.results.length > 0 ? `${start}~${end}번째` : '조회된 결과가 없습니다.'}
+                <div className={styles.resultInfo}>
+                  {state.results.length > 0 ? `현재 페이지에서 ${start}~${end}번째 결과를 표시합니다.` : '조회된 결과가 없습니다.'}
                 </div>
               </>
             )}

@@ -90,6 +90,9 @@ export default function PointPage() {
           <p className={styles.balanceDesc}>
             1포인트 = 1원으로 사용 가능합니다
           </p>
+          <p className={styles.balanceDesc}>
+            주문 시에는 보유 포인트와 쿠폰·배송비 적용 후 포인트 사용 전 결제 예정 금액 중 작은 금액까지 사용할 수 있습니다.
+          </p>
         </div>
         <div className={styles.balanceIcon}>
           <span></span>
@@ -98,6 +101,24 @@ export default function PointPage() {
 
       {/* 포인트 적립 안내 */}
       <div className={styles.earnInfo}>
+        <h3>포인트 안내</h3>
+        <div className={styles.earnMethods}>
+          <div className={styles.earnMethod}>
+            <div className={styles.methodInfo}>
+              <h4>적립 내역</h4>
+              <p>적립과 환불 내역은 서버에서 처리된 기록을 기준으로 표시됩니다.</p>
+            </div>
+          </div>
+          <div className={styles.earnMethod}>
+            <div className={styles.methodInfo}>
+              <h4>주문 시 사용</h4>
+              <p>포인트 사용 한도는 주문서의 결제 예정 금액을 기준으로 계산됩니다.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.earnInfo} hidden>
         <h3>포인트 적립 안내</h3>
         <div className={styles.earnMethods}>
           <div className={styles.earnMethod}>
@@ -181,6 +202,14 @@ export default function PointPage() {
               </div>
             </div>
             <div className={styles.pointNote}>
+              <h4>포인트 사용 안내</h4>
+              <ul>
+                <li>포인트는 1P = 1원으로 사용할 수 있습니다.</li>
+                <li>주문 시 보유 포인트와 포인트 사용 전 결제 예정 금액 중 작은 금액까지 사용할 수 있습니다.</li>
+                <li>적립·사용·환불 내역은 서버에서 처리된 기록을 기준으로 표시됩니다.</li>
+              </ul>
+            </div>
+            <div className={styles.pointNote} hidden>
               <h4>포인트 사용 안내</h4>
               <ul>
                 <li>포인트는 적립일로부터 6개월간 유효합니다</li>

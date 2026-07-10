@@ -1,7 +1,6 @@
 import { 
   collection, 
   doc, 
-  addDoc, 
   updateDoc, 
   deleteDoc, 
   getDocs, 
@@ -16,39 +15,117 @@ import {
   DocumentData,
   Timestamp 
 } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { db } from '@/shared/libs/firebase/firebase';
 import { Review, ReviewSummary } from '@/shared/types/review';
+
+export interface ReviewSubmission {
+  orderId: string;
+  size: string;
+  color: string;
+  rating: number;
+  title: string;
+  content: string;
+  images: string[];
+  height?: number;
+  weight?: number;
+  isRecommended: boolean;
+}
+
+export interface ReviewEligibilityOption {
+  orderId: string;
+  orderNumber: string;
+  productId: string;
+  size: string;
+  color: string;
+}
+
+function toReview(data: Record<string, unknown>): Review {
+  const toDate = (value: unknown) => {
+    if (value && typeof value === 'object' && 'toDate' in value) {
+      return (value as { toDate: () => Date }).toDate();
+    }
+    return new Date(String(value));
+  };
+
+  return {
+    id: String(data.id || ''),
+    productId: String(data.productId || ''),
+    userId: String(data.userId || ''),
+    userName: String(data.userName || '익명'),
+    rating: Number(data.rating || 0),
+    title: String(data.title || ''),
+    content: String(data.content || ''),
+    images: Array.isArray(data.images) ? data.images.filter((image): image is string => typeof image === 'string') : [],
+    size: String(data.size || ''),
+    color: String(data.color || ''),
+    ...(typeof data.height === 'number' ? { height: data.height } : {}),
+    ...(typeof data.weight === 'number' ? { weight: data.weight } : {}),
+    isRecommended: data.isRecommended === true,
+    ...(typeof data.orderId === 'string' ? { orderId: data.orderId } : {}),
+    ...(data.verifiedPurchase === true ? { verifiedPurchase: true } : {}),
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  };
+}
 
 export class ReviewService {
   // 리뷰 컬렉션 경로: reviews/{productId}
   // 리뷰 생성
-  static async createReview(productId: string, review: Omit<Review, 'id' | 'createdAt' | 'updatedAt'>): Promise<Review> {
+  static async createReview(productId: string, review: ReviewSubmission): Promise<Review> {
     try {
-      const reviewsCollection = collection(db, 'reviews');
-      
-      const reviewData = {
-        ...review,
-        productId,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
-      };
+      const user = getAuth().currentUser;
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
+      }
 
-      const docRef = await addDoc(reviewsCollection, reviewData);
-      
-      const createdReview: Review = {
-        id: docRef.id,
-        ...review,
-        productId,
-        createdAt: reviewData.createdAt.toDate(),
-        updatedAt: reviewData.updatedAt.toDate()
-      };
+      const token = await user.getIdToken();
+      const response = await fetch('/api/review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ...review, productId }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.success || !body.data) {
+        throw new Error(body.error || '리뷰를 등록하는데 실패했습니다.');
+      }
 
-      return createdReview;
+      return toReview(body.data as Record<string, unknown>);
 
     } catch (error) {
  console.error('리뷰 생성 실패:', error);
       throw new Error('리뷰를 생성하는데 실패했습니다.');
     }
+  }
+
+  static async getEligibleReviewOptions(productId: string): Promise<ReviewEligibilityOption[]> {
+    const user = getAuth().currentUser;
+    if (!user) {
+      throw new Error('로그인이 필요합니다.');
+    }
+
+    const token = await user.getIdToken();
+    const response = await fetch('/api/review', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ action: 'eligibleOptions', productId }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !body.success || !Array.isArray(body.data?.options)) {
+      throw new Error(body.error || '작성 가능한 구매 내역을 불러오지 못했습니다.');
+    }
+
+    return body.data.options.filter((option: unknown): option is ReviewEligibilityOption => {
+      if (!option || typeof option !== 'object') return false;
+      const value = option as Record<string, unknown>;
+      return ['orderId', 'productId', 'size', 'color'].every((key) => typeof value[key] === 'string');
+    });
   }
 
   // 상품별 리뷰 조회
@@ -88,6 +165,8 @@ export class ReviewService {
           height: data.height,
           weight: data.weight,
           isRecommended: data.isRecommended,
+          orderId: data.orderId,
+          verifiedPurchase: data.verifiedPurchase === true,
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date()
         };
@@ -228,6 +307,8 @@ export class ReviewService {
           height: data.height,
           weight: data.weight,
           isRecommended: data.isRecommended,
+          orderId: data.orderId,
+          verifiedPurchase: data.verifiedPurchase === true,
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date()
         };
@@ -284,6 +365,8 @@ export class ReviewService {
         height: data.height,
         weight: data.weight,
         isRecommended: data.isRecommended,
+        orderId: data.orderId,
+        verifiedPurchase: data.verifiedPurchase === true,
         createdAt: data.createdAt?.toDate() || new Date(),
         updatedAt: data.updatedAt?.toDate() || new Date()
       };
@@ -384,6 +467,8 @@ export class ReviewService {
           height: data.height,
           weight: data.weight,
           isRecommended: data.isRecommended,
+          orderId: data.orderId,
+          verifiedPurchase: data.verifiedPurchase === true,
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date()
         };

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from "react";
-import { ReviewService } from "@/shared/services/reviewService";
+import { ReviewService, ReviewSubmission } from "@/shared/services/reviewService";
 import { Review, ReviewSummary } from "@/shared/types/review";
 import { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
@@ -37,7 +37,7 @@ interface ReviewContextType {
   loadAllReviews: (page?: number, rating?: number, sortBy?: 'latest' | 'rating' | 'helpful') => Promise<void>;
   loadReviewSummary: (productId: string) => Promise<void>;
   loadUserReviews: (userId: string) => Promise<void>;
-  createReview: (productId: string, review: Omit<Review, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Review>;
+  createReview: (productId: string, review: ReviewSubmission) => Promise<Review>;
   updateReview: (productId: string, reviewId: string, updates: Partial<Omit<Review, 'id' | 'productId' | 'userId' | 'createdAt'>>) => Promise<Review>;
   deleteReview: (productId: string, reviewId: string) => Promise<void>;
   clearReviews: () => void;
@@ -237,7 +237,7 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // 리뷰 생성
-  const createReview = useCallback(async (productId: string, review: Omit<Review, 'id' | 'createdAt' | 'updatedAt'>): Promise<Review> => {
+  const createReview = useCallback(async (productId: string, review: ReviewSubmission): Promise<Review> => {
     try {
       setLoading(true);
       setError(null);

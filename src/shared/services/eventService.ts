@@ -16,6 +16,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { getAuth } from 'firebase/auth';
 import { db, storage } from '../libs/firebase/firebase';
 import {
+  getImageUploadMetadata,
   getOptimizedWebpStorageFileName,
   optimizeImageForUpload,
 } from '../libs/firebase/imageOptimization';
@@ -355,9 +356,7 @@ export class EventService {
       const fileName = getOptimizedWebpStorageFileName(file.name, timestamp);
       const imageRef = ref(storage, `${path}/${fileName}`);
       
-      await uploadBytes(imageRef, optimizedFile, {
-        contentType: optimizedFile.type,
-      });
+      await uploadBytes(imageRef, optimizedFile, getImageUploadMetadata(optimizedFile.type));
       const downloadURL = await getDownloadURL(imageRef);
       
       return downloadURL;

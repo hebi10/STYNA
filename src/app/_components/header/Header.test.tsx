@@ -70,4 +70,10 @@ describe('Header', () => {
     expect(markup).toContain('5만원 이상 무료배송');
     expect(markup).toContain('오늘 출고 마감 14:00');
   });
+
+  test('includes an all-products entry point in the primary navigation', () => {
+    const markup = renderToStaticMarkup(<Header />);
+
+    expect(markup).toContain('href="/products"');
+  });
 });

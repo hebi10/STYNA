@@ -47,6 +47,10 @@
         "function": "event"
       },
       {
+        "source": "/api/review",
+        "function": "review"
+      },
+      {
         "source": "**",
         "function": "nextjsServer"
       }

@@ -88,6 +88,7 @@ export default function Header() {
   const safeCartItemCount = isMounted ? cartItemCount : 0;
   const featuredCategories = categories.slice(0, 1);
   const primaryNavItems: HeaderNavItem[] = [
+    { label: "전체 상품", href: "/products" },
     { label: "신상", href: "/recommend?filter=new" },
     { label: "베스트", href: "/recommend?filter=review" },
     ...featuredCategories.map((category) => ({
@@ -96,7 +97,7 @@ export default function Header() {
     })),
     { label: "세일", href: "/main/sale" },
     { label: "브랜드", href: "/brand" },
-  ].slice(0, 5);
+  ].slice(0, 6);
   const secondaryNavItems: HeaderNavItem[] = [
     { label: "추천", href: "/recommend" },
     ...SUPPORT_LINKS.filter((item) => item.label !== "고객센터"),

@@ -3,6 +3,7 @@ import ProductDetailClient from './ProductDetailClient';
 import { Product } from '@/shared/types/product';
 import { useUserActivity } from '@/context/userActivityProvider';
 import { getProductReviewStats } from '@/shared/utils/syncProductReviews';
+import { QnAService } from '@/shared/services/qnaService';
 
 const push = jest.fn();
 const addRecentProduct = jest.fn();
@@ -39,6 +40,12 @@ jest.mock('@/shared/hooks/useCart', () => ({
 
 jest.mock('@/shared/utils/syncProductReviews', () => ({
   getProductReviewStats: jest.fn(() => new Promise(() => undefined)),
+}));
+
+jest.mock('@/shared/services/qnaService', () => ({
+  QnAService: {
+    getQnAList: jest.fn(),
+  },
 }));
 
 jest.mock('@/app/_components/Button', () => function MockButton({
@@ -183,5 +190,80 @@ describe('ProductDetailClient detail images', () => {
 
     expect(screen.getByText('4.5 (13개 리뷰)')).toBeInTheDocument();
     expect(getProductReviewStats).not.toHaveBeenCalled();
+  });
+});
+
+describe('ProductDetailClient product Q&A', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockWishlistItems = [];
+    (useUserActivity as jest.Mock).mockReturnValue({
+      wishlistItems: mockWishlistItems,
+      addRecentProduct,
+      addToWishlist,
+      removeFromWishlist,
+      isInWishlist: jest.fn().mockResolvedValue(false),
+    });
+    jest.mocked(QnAService.getQnAList).mockResolvedValue({
+      qnas: [{
+        id: 'qna-1',
+        title: '사이즈 문의',
+        content: '13호 착용감이 궁금합니다.',
+        category: 'product',
+        isSecret: false,
+        status: 'answered',
+        userId: 'writer-1',
+        userEmail: 'writer@example.com',
+        userName: '작성자',
+        views: 0,
+        isNotified: false,
+        createdAt: new Date('2026-05-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-05-01T00:00:00.000Z'),
+        answer: {
+          content: '상세 사이즈 표를 참고해 주세요.',
+          answeredBy: '관리자',
+          answeredAt: new Date('2026-05-02T00:00:00.000Z'),
+          isAdmin: true,
+        },
+      }],
+      pagination: { page: 1, limit: 5, totalCount: 1, totalPages: 1 },
+    });
+  });
+
+  test('shows public Q&A for the product and opens a prefilled inquiry form', async () => {
+    render(<ProductDetailClient product={product} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Q&A' }));
+
+    expect(await screen.findByText('사이즈 문의')).toBeInTheDocument();
+    expect(screen.getByText('상세 사이즈 표를 참고해 주세요.')).toBeInTheDocument();
+    expect(QnAService.getQnAList).toHaveBeenCalledWith({ productId: 'product-1', isSecret: false }, 1, 5);
+
+    fireEvent.click(screen.getByRole('button', { name: '문의하기' }));
+    expect(push).toHaveBeenCalledWith(
+      `/qna/write?productId=${product.id}&productName=${encodeURIComponent(product.name)}`
+    );
+  });
+});
+
+describe('ProductDetailClient policy summary', () => {
+  beforeEach(() => {
+    mockWishlistItems = [];
+    (useUserActivity as jest.Mock).mockReturnValue({
+      wishlistItems: mockWishlistItems,
+      addRecentProduct,
+      addToWishlist,
+      removeFromWishlist,
+      isInWishlist: jest.fn().mockResolvedValue(false),
+    });
+  });
+
+  test('does not promise unconditional free shipping or returns', () => {
+    render(<ProductDetailClient product={product} />);
+
+    expect(screen.getByText('배송비는 주문서에서 조건에 따라 계산됩니다.')).toBeInTheDocument();
+    expect(screen.getByText('수령 후 7일 이내, 상품 상태에 따라 반품 신청 가능')).toBeInTheDocument();
+    expect(screen.queryByText('무료배송')).not.toBeInTheDocument();
+    expect(screen.queryByText('무료반품 (7일)')).not.toBeInTheDocument();
   });
 });

@@ -82,7 +82,6 @@ function getOperatingMetadata(
   type: ProductSectionProps['type'],
 ) {
   const reviewCount = product.reviewCount ?? 0;
-  const inStock = (product.stock ?? 0) > 0;
   const operationLabel =
     type === 'recommended' || index === 0
       ? 'MD추천'
@@ -91,7 +90,7 @@ function getOperatingMetadata(
         : product.isSale
           ? 'SALE'
           : undefined;
-  const shippingLabel = inStock ? '오늘출발' : undefined;
+  const shippingLabel = undefined;
   const reviewLabel = reviewCount >= 100 ? '리뷰 100+' : undefined;
   const mdComment = product.isSale
     ? '이번 주만 적용되는 시즌 특가로 준비했습니다.'

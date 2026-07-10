@@ -17,9 +17,9 @@ src/shared/
 
 ## 데이터 레이어
 
-- `DashboardService`: 통계 데이터 조회 및 가공. 상품·주문은 Mock 기반, 사용자·쿠폰·이벤트는 Firebase 연결
-- `useDashboardQuery`: React Query 기반. 5분 간격 자동 갱신
-- Firebase 연결 실패 시 빈 배열 반환
+- `DashboardService`: users, products, orders, coupons, events, QnA, 1:1 문의를 각각 조회한 뒤 통계를 가공한다.
+- 조회는 `Promise.allSettled`로 분리되어 일부 컬렉션이 실패해도 나머지 지표를 표시한다.
+- `useDashboardQuery`: 통계는 5분 간격, 사용자 수 보조 조회는 1분 간격으로 갱신한다.
 
 ## 차트
 
@@ -30,32 +30,20 @@ src/shared/
 ## 통계 카드
 
 - 사용자, 상품, 쿠폰, 이벤트, 주문, 매출 카드
-- 월별 증감률 표시
-- `dataAvailability` 필드로 각 데이터 소스 가용 여부 추적 → 데이터 없는 카드 숨김 처리
+- 최근 7일과 직전 7일을 비교한 증감률 표시
+- `dataAvailability` 필드로 각 데이터 소스 가용 여부를 추적하고, 데이터가 없는 카드는 숨긴다.
 
 ## 표시 로직
 
-- 상품/주문 통계: Mock 데이터 기반으로 항상 표시
-- 사용자/쿠폰/이벤트 통계: Firebase 데이터가 있을 때만 표시
-- 차트: 해당 데이터가 존재하는 경우에만 렌더링
+- 모든 지표는 Firestore 조회 결과를 사용한다. 데이터가 없거나 접근하지 못한 지표는 임의 수치로 대체하지 않는다.
+- 매출은 취소·반품·교환 주문을 제외한 주문 합계이며, 카테고리 차트는 판매량이 없으면 등록 상품 수를 표시한다.
+- 차트는 해당 데이터가 존재하는 경우에만 렌더링한다.
 
 ## 에러 처리
 
 - `ErrorBoundary` 컴포넌트로 렌더링 오류 격리
 - 네트워크 오류 시 재시도
 - 기본값 fallback 처리
-
-## 2026-05-11 점검
-
-- `src/app/admin/dashboard/dashboard/page.tsx`의 깨진 한글/JSX를 정상 UTF-8 기준으로 복구.
-- 관리자 접근 제어는 `src/app/admin/layout.tsx`의 `AuthChecking`에 맡기고, 대시보드 내부의 중복 `user.role` 확인은 제거된 상태를 유지.
-- `src/app/admin/dashboard/page.tsx`는 `useEffect`, `useRouter`, `useAuth`를 사용하는 redirect 페이지라 `"use client"` 지시문을 유지해야 한다.
-
-## 2026-05-12 디자인 톤 정리
-
-- 대시보드 데이터 레이어와 표시 로직은 변경하지 않고 CSS만 보정했다.
-- `src/app/admin/dashboard/dashboard/page.module.css`의 그라데이션 배경, 글래스 카드, 컬러별 통계 카드, 그라데이션 빠른 액션을 중립 운영툴 톤으로 낮췄다.
-- 관리자 공통 레이아웃에서 하위 페이지의 버튼/입력/카드/모달까지 검정 CTA와 2px radius 기준으로 덮도록 했다.
 
 ## 2026-05-12 운영 지표 정리
 
@@ -75,8 +63,7 @@ src/shared/
 - `DashboardService`가 호환용 `UserService` 래퍼 대신 `AdminUserService.getAllUsersSimple()`을 직접 호출하도록 정리했다.
 - 참조되지 않던 옛 `useDashboard` 훅은 제거하고 React Query 기반 `useDashboardQuery`만 유지한다.
 
-## 2026-06-29 구형 대시보드 삭제 정리
+## 현재 한계
 
-- mock 통계/주문/활동을 보여 주던 `/admin/dashboard/dashboard` 구형 대시보드를 삭제했다.
-- `/admin/dashboard`는 실제 데이터 대시보드인 `/admin`으로 바로 redirect한다.
-- 관리자 사용자/주문 페이지 내부의 중복 헤더/Nav/logout 렌더는 상위 `admin/layout`에 맡기도록 제거했다.
+- 대시보드는 운영 분석 도구가 아닌 포트폴리오 데모이며, 실제 매출·비용·SLA를 보장하지 않는다.
+- 화면의 일일 비용 추정과 일부 운영 상태 문구는 계산 근거가 연결되지 않은 안내용 표현이므로 실제 운영 의사결정에 사용하면 안 된다.

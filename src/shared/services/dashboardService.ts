@@ -21,6 +21,7 @@ export interface DashboardStats {
   totalInquiries: number;
   totalOrders: number;
   totalRevenue: number;
+  excludedRevenueOrderCount: number;
   qnaStats: {
     waiting: number;
     answered: number;
@@ -118,7 +119,8 @@ export class DashboardService {
       closed: inquiries.filter((inquiry) => inquiry.status === 'closed').length,
     };
 
-    const categoryBreakdown = DashboardService.getCategoryBreakdown(products, orders);
+    const revenueOrders = DashboardService.getRevenueOrders(orders);
+    const categoryBreakdown = DashboardService.getCategoryBreakdown(products, revenueOrders);
 
     return {
       totalUsers: users.length,
@@ -128,7 +130,8 @@ export class DashboardService {
       totalQnAs: qnas.length,
       totalInquiries: inquiries.length,
       totalOrders: orders.length,
-      totalRevenue: orders.reduce((sum, order) => sum + order.finalAmount, 0),
+      totalRevenue: revenueOrders.reduce((sum, order) => sum + order.finalAmount, 0),
+      excludedRevenueOrderCount: orders.length - revenueOrders.length,
       qnaStats,
       inquiryStats,
       monthlyGrowth: {
@@ -140,7 +143,7 @@ export class DashboardService {
         inquiries: DashboardService.calculateGrowthForCount(inquiries, (inquiry) => inquiry.createdAt),
         orders: DashboardService.calculateGrowthForCount(orders, (order) => order.createdAt),
         revenue: DashboardService.calculateGrowthForValue(
-          orders,
+          revenueOrders,
           (order) => order.createdAt,
           (order) => order.finalAmount
         ),
@@ -150,9 +153,9 @@ export class DashboardService {
         .filter((product) => product.stock > 0 && product.stock <= 5)
         .sort((left, right) => left.stock - right.stock)
         .slice(0, 5),
-      topSellingProducts: DashboardService.getTopSellingProducts(products, orders),
+      topSellingProducts: DashboardService.getTopSellingProducts(products, revenueOrders),
       orderStatusStats: DashboardService.getOrderStatusStats(orders),
-      revenueByMonth: DashboardService.getRevenueByMonth(orders),
+      revenueByMonth: DashboardService.getRevenueByMonth(revenueOrders),
       categoryBreakdown: categoryBreakdown.data,
       categoryBreakdownType: categoryBreakdown.type,
       dataAvailability,
@@ -283,6 +286,14 @@ export class DashboardService {
     };
 
     return statusMap[status] || status;
+  }
+
+  private static getRevenueOrders(orders: Order[]): Order[] {
+    const excludedStatuses = new Set(['cancelled', 'returned', 'exchanged']);
+
+    return orders.filter((order) => !excludedStatuses.has(
+      DashboardService.normalizeOrderStatus(order.status)
+    ));
   }
 
   private static getOrderStatusStats(orders: Order[]): Record<string, number> {

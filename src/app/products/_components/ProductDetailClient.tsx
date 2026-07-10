@@ -13,6 +13,8 @@ import { getProductPricing } from '@/shared/utils/productPricing';
 import Button from '@/app/_components/Button';
 import ProductCard from './ProductCard';
 import ProductReviews from './ProductReviews';
+import { QnAService } from '@/shared/services/qnaService';
+import { QnA } from '@/shared/types/qna';
 import styles from './ProductDetail.module.css';
 
 interface Props {
@@ -75,6 +77,9 @@ export default function ProductDetailClient({ product }: Props) {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isWishlistLoading, setIsWishlistLoading] = useState(false);
   const [optimisticWishlisted, setOptimisticWishlisted] = useState<boolean | null>(null);
+  const [productQnAs, setProductQnAs] = useState<QnA[]>([]);
+  const [isProductQnAsLoading, setIsProductQnAsLoading] = useState(false);
+  const [productQnAsError, setProductQnAsError] = useState<string | null>(null);
 
   // 찜 상태 확인
   const storedWishlisted = user?.uid
@@ -85,6 +90,46 @@ export default function ProductDetailClient({ product }: Props) {
   useEffect(() => {
     setOptimisticWishlisted(null);
   }, [product.id, user?.uid, storedWishlisted]);
+
+  useEffect(() => {
+    if (activeTab !== 'qna') {
+      return;
+    }
+
+    let isActive = true;
+
+    const loadProductQnAs = async () => {
+      setIsProductQnAsLoading(true);
+      setProductQnAsError(null);
+
+      try {
+        const result = await QnAService.getQnAList(
+          { productId: product.id, isSecret: false },
+          1,
+          5
+        );
+
+        if (isActive) {
+          setProductQnAs(result.qnas);
+        }
+      } catch (error) {
+        console.error('상품 Q&A 조회 실패:', error);
+        if (isActive) {
+          setProductQnAsError('상품 문의를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+        }
+      } finally {
+        if (isActive) {
+          setIsProductQnAsLoading(false);
+        }
+      }
+    };
+
+    void loadProductQnAs();
+
+    return () => {
+      isActive = false;
+    };
+  }, [activeTab, product.id]);
 
   // 컴포넌트 마운트 시 상품 정보와 연관 상품 로드
   useEffect(() => {
@@ -450,11 +495,11 @@ export default function ProductDetailClient({ product }: Props) {
           <div className={styles.summary}>
             <div className={styles.summaryItem}>
               <span className={styles.summaryLabel}>배송</span>
-              <span className={styles.summaryValue}>무료배송</span>
+              <span className={styles.summaryValue}>배송비는 주문서에서 조건에 따라 계산됩니다.</span>
             </div>
             <div className={styles.summaryItem}>
               <span className={styles.summaryLabel}>반품</span>
-              <span className={styles.summaryValue}>무료반품 (7일)</span>
+              <span className={styles.summaryValue}>수령 후 7일 이내, 상품 상태에 따라 반품 신청 가능</span>
             </div>
             <div className={styles.summaryItem}>
               <span className={styles.summaryLabel}>재고</span>
@@ -611,8 +656,32 @@ export default function ProductDetailClient({ product }: Props) {
           {activeTab === 'qna' && (
             <div className={styles.qnaContent}>
               <h3>상품 Q&A</h3>
-              <p>아직 등록된 문의가 없습니다.</p>
-              <Button variant="primary">문의하기</Button>
+              <p>공개 문의와 답변을 확인할 수 있습니다. 비밀글은 작성자와 관리자만 볼 수 있습니다.</p>
+              {isProductQnAsLoading ? (
+                <p role="status">상품 문의를 불러오는 중입니다.</p>
+              ) : productQnAsError ? (
+                <p role="alert">{productQnAsError}</p>
+              ) : productQnAs.length === 0 ? (
+                <p>등록된 공개 상품 문의가 없습니다.</p>
+              ) : (
+                <ul className={styles.qnaList}>
+                  {productQnAs.map((qna) => (
+                    <li key={qna.id} className={styles.qnaItem}>
+                      <strong>{qna.title}</strong>
+                      <span>{qna.status === 'answered' ? '답변 완료' : '답변 대기'}</span>
+                      {qna.answer && <p>{qna.answer.content}</p>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <Button
+                variant="primary"
+                onClick={() => router.push(
+                  `/qna/write?productId=${encodeURIComponent(product.id)}&productName=${encodeURIComponent(product.name)}`
+                )}
+              >
+                문의하기
+              </Button>
             </div>
           )}
         </div>

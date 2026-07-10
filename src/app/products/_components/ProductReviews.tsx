@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useReview } from '@/context/reviewProvider';
 import { useAuth } from '@/context/authProvider';
+import { ReviewEligibilityOption, ReviewService } from '@/shared/services/reviewService';
 import { formatDate } from '@/shared/utils/dateFormat';
 import styles from './ProductReviews.module.css';
 
@@ -27,12 +28,13 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
   const { user } = useAuth();
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [eligibleOptions, setEligibleOptions] = useState<ReviewEligibilityOption[]>([]);
+  const [selectedOptionKey, setSelectedOptionKey] = useState('');
+  const [isLoadingEligibleOptions, setIsLoadingEligibleOptions] = useState(false);
   const [reviewForm, setReviewForm] = useState({
     rating: 5,
     title: '',
     content: '',
-    size: '',
-    color: '',
     isRecommended: true
   });
 
@@ -40,6 +42,40 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
     loadProductReviews(productId);
     loadReviewSummary(productId);
   }, [productId, loadProductReviews, loadReviewSummary]);
+
+  const getOptionKey = (option: ReviewEligibilityOption) => (
+    JSON.stringify([option.orderId, option.productId, option.size, option.color])
+  );
+
+  const handleOpenReviewForm = async () => {
+    if (showReviewForm) {
+      setShowReviewForm(false);
+      setSubmitError(null);
+      return;
+    }
+
+    try {
+      setIsLoadingEligibleOptions(true);
+      setSubmitError(null);
+      const options = await ReviewService.getEligibleReviewOptions(productId);
+      setEligibleOptions(options);
+      setSelectedOptionKey('');
+
+      if (options.length === 0) {
+        setShowReviewForm(false);
+        setSubmitError('배송 완료 또는 구매 확정된 주문 상품에서만 리뷰를 작성할 수 있습니다.');
+        return;
+      }
+
+      setShowReviewForm(true);
+    } catch (error) {
+      console.error('작성 가능한 주문 옵션 조회 실패:', error);
+      setShowReviewForm(false);
+      setSubmitError(error instanceof Error ? error.message : '작성 가능한 구매 내역을 불러오지 못했습니다.');
+    } finally {
+      setIsLoadingEligibleOptions(false);
+    }
+  };
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,13 +85,19 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
       return;
     }
 
+    const selectedOption = eligibleOptions.find((option) => getOptionKey(option) === selectedOptionKey);
+    if (!selectedOption) {
+      setSubmitError('리뷰를 작성할 주문 상품 옵션을 선택해주세요.');
+      return;
+    }
+
     try {
       setSubmitError(null);
       await createReview(productId, {
         ...reviewForm,
-        productId,
-        userId: user.uid,
-        userName: user.displayName || '익명',
+        orderId: selectedOption.orderId,
+        size: selectedOption.size,
+        color: selectedOption.color,
         images: [] // 이미지 업로드 기능은 추후 구현
       });
       
@@ -64,8 +106,6 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
         rating: 5,
         title: '',
         content: '',
-        size: '',
-        color: '',
         isRecommended: true
       });
       
@@ -102,16 +142,17 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
         {user && (
           <button 
             className={styles.writeButton}
-            onClick={() => {
-              setShowReviewForm(!showReviewForm);
-              setSubmitError(null);
-            }}
+            onClick={() => void handleOpenReviewForm()}
             aria-expanded={showReviewForm}
+            disabled={isLoadingEligibleOptions}
           >
-            리뷰 작성
+            {isLoadingEligibleOptions ? '구매 내역 확인 중...' : '리뷰 작성'}
           </button>
         )}
       </div>
+      {!showReviewForm && submitError && (
+        <p className={styles.submitError} role="alert">{submitError}</p>
+      )}
 
       {/* 리뷰 요약 */}
       {reviewSummary && (
@@ -156,6 +197,23 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
             </p>
           )}
           <div className={styles.formGroup}>
+            <label htmlFor="review-order-option">구매 상품 옵션</label>
+            <select
+              id="review-order-option"
+              value={selectedOptionKey}
+              onChange={(e) => setSelectedOptionKey(e.target.value)}
+              required
+            >
+              <option value="">배송 완료 주문 상품을 선택하세요</option>
+              {eligibleOptions.map((option) => (
+                <option key={getOptionKey(option)} value={getOptionKey(option)}>
+                  {(option.orderNumber || option.orderId)} / {option.color || '색상 없음'} / {option.size || '사이즈 없음'}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={styles.formGroup}>
             <label htmlFor="review-rating">평점</label>
             <select 
               id="review-rating"
@@ -192,30 +250,6 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
               rows={5}
               required
             />
-          </div>
-
-          <div className={styles.formRow}>
-            <div className={styles.formGroup}>
-              <label htmlFor="review-size">사이즈</label>
-              <input
-                id="review-size"
-                type="text"
-                value={reviewForm.size}
-                onChange={(e) => setReviewForm(prev => ({ ...prev, size: e.target.value }))}
-                placeholder="예: M, L, 250"
-              />
-            </div>
-
-            <div className={styles.formGroup}>
-              <label htmlFor="review-color">색상</label>
-              <input
-                id="review-color"
-                type="text"
-                value={reviewForm.color}
-                onChange={(e) => setReviewForm(prev => ({ ...prev, color: e.target.value }))}
-                placeholder="예: 블랙, 화이트"
-              />
-            </div>
           </div>
 
           <div className={styles.formGroup}>
@@ -257,6 +291,9 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
                     <span className={styles.rating}>{renderStars(review.rating)}</span>
                     {review.isRecommended && (
                       <span className={styles.recommended}>추천</span>
+                    )}
+                    {review.verifiedPurchase && (
+                      <span className={styles.verifiedPurchase}>구매 인증</span>
                     )}
                   </div>
                   <div className={styles.reviewMeta}>

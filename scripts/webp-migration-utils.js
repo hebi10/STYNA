@@ -3,6 +3,10 @@ const path = require("path");
 const crypto = require("crypto");
 const sharp = require("sharp");
 
+function getWebpCacheControl() {
+  return "public, max-age=31536000, immutable";
+}
+
 function parseFirebaseStorageUrl(imageUrl) {
   try {
     const url = new URL(imageUrl);
@@ -69,7 +73,7 @@ async function convertStorageImageToWebp(admin, imageUrl, options, config = {}) 
     resumable: false,
     metadata: {
       contentType: "image/webp",
-      cacheControl: sourceMetadata.cacheControl || "public, max-age=31536000",
+      cacheControl: getWebpCacheControl(),
       metadata: {
         firebaseStorageDownloadTokens: token,
         migratedFrom: parsed.path,
@@ -108,6 +112,7 @@ async function writeMigrationLog(logDir, payload, prefix) {
 module.exports = {
   buildWebpStoragePath,
   convertStorageImageToWebp,
+  getWebpCacheControl,
   parseFirebaseStorageUrl,
   writeMigrationLog,
 };

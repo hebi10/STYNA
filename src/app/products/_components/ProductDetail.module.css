@@ -524,6 +524,30 @@
   margin-bottom: var(--spacing-lg);
 }
 
+.qnaList {
+  list-style: none;
+  margin: 0 0 var(--spacing-lg);
+  padding: 0;
+  text-align: left;
+  border-top: 1px solid var(--line);
+}
+
+.qnaItem {
+  display: grid;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-md) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.qnaItem span {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.qnaItem p {
+  margin: 0;
+}
+
 /* 반응형 */
 @media (max-width: 768px) {
   .container {

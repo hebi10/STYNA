@@ -308,7 +308,9 @@ export default function CheckoutPage() {
               <div className={styles.pointSection}>
                 <div className={styles.pointInfo}>
                   <span>가용 포인트: {pointBalance.toLocaleString()}원</span>
-                  <span className={styles.pointNote}>이번 주문에는 최대 {maxUsablePoints.toLocaleString()}원까지 사용할 수 있습니다.</span>
+                  <span className={styles.pointNote}>
+                    보유 포인트와 쿠폰·배송비 적용 후 포인트 사용 전 결제 예정 금액 중 작은 금액까지 사용할 수 있습니다. (최대 {maxUsablePoints.toLocaleString()}원)
+                  </span>
                 </div>
                 <div className={styles.pointInput}>
                   <input

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import styles from './Footer.module.css';
+import { SITE_INFO } from '@/shared/constants/siteInfo';
 
 export default function Footer() {
   return (
@@ -60,20 +61,15 @@ export default function Footer() {
           <div className={styles.section}>
             <h3>소셜</h3>
             <div className={styles.linkList}>
-              <a href="#" className={styles.link}>
-                Instagram
-              </a>
-              <a href="#" className={styles.link}>
-                YouTube
-              </a>
+              <span className={styles.link}>소셜 채널은 포트폴리오 데모에서 제공하지 않습니다.</span>
             </div>
           </div>
         </div>
 
         <div className={styles.copyright}>
-          <p>UI 및 브랜딩 포트폴리오용 쇼핑몰 데모입니다.</p>
-          <p>sevim0104@naver.com</p>
-          <strong>© 2025 STYNA. All rights reserved.</strong>
+          <p>{SITE_INFO.demoNotice}</p>
+          <p>{SITE_INFO.supportEmail} · {SITE_INFO.supportPhone} · {SITE_INFO.supportHours}</p>
+          <strong>© {new Date().getFullYear()} {SITE_INFO.brandName}. All rights reserved.</strong>
         </div>
       </div>
     </footer>

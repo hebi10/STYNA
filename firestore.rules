@@ -122,35 +122,6 @@ service cloud.firestore {
         (!changed.hasAny(['status']) || request.resource.data.status == 'closed');
     }
 
-    function reviewAllowedKeys() {
-      return [
-        'productId',
-        'userId',
-        'userName',
-        'rating',
-        'title',
-        'content',
-        'images',
-        'size',
-        'color',
-        'height',
-        'weight',
-        'isRecommended',
-        'createdAt',
-        'updatedAt'
-      ];
-    }
-
-    function isValidReviewCreate() {
-      return isSignedIn() &&
-        request.resource.data.userId == request.auth.uid &&
-        request.resource.data.keys().hasOnly(reviewAllowedKeys()) &&
-        request.resource.data.productId is string &&
-        request.resource.data.rating is number &&
-        request.resource.data.rating >= 1 &&
-        request.resource.data.rating <= 5;
-    }
-
     function isValidReviewOwnerUpdate() {
       return isOwner(resource.data.userId) &&
         request.resource.data.userId == resource.data.userId &&
@@ -274,7 +245,7 @@ service cloud.firestore {
 
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isValidReviewCreate() || isAdmin();
+      allow create: if false;
       allow update: if isAdmin() || isValidReviewOwnerUpdate();
       allow delete: if isOwner(resource.data.userId) || isAdmin();
     }
