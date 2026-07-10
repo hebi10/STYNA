@@ -44,8 +44,8 @@ export default function CheckoutPage() {
   const [checkoutRecoveryReason, setCheckoutRecoveryReason] = useState<string | null>(null);
 
   const addresses = useMemo(
-    () => buildCheckoutDeliveryAddresses(userData, user?.displayName),
-    [userData, user?.displayName]
+    () => buildCheckoutDeliveryAddresses(userData),
+    [userData]
   );
 
   useEffect(() => {
@@ -195,8 +195,34 @@ export default function CheckoutPage() {
     );
   }
 
-  if (!orderData || !selectedAddress) {
+  if (!orderData) {
     return <div>주문 정보 확인 중...</div>;
+  }
+
+  if (addresses.length === 0 || !selectedAddress) {
+    return (
+      <div className={styles.container}>
+        <PageHeader
+          title="배송지 등록 필요"
+          description="주문을 진행하려면 실제 배송지를 먼저 등록해주세요"
+          breadcrumb={[
+            { label: "홈", href: "/" },
+            { label: "주문/결제" },
+          ]}
+        />
+        <div className={styles.content}>
+          <div className={styles.recoveryPanel} role="status" aria-live="polite">
+            <h2 className={styles.recoveryTitle}>등록된 배송지가 없습니다</h2>
+            <p className={styles.recoveryDescription}>
+              임시 주소로 주문하지 않습니다. 마이페이지에서 배송지를 등록한 뒤 다시 진행해주세요.
+            </p>
+            <Link href="/mypage/info-edit" className={styles.recoveryButton}>
+              배송지 등록하기
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -258,6 +284,9 @@ export default function CheckoutPage() {
 
             <section className={styles.section}>
               <h3 className={styles.sectionTitle}>결제 방식</h3>
+              <p className={styles.paymentNotice}>
+                포트폴리오 데모에서는 실제 결제가 진행되지 않으며 주문 접수만 기록됩니다.
+              </p>
               <div className={styles.paymentMethods}>
                 {paymentMethods.map((method) => (
                   <label key={method.value} className={styles.paymentMethod}>
@@ -343,7 +372,7 @@ export default function CheckoutPage() {
                 onClick={handleCompleteOrder}
                 disabled={!agreeTerms || isProcessing}
               >
-                {isProcessing ? "주문 처리 중..." : `${finalAmount.toLocaleString()}원 주문하기`}
+                {isProcessing ? "주문 처리 중..." : `${finalAmount.toLocaleString()}원 데모 주문 접수하기`}
               </button>
 
               <Link href="/orders/cart" className={styles.backButton}>

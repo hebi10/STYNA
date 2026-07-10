@@ -3,25 +3,15 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import type { Response } from "express";
 import {
   couponHasExpired,
-  isCouponIssuableByAction,
   isAvailableUserCouponStatus,
   normalizeCouponCode,
 } from "../domain/couponDomain";
+import { CouponIssuanceError, issueUserCouponInTransaction } from "../domain/couponIssuance";
 import { verifyAuth, requireAdmin, AuthError } from "../utils/auth";
 import { applyNoStoreHeaders } from "../utils/http";
 
 function getDb() {
   return getFirestore();
-}
-
-class CouponRequestError extends Error {
-  constructor(
-    public statusCode: number,
-    message: string
-  ) {
-    super(message);
-    this.name = "CouponRequestError";
-  }
 }
 
 export const coupon = onRequest(
@@ -54,8 +44,9 @@ export const coupon = onRequest(
           return;
         }
         case "issue": {
-          const userId = await verifyAuth(req.headers.authorization);
-          await handleIssue(userId, payload, res);
+          const adminContext = await requireAdmin(req.headers.authorization);
+          const targetUid = ensureString(payload.targetUid) || adminContext.uid;
+          await handleIssue(targetUid, payload, res);
           return;
         }
         case "use": {
@@ -261,7 +252,7 @@ async function handleRegister(
     const result = await db.runTransaction(async (transaction) => {
       const couponSnapshot = await transaction.get(couponQuery);
       if (couponSnapshot.empty) {
-        throw new CouponRequestError(404, "Coupon code was not found.");
+        throw new CouponIssuanceError(404, "Coupon code was not found.");
       }
 
       const couponDoc = couponSnapshot.docs[0];
@@ -269,11 +260,11 @@ async function handleRegister(
       const couponId = couponDoc.id;
 
       if (couponData.usageLimit && couponData.usedCount >= couponData.usageLimit) {
-        throw new CouponRequestError(409, "Coupon usage limit has been reached.");
+        throw new CouponIssuanceError(409, "Coupon usage limit has been reached.");
       }
 
       if (couponHasExpired(couponData.expiryDate)) {
-        throw new CouponRequestError(410, "Coupon has expired.");
+        throw new CouponIssuanceError(410, "Coupon has expired.");
       }
 
       const existingQuery = db
@@ -282,7 +273,7 @@ async function handleRegister(
         .where("couponId", "==", couponId);
       const existing = await transaction.get(existingQuery);
       if (!existing.empty) {
-        throw new CouponRequestError(409, "Coupon already registered for this user.");
+        throw new CouponIssuanceError(409, "Coupon already registered for this user.");
       }
 
       const today = new Date().toISOString().split("T")[0];
@@ -315,7 +306,7 @@ async function handleRegister(
       },
     });
   } catch (error) {
-    if (error instanceof CouponRequestError) {
+    if (error instanceof CouponIssuanceError) {
       res.status(error.statusCode).json({ success: false, error: error.message });
       return;
     }
@@ -338,62 +329,9 @@ async function handleIssue(
 
   const db = getDb();
   try {
-    const result = await db.runTransaction(async (transaction) => {
-      const couponRef = db.collection("coupons").doc(couponId);
-      const couponDoc = await transaction.get(couponRef);
-
-      if (!couponDoc.exists) {
-        throw new CouponRequestError(404, "Coupon does not exist.");
-      }
-
-      const couponData = couponDoc.data();
-      const issuePolicy = isCouponIssuableByAction(couponData);
-      if (!issuePolicy.ok) {
-        const statusByReason: Record<typeof issuePolicy.reason, number> = {
-          inactive: 403,
-          code_coupon_requires_register: 403,
-          expired: 410,
-          usage_limit_reached: 409,
-        };
-        const messageByReason: Record<typeof issuePolicy.reason, string> = {
-          inactive: "Coupon is inactive.",
-          code_coupon_requires_register: "Code coupons must be registered with couponCode.",
-          expired: "Coupon has expired.",
-          usage_limit_reached: "Coupon usage limit has been reached.",
-        };
-
-        throw new CouponRequestError(statusByReason[issuePolicy.reason], messageByReason[issuePolicy.reason]);
-      }
-
-      const existingQuery = db
-        .collection("user_coupons")
-        .where("uid", "==", userId)
-        .where("couponId", "==", couponId);
-      const existing = await transaction.get(existingQuery);
-      if (!existing.empty) {
-        throw new CouponRequestError(409, "Coupon already issued for this user.");
-      }
-
-      const today = new Date().toISOString().split("T")[0];
-      const userCouponRef = db.collection("user_coupons").doc();
-      transaction.set(userCouponRef, {
-        uid: userId,
-        couponId,
-        status: "사용가능",
-        issuedDate: today,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-      transaction.update(couponRef, {
-        usedCount: FieldValue.increment(1),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-
-      return {
-        userCouponId: userCouponRef.id,
-        couponName: couponData?.name,
-      };
-    });
+    const result = await db.runTransaction((transaction) =>
+      issueUserCouponInTransaction(transaction, db, { userId, couponId })
+    );
 
     res.status(200).json({
       success: true,
@@ -403,7 +341,7 @@ async function handleIssue(
       },
     });
   } catch (error) {
-    if (error instanceof CouponRequestError) {
+    if (error instanceof CouponIssuanceError) {
       res.status(error.statusCode).json({ success: false, error: error.message });
       return;
     }

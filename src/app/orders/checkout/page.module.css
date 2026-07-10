@@ -267,6 +267,13 @@
 }
 
 /* 결제 수단 */
+.paymentNotice {
+  margin: -0.25rem 0 0.875rem;
+  color: var(--text-subtle);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
 .paymentMethods {
   display: flex;
   flex-wrap: wrap;

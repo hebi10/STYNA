@@ -49,3 +49,11 @@
 - 일반 계정으로 `/admin` 접속 시 Unauthorized UI 분기와 비로그인 이동 UX는 통합 점검 필요.
 - Firestore Emulator 또는 배포 환경에서 실제 규칙 self-update 차단 테스트 수행 필요.
 - `categoryOrder`, `brandSummaries`, Storage 관리자 claim 반영을 위해 `firebase deploy --only firestore:rules,storage` 실행 필요.
+
+## 2026-07-10 서버 권한 경계 보강
+- 일반 사용자의 쿠폰 `issue` 액션을 차단하고, 직접 발급은 관리자·이벤트 보상 transaction만 사용한다.
+- 이벤트 참여는 `/api/event/participate` Function이 결정적 참여 문서 ID와 단일 transaction으로 처리한다. 일반 사용자의 `eventParticipants`, `events`, `user_coupons` 직접 쓰기는 규칙에서 거부한다.
+- 비밀 QnA는 비밀번호 공유 검증을 폐기하고 작성자 또는 custom claim 관리자만 읽을 수 있게 변경했다. 작성자는 본문 편집 필드만 바꿀 수 있으며 답변·조회수·작성자·생성일은 변경할 수 없다.
+- Functions 공통 인증은 유효한 Firebase ID 토큰뿐 아니라 `users/{uid}.status`도 확인한다. `inactive`·`banned` 계정은 403으로 거부한다.
+- 리뷰 작성자는 자신의 리뷰 본문·평점·이미지 등 편집 필드만 수정할 수 있다. `productId`, `userId`, `createdAt` 변경과 임의 필드 추가는 Firestore 규칙에서 차단한다.
+- `npm run test:rules`는 Firestore Emulator에서 이 권한 행렬을 검증한다. 현재 로컬 실행에는 Java 런타임이 필요하다.

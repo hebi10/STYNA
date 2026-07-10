@@ -157,6 +157,48 @@ export function normalizeItems(rawItems: RawOrderItem[]): NormalizedOrderItem[] 
   return Array.from(groupedItems.values());
 }
 
+export function aggregateProductQuantities<T extends Pick<RawOrderItem, "productId" | "quantity">>(
+  items: ReadonlyArray<T>
+): Array<{ productId: string; quantity: number }> {
+  const quantities = new Map<string, number>();
+
+  for (const item of items) {
+    const productId = toStringValue(item.productId);
+    const quantity = toNonNegativeInteger(item.quantity);
+    if (!productId || quantity <= 0) {
+      continue;
+    }
+
+    quantities.set(productId, (quantities.get(productId) || 0) + quantity);
+  }
+
+  return Array.from(quantities, ([productId, quantity]) => ({ productId, quantity }));
+}
+
+export function assertOrderableProductOption(
+  productData: Record<string, unknown>,
+  item: NormalizedOrderItem
+): void {
+  const status = toStringValue(productData.status);
+  if (status && status !== "active") {
+    throw new Error(`Product is not orderable: ${item.productId}`);
+  }
+
+  const sizes = Array.isArray(productData.sizes)
+    ? productData.sizes.map(toStringValue).filter(Boolean)
+    : [];
+  if (sizes.length > 0 && !sizes.includes(item.size)) {
+    throw new Error(`Invalid size option: ${item.size}`);
+  }
+
+  const colors = Array.isArray(productData.colors)
+    ? productData.colors.map(toStringValue).filter(Boolean)
+    : [];
+  if (colors.length > 0 && !colors.includes(item.color)) {
+    throw new Error(`Invalid color option: ${item.color}`);
+  }
+}
+
 export function parseDate(value: unknown): Date | null {
   if (value instanceof Date) {
     return value;

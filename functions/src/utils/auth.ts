@@ -22,6 +22,11 @@ export async function verifyAuthContext(authHeader: string | undefined): Promise
 
   try {
     const decodedToken = await admin.auth().verifyIdToken(token);
+    const userSnapshot = await admin.firestore().collection("users").doc(decodedToken.uid).get();
+    const accountStatus = userSnapshot.exists ? userSnapshot.data()?.status : undefined;
+    if (accountStatus === "inactive" || accountStatus === "banned") {
+      throw new AuthError(403, "This account is not active.");
+    }
     const role = decodedToken.role as string | undefined;
     const isAdmin = decodedToken.admin === true || role === "admin";
 
@@ -31,7 +36,10 @@ export async function verifyAuthContext(authHeader: string | undefined): Promise
       role,
       isAdmin,
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError) {
+      throw error;
+    }
     throw new AuthError(401, "Invalid authentication token.");
   }
 }

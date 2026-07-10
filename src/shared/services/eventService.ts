@@ -13,6 +13,7 @@ import {
   writeBatch 
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 import { db, storage } from '../libs/firebase/firebase';
 import {
   getOptimizedWebpStorageFileName,
@@ -34,6 +35,13 @@ export type EventParticipationErrorCode =
   | 'manual_coupon'
   | 'max_participants'
   | 'unknown';
+
+export interface EventParticipationResult {
+  alreadyParticipated: boolean;
+  participantCount: number;
+  rewardIssued: boolean;
+  userCouponId?: string;
+}
 
 const EVENT_PARTICIPATION_ERROR_MESSAGES: Record<
   Exclude<EventParticipationErrorCode, 'unknown'>,
@@ -428,53 +436,28 @@ export class EventService {
   }
 
   // 이벤트 참여
-  static async participateInEvent(eventId: string, userId: string, userName: string): Promise<void> {
+  static async participateInEvent(eventId: string): Promise<EventParticipationResult> {
     try {
-      // 이미 참여했는지 확인
-      const isAlreadyParticipated = await this.checkEventParticipation(eventId, userId);
-      if (isAlreadyParticipated) {
-        throw new EventParticipationError('already_participated');
+      const user = getAuth().currentUser;
+      if (!user) {
+        throw new Error('로그인이 필요합니다.');
       }
 
-      // 이벤트 정보 확인
-      const event = await this.getEventById(eventId);
-      if (!event) {
-        throw new EventParticipationError('event_not_found');
-      }
-
-      // 이벤트 상태 확인
-      const now = new Date();
-      if (now < event.startDate) {
-        throw new EventParticipationError('event_not_started');
-      }
-      if (now > event.endDate) {
-        throw new EventParticipationError('event_ended');
-      }
-      if (!event.isActive) {
-        throw new EventParticipationError('event_inactive');
-      }
-
-      // manual 타입 쿠폰 이벤트는 참여 불가
-      if (event.eventType === 'coupon' && event.couponType === 'manual') {
-        throw new EventParticipationError('manual_coupon');
-      }
-
-      // 최대 참여자 수 확인
-      if (event.hasMaxParticipants && event.maxParticipants && event.participantCount >= event.maxParticipants) {
-        throw new EventParticipationError('max_participants');
-      }
-
-      // 참여자 추가
-      await addDoc(collection(db, EVENT_PARTICIPANTS_COLLECTION), {
-        eventId,
-        userId,
-        userName,
-        participatedAt: Timestamp.now(),
-        couponUsed: false,
+      const token = await user.getIdToken();
+      const response = await fetch('/api/event/participate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ eventId }),
       });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.success) {
+        throw new Error(body.error || '이벤트 참여 처리에 실패했습니다.');
+      }
 
-      // 참여자 수 증가
-      await this.incrementParticipantCount(eventId);
+      return body.data as EventParticipationResult;
     } catch (error) {
       console.error('Error participating in event:', error);
       throw error;
@@ -484,14 +467,9 @@ export class EventService {
   // 이벤트 참여 여부 확인
   static async checkEventParticipation(eventId: string, userId: string): Promise<boolean> {
     try {
-      const q = query(
-        collection(db, EVENT_PARTICIPANTS_COLLECTION),
-        where('eventId', '==', eventId),
-        where('userId', '==', userId)
-      );
-
-      const querySnapshot = await getDocs(q);
-      return !querySnapshot.empty;
+      const participantRef = doc(db, EVENT_PARTICIPANTS_COLLECTION, `${eventId}_${userId}`);
+      const participant = await getDoc(participantRef);
+      return participant.exists();
     } catch (error) {
       console.error('Error checking event participation:', error);
       return false;

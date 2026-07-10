@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ProductList from './ProductList';
 import { ProductService } from '@/shared/services/productService';
 
@@ -54,5 +54,37 @@ describe('ProductList loading state', () => {
     render(<ProductList />);
 
     expect(await screen.findByRole('option', { name: '가방' })).toHaveValue('bags');
+  });
+
+  test('labels price controls and describes counts as the current page', async () => {
+    (ProductService.queryProducts as jest.Mock).mockResolvedValue({
+      items: [],
+      hasMore: false,
+    });
+
+    render(<ProductList />);
+
+    expect(await screen.findByLabelText('최소 가격')).toBeInTheDocument();
+    expect(screen.getByLabelText('최대 가격')).toBeInTheDocument();
+    expect(screen.getByText('현재 페이지 상품')).toBeInTheDocument();
+  });
+
+  test('applies a changed price range only after the user selects apply', async () => {
+    (ProductService.queryProducts as jest.Mock).mockResolvedValue({
+      items: [],
+      hasMore: false,
+    });
+
+    render(<ProductList />);
+    await waitFor(() => expect(ProductService.queryProducts).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(screen.getByLabelText('최소 가격'), { target: { value: '10000' } });
+    expect(ProductService.queryProducts).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: '적용' }));
+    await waitFor(() => expect(ProductService.queryProducts).toHaveBeenCalledTimes(2));
+    expect(ProductService.queryProducts).toHaveBeenLastCalledWith(expect.objectContaining({
+      minPrice: 10000,
+    }));
   });
 });

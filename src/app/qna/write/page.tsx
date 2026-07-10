@@ -18,7 +18,6 @@ export default function QnAWritePage() {
     title: '',
     content: '',
     isSecret: false,
-    password: '',
     isNotified: true,
     images: [],
   });
@@ -57,11 +56,6 @@ export default function QnAWritePage() {
 
     if (!formData.content.trim()) {
       setError('내용을 입력해주세요.');
-      return;
-    }
-
-    if (formData.isSecret && !formData.password) {
-      setError('비밀글로 설정하신 경우 비밀번호를 입력해주세요.');
       return;
     }
 
@@ -181,21 +175,9 @@ export default function QnAWritePage() {
               <span className={styles.checkboxText}>비밀글로 작성</span>
             </label>
           </div>
-          
           {formData.isSecret && (
-            <div className={styles.passwordField}>
-              <input
-                type="password"
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                className={styles.input}
-                placeholder="비밀번호를 입력해주세요 (숫자 4자리)"
-                maxLength={4}
-                pattern="[0-9]{4}"
-              />
-              <div className={styles.fieldHelp}>
-                비밀글 확인을 위한 숫자 4자리를 입력해주세요.
-              </div>
+            <div className={styles.fieldHelp}>
+              비밀글은 작성자와 관리자만 확인할 수 있습니다.
             </div>
           )}
         </div>

@@ -30,10 +30,6 @@ jest.mock('@/shared/libs/firebase/firebase', () => ({
   db: {},
 }));
 
-jest.mock('@/shared/utils/qnaSecret', () => ({
-  buildQnASecurity: jest.fn(),
-}));
-
 function timestamp(date: string) {
   return { toDate: () => new Date(date) };
 }

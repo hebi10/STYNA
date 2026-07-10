@@ -45,7 +45,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 4;
   background: rgba(0, 0, 0, 0.58);
   pointer-events: none;
   transition: background-color 0.24s ease;
@@ -61,6 +61,7 @@
   height: 100%;
   overflow: hidden;
   background: #111;
+  text-decoration: none;
 }
 
 .bannerCard:focus-visible {
@@ -87,18 +88,34 @@
   background: rgba(0, 0, 0, 0.34);
   color: #fff;
   cursor: pointer;
-  font-size: 2.6rem;
-  font-weight: 200;
-  line-height: 1;
+  font-size: 0;
+  line-height: 0;
   transform: translateY(-50%);
+}
+
+.navButton::before {
+  content: "";
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-top: 2px solid currentColor;
+  border-right: 2px solid currentColor;
 }
 
 .prevButton {
   left: calc(7% + 1rem);
 }
 
+.prevButton::before {
+  transform: rotate(-135deg);
+}
+
 .nextButton {
   right: calc(7% + 1rem);
+}
+
+.nextButton::before {
+  transform: rotate(45deg);
 }
 
 .pagination {
@@ -134,7 +151,11 @@
   .navButton {
     width: 40px;
     height: 40px;
-    font-size: 2.2rem;
+  }
+
+  .navButton::before {
+    width: 12px;
+    height: 12px;
   }
 
   .prevButton {

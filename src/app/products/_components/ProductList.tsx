@@ -34,6 +34,8 @@ export default function ProductList() {
   const [sort, setSort] = useState<ProductSort>({ field: 'createdAt', order: 'desc' });
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(DEFAULT_PRICE_MAX);
+  const [minPriceInput, setMinPriceInput] = useState(0);
+  const [maxPriceInput, setMaxPriceInput] = useState(DEFAULT_PRICE_MAX);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [cursorStack, setCursorStack] = useState<Record<number, PageCursor>>({ 1: null });
@@ -45,8 +47,8 @@ export default function ProductList() {
       category: category || undefined,
       keyword: searchKeyword || undefined,
       status: 'active',
-      minPrice,
-      maxPrice,
+      minPrice: minPrice > 0 ? minPrice : undefined,
+      maxPrice: maxPrice < DEFAULT_PRICE_MAX ? maxPrice : undefined,
       sort,
       limitCount: ITEMS_PER_PAGE,
     }),
@@ -76,7 +78,7 @@ export default function ProductList() {
     setError(null);
 
     try {
-      const startAfterDoc = page === 1 ? null : cursorStack[page - 1] || null;
+      const startAfterDoc = page === 1 ? null : cursorStack[page] || null;
       const result = await ProductService.queryProducts({
         ...queryInput,
         startAfterDoc,
@@ -163,10 +165,12 @@ export default function ProductList() {
   };
 
   const applyPriceFilter = () => {
-    const nextMin = Math.max(0, Number.isFinite(minPrice) ? minPrice : 0);
-    const nextMax = Math.max(nextMin, Number.isFinite(maxPrice) ? maxPrice : DEFAULT_PRICE_MAX);
+    const nextMin = Math.max(0, Number.isFinite(minPriceInput) ? minPriceInput : 0);
+    const nextMax = Math.max(nextMin, Number.isFinite(maxPriceInput) ? maxPriceInput : DEFAULT_PRICE_MAX);
     setMinPrice(nextMin);
     setMaxPrice(nextMax);
+    setMinPriceInput(nextMin);
+    setMaxPriceInput(nextMax);
   };
 
   const clearFilters = () => {
@@ -176,6 +180,8 @@ export default function ProductList() {
     setSort({ field: 'createdAt', order: 'desc' });
     setMinPrice(0);
     setMaxPrice(DEFAULT_PRICE_MAX);
+    setMinPriceInput(0);
+    setMaxPriceInput(DEFAULT_PRICE_MAX);
   };
 
   const moveToPreviousPage = () => {
@@ -228,7 +234,7 @@ export default function ProductList() {
       <div className={styles.stats}>
         <div className={styles.statItem}>
           <div className={styles.statNumber}>{items.length}</div>
-          <div className={styles.statLabel}>전체 상품 수</div>
+          <div className={styles.statLabel}>현재 페이지 상품</div>
         </div>
         <div className={styles.statItem}>
           <div className={styles.statNumber}>{items.filter((product) => product.isNew).length}</div>
@@ -244,6 +250,7 @@ export default function ProductList() {
         <div className={styles.searchSection}>
           <input
             type="text"
+            aria-label="상품명 검색"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && handleSearch()}
@@ -256,7 +263,7 @@ export default function ProductList() {
         </div>
 
         <div className={styles.filters}>
-          <select value={category} onChange={(event) => setCategory(event.target.value)} className={styles.filterSelect}>
+          <select aria-label="카테고리 필터" value={category} onChange={(event) => setCategory(event.target.value)} className={styles.filterSelect}>
             <option value="">전체 카테고리</option>
             {categories.map((categoryId) => (
               <option key={categoryId} value={categoryId}>
@@ -265,7 +272,7 @@ export default function ProductList() {
             ))}
           </select>
 
-          <select value={`${sort.field}-${sort.order}`} onChange={(event) => handleSortChange(event.target.value)} className={styles.sortSelect}>
+          <select aria-label="정렬 기준" value={`${sort.field}-${sort.order}`} onChange={(event) => handleSortChange(event.target.value)} className={styles.sortSelect}>
             {sortOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -283,15 +290,17 @@ export default function ProductList() {
         <label>가격</label>
         <input
           type="number"
-          value={minPrice}
-          onChange={(event) => setMinPrice(Number(event.target.value))}
+          aria-label="최소 가격"
+          value={minPriceInput}
+          onChange={(event) => setMinPriceInput(Number(event.target.value))}
           className={styles.priceInput}
         />
         <span>~</span>
         <input
           type="number"
-          value={maxPrice}
-          onChange={(event) => setMaxPrice(Number(event.target.value))}
+          aria-label="최대 가격"
+          value={maxPriceInput}
+          onChange={(event) => setMaxPriceInput(Number(event.target.value))}
           className={styles.priceInput}
         />
         <button onClick={applyPriceFilter} className={styles.applyButton} type="button">
@@ -338,7 +347,7 @@ export default function ProductList() {
         </button>
       </div>
 
-      <div className={styles.resultInfo}>
+      <div className={styles.resultInfo} aria-live="polite">
         <span>{resultCountText}</span>
       </div>
     </div>

@@ -13,6 +13,7 @@ export { chat } from "./handlers/chat";
 export { adminUsers } from "./handlers/adminUsers";
 export { qna } from "./handlers/qna";
 export { order } from "./handlers/order";
+export { event } from "./handlers/event";
 
 // ── 크론 ──
 export { expirePoints } from "./cron/expirePoints";

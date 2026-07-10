@@ -1,19 +1,15 @@
 import { onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import type { Response } from "express";
-import { randomBytes } from "crypto";
 import {
   ensureString,
-  hashQnAPassword,
   QnARecord,
   toSafeQnA,
-  verifyQnASecret,
 } from "../domain/qnaDomain";
 import { AuthError, verifyAuthContext } from "../utils/auth";
 
 interface VerifySecretRequest {
   qnaId?: unknown;
-  password?: unknown;
 }
 
 const NO_STORE_HEADERS = {
@@ -81,33 +77,26 @@ export const qna = onRequest(
 
       const qnaData = qnaSnapshot.data() as QnARecord;
       const isSecret = qnaData.isSecret === true;
-      const password = ensureString(body.password);
       const actorUidFromData = ensureString(qnaData.userId);
       const isOwner = actorUid === actorUidFromData;
 
       if (isSecret) {
         const isOwnerOrAdmin = actorIsAdmin || isOwner;
-        const hasAccess = isOwnerOrAdmin || verifyQnASecret(qnaData, password);
 
-        if (!hasAccess) {
+        if (!actorUid) {
           res.status(401).json({
             success: false,
-            needsPassword: true,
-            error: "비밀번호가 일치하지 않습니다.",
+            error: "로그인이 필요합니다.",
           });
           return;
         }
 
-        // legacy migration: migrate plain password to salted hash (single time)
-        const legacyPassword = ensureString(qnaData.password);
-        if (password && legacyPassword && !ensureString(qnaData.passwordHash) && !ensureString(qnaData.passwordSalt)) {
-          const salt = randomBytes(16).toString("base64");
-          const passwordHash = hashQnAPassword(password, salt);
-          await qnaRef.update({
-            passwordHash,
-            passwordSalt: salt,
-            password: admin.firestore.FieldValue.delete(),
+        if (!isOwnerOrAdmin) {
+          res.status(403).json({
+            success: false,
+            error: "이 비밀글을 조회할 권한이 없습니다.",
           });
+          return;
         }
 
         await qnaRef.update({

@@ -19,6 +19,7 @@ export interface Event {
   discountRate?: number;
   discountAmount?: number;
   couponCode?: string;
+  rewardCouponId?: string;
   targetProducts?: string[];
   targetCategories?: string[];
   participantCount: number;
@@ -35,6 +36,8 @@ export interface EventParticipant {
   userName: string;
   participatedAt: Date;
   couponUsed?: boolean;
+  rewardCouponId?: string;
+  userCouponId?: string;
 }
 
 export interface EventFilter {

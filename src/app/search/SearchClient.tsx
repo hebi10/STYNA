@@ -251,6 +251,7 @@ export default function SearchClient() {
           <form onSubmit={handleFormSubmit} className={styles.searchInputWrapper}>
             <input
               type="text"
+              aria-label="상품 검색어"
               value={state.query}
               onChange={(event) => handleSearchInput(event.target.value)}
               placeholder="상품명을 입력해 검색하세요"
@@ -287,6 +288,7 @@ export default function SearchClient() {
 
               <div className={styles.controlsWrapper}>
                 <select
+                  aria-label="정렬 기준"
                   value={`${state.sortBy.field}-${state.sortBy.order}`}
                   onChange={(event) => handleSortChange(event.target.value)}
                   className={styles.sortSelect}
@@ -302,8 +304,9 @@ export default function SearchClient() {
 
             <div className={styles.filtersSection}>
               <div className={styles.filterGroup}>
-                <label className={styles.filterLabel}>카테고리</label>
+                <label htmlFor="search-category" className={styles.filterLabel}>카테고리</label>
                 <select
+                  id="search-category"
                   value={state.filters.category || ''}
                   onChange={(event) => updateFilters({ ...state.filters, category: event.target.value || undefined })}
                   className={styles.filterSelect}
@@ -318,8 +321,9 @@ export default function SearchClient() {
               </div>
 
               <div className={styles.filterGroup}>
-                <label className={styles.filterLabel}>최대 가격</label>
+                <label htmlFor="search-max-price" className={styles.filterLabel}>최대 가격</label>
                 <select
+                  id="search-max-price"
                   value={state.filters.maxPrice ? String(state.filters.maxPrice) : ''}
                   onChange={(event) =>
                     updateFilters({
@@ -341,6 +345,7 @@ export default function SearchClient() {
                 <button
                   type="button"
                   className={`${styles.filterTag} ${state.filters.isNew ? styles.active : ''}`}
+                  aria-pressed={state.filters.isNew === true}
                   onClick={() => updateFilters({ ...state.filters, isNew: state.filters.isNew ? undefined : true })}
                 >
                   신상품
@@ -348,6 +353,7 @@ export default function SearchClient() {
                 <button
                   type="button"
                   className={`${styles.filterTag} ${state.filters.isSale ? styles.active : ''}`}
+                  aria-pressed={state.filters.isSale === true}
                   onClick={() => updateFilters({ ...state.filters, isSale: state.filters.isSale ? undefined : true })}
                 >
                   세일
@@ -355,6 +361,7 @@ export default function SearchClient() {
                 <button
                   type="button"
                   className={`${styles.filterTag} ${state.filters.rating ? styles.active : ''}`}
+                  aria-pressed={state.filters.rating === 4}
                   onClick={() => updateFilters({ ...state.filters, rating: state.filters.rating ? undefined : 4 })}
                 >
                   평점 4점 이상
@@ -422,7 +429,7 @@ export default function SearchClient() {
                   </button>
                 </div>
 
-                <div className={styles.resultInfo}>
+                <div className={styles.resultInfo} aria-live="polite">
                   {state.results.length > 0 ? `${start}~${end}번째` : '조회된 결과가 없습니다.'}
                 </div>
               </>

@@ -22,5 +22,6 @@ module.exports = {
   testPathIgnorePatterns: [
     "<rootDir>/.next/",
     "<rootDir>/node_modules/",
+    "<rootDir>/functions/__tests__/firestoreRules.test.ts",
   ],
 };

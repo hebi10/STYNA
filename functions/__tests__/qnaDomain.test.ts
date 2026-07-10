@@ -1,24 +1,6 @@
-import {
-  hashQnAPassword,
-  toSafeQnA,
-  verifyQnASecret,
-} from '../src/domain/qnaDomain';
+import { toSafeQnA } from '../src/domain/qnaDomain';
 
 describe('qna domain logic', () => {
-  test('verifies salted secret hashes and rejects wrong passwords', () => {
-    const salt = 'fixed-test-salt';
-    const passwordHash = hashQnAPassword('1234', salt);
-
-    expect(verifyQnASecret({ passwordHash, passwordSalt: salt }, '1234')).toBe(true);
-    expect(verifyQnASecret({ passwordHash, passwordSalt: salt }, '9999')).toBe(false);
-    expect(verifyQnASecret({ passwordHash, passwordSalt: salt }, undefined)).toBe(false);
-  });
-
-  test('keeps legacy plain password verification for migration', () => {
-    expect(verifyQnASecret({ password: '1234' }, '1234')).toBe(true);
-    expect(verifyQnASecret({ password: '1234' }, '9999')).toBe(false);
-  });
-
   test('safe QnA response omits password material', () => {
     const safe = toSafeQnA('qna-1', {
       userId: 'user-1',

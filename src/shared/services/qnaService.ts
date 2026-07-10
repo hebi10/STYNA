@@ -19,13 +19,11 @@ import {
 import { getAuth } from 'firebase/auth';
 import { db } from '@/shared/libs/firebase/firebase';
 import { QnA, CreateQnAData, QnAAnswer, QnAFilter, QnAPagination } from '@/shared/types/qna';
-import { buildQnASecurity } from '@/shared/utils/qnaSecret';
 
 const COLLECTION_NAME = 'qna';
 
 interface QnASecretVerifyResponse {
   success: boolean;
-  needsPassword?: boolean;
   qna?: RawQnAFromServer;
   error?: string;
 }
@@ -53,14 +51,11 @@ interface RawQnAFromServer {
     answeredAt: string | Timestamp | Date;
     isAdmin: boolean;
   };
-  passwordHash?: string;
-  passwordSalt?: string;
 }
 
 interface QnAAccessResult {
   success: boolean;
   qna: QnA | null;
-  needsPassword: boolean;
   error?: string;
 }
 
@@ -110,19 +105,6 @@ export class QnAService {
       productId: data.productId,
       productName: data.productName,
     };
-
-    if (data.isSecret && data.password) {
-      const trimmedPassword = data.password.trim();
-      if (!trimmedPassword) {
-        throw new Error('비밀번호가 비어 있습니다.');
-      }
-
-      const security = await buildQnASecurity(trimmedPassword);
-      qnaData.passwordHash = security.passwordHash;
-      qnaData.passwordSalt = security.passwordSalt;
-    } else if (data.isSecret) {
-      throw new Error('비밀글은 비밀번호가 필요합니다.');
-    }
 
     const docRef = await addDoc(collection(db, COLLECTION_NAME), qnaData);
     return docRef.id;
@@ -195,11 +177,8 @@ export class QnAService {
     return null;
   }
 
-  // 서버에서 비밀번호 검증 + 접근 토큰 정책을 확인해 QnA 조회
-  static async getQnAWithAccessCheck(
-    qnaId: string,
-    password?: string
-  ): Promise<QnAAccessResult> {
+  // 서버에서 작성자·관리자 권한을 확인해 QnA 조회
+  static async getQnAWithAccessCheck(qnaId: string): Promise<QnAAccessResult> {
     const currentUser = getAuth().currentUser;
     const token = currentUser ? await currentUser.getIdToken() : undefined;
 
@@ -211,7 +190,6 @@ export class QnAService {
       },
       body: JSON.stringify({
         qnaId,
-        password,
       }),
     });
 
@@ -222,7 +200,6 @@ export class QnAService {
       return {
         success: false,
         qna: null,
-        needsPassword: false,
         error: parsed.error || `HTTP ${response.status}`,
       };
     }
@@ -231,15 +208,13 @@ export class QnAService {
       return {
         success: true,
         qna: null,
-        needsPassword: Boolean(parsed.needsPassword),
-        error: parsed.needsPassword ? '비밀번호가 필요합니다.' : '문의글을 찾을 수 없습니다.',
+        error: '문의글을 찾을 수 없습니다.',
       };
     }
 
     return {
       success: true,
       qna: this.normalizeServerQnA(parsed.qna),
-      needsPassword: false,
     };
   }
 
@@ -278,7 +253,6 @@ export class QnAService {
       content?: string;
       category?: QnA['category'];
       isSecret?: boolean;
-      password?: string;
     }
   ): Promise<void> {
     const qnaRef = doc(db, COLLECTION_NAME, qnaId);
@@ -298,18 +272,6 @@ export class QnAService {
 
     if (updateData.isSecret !== undefined) {
       nextData.isSecret = updateData.isSecret;
-    }
-
-    if (updateData.password) {
-      const trimmedPassword = updateData.password.trim();
-      if (trimmedPassword) {
-        const security = await buildQnASecurity(trimmedPassword);
-        nextData.passwordHash = security.passwordHash;
-        nextData.passwordSalt = security.passwordSalt;
-      }
-    } else if (updateData.isSecret === false) {
-      nextData.passwordHash = null;
-      nextData.passwordSalt = null;
     }
 
     await updateDoc(qnaRef, nextData);

@@ -78,3 +78,8 @@ scripts/seed-coupons.ts              # 시드 데이터
 ## 2026-06-29 Chrome 주문 QA 메모
 - 일반 회원 계정의 장바구니 쿠폰 드롭다운은 렌더링됐지만 현재 계정에 사용 가능한 쿠폰이 없어 실제 쿠폰 할인/복원은 Chrome 실주문에서 검증하지 못했다.
 - 시드 쿠폰 만료일이 2024~2025년 중심이라 2026-06-29 기준 실사용 쿠폰 QA에는 최신 테스트 쿠폰 데이터가 필요하다.
+
+## 2026-07-10 발급 권한과 이벤트 보상
+- `action: "issue"`는 관리자만 사용할 수 있는 직접 발급 기능이다. 일반 회원은 쿠폰 코드 등록만 할 수 있다.
+- `functions/src/domain/couponIssuance.ts`가 중복·활성·만료·한도 확인과 `user_coupons`/`usedCount` 쓰기를 공통 transaction으로 제공한다.
+- 자동 쿠폰 이벤트는 `rewardCouponId`를 설정하고, 이벤트 참여 transaction 안에서 쿠폰을 한 번만 지급한다.

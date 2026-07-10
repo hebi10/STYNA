@@ -2,6 +2,8 @@ import {
   calculateCouponDiscount,
   calculateDeliveryFee,
   calculateDiscountedUnitPrice,
+  aggregateProductQuantities,
+  assertOrderableProductOption,
   normalizeItems,
 } from '../src/domain/orderDomain';
 
@@ -36,6 +38,41 @@ describe('order domain logic', () => {
     expect(() => normalizeItems([{ productId: 'p1', quantity: 0 }])).toThrow(
       'item.quantity must be greater than 0: p1'
     );
+  });
+
+  test('aggregates quantities by product while preserving separate options', () => {
+    expect(aggregateProductQuantities([
+      { productId: 'p1', size: 'M', color: 'black', quantity: 2, cartItemIds: [] },
+      { productId: 'p1', size: 'L', color: 'black', quantity: 3, cartItemIds: [] },
+    ])).toEqual([
+      { productId: 'p1', quantity: 5 },
+    ]);
+  });
+
+  test.each(['inactive', 'draft'])('rejects a product with %s sales status', (status) => {
+    expect(() => assertOrderableProductOption(
+      { status, sizes: [], colors: [] },
+      { productId: 'p1', size: 'M', color: 'black', quantity: 1, cartItemIds: [] }
+    )).toThrow('Product is not orderable: p1');
+  });
+
+  test('rejects options not declared by the product', () => {
+    expect(() => assertOrderableProductOption(
+      { status: 'active', sizes: ['S', 'M'], colors: ['black'] },
+      { productId: 'p1', size: 'L', color: 'white', quantity: 1, cartItemIds: [] }
+    )).toThrow('Invalid size option: L');
+
+    expect(() => assertOrderableProductOption(
+      { status: 'active', sizes: ['S', 'M'], colors: ['black'] },
+      { productId: 'p1', size: 'M', color: 'white', quantity: 1, cartItemIds: [] }
+    )).toThrow('Invalid color option: white');
+  });
+
+  test('allows legacy products without status or declared options', () => {
+    expect(() => assertOrderableProductOption(
+      { sizes: [], colors: [] },
+      { productId: 'p1', size: 'M', color: 'black', quantity: 1, cartItemIds: [] }
+    )).not.toThrow();
   });
 
   test('calculates discounted unit price within a valid price range', () => {

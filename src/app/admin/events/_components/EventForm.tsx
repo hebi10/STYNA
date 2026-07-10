@@ -37,10 +37,11 @@ export default function EventForm({ event, isEdit = false }: Props) {
     discountRate: event?.discountRate || 0,
     discountAmount: event?.discountAmount || 0,
     couponCode: event?.couponCode || '',
+    rewardCouponId: event?.rewardCouponId || '',
     maxParticipants: event?.maxParticipants || 0,
     hasMaxParticipants: event?.hasMaxParticipants ?? false,
     selectedCategories: event?.targetCategories || [],
-    couponType: event?.couponCode ? 'manual' : 'auto' as 'auto' | 'manual',
+    couponType: event?.couponType || (event?.couponCode ? 'manual' : 'auto') as 'auto' | 'manual',
   });
 
   const [images, setImages] = useState({
@@ -152,6 +153,11 @@ export default function EventForm({ event, isEdit = false }: Props) {
       return;
     }
 
+    if (formData.eventType === 'coupon' && formData.couponType === 'auto' && !formData.rewardCouponId.trim()) {
+      alert('자동 지급 쿠폰 이벤트에는 쿠폰 관리 문서 ID를 입력해주세요.');
+      return;
+    }
+
     try {
       setLoading(true);
       
@@ -172,7 +178,9 @@ export default function EventForm({ event, isEdit = false }: Props) {
         isActive: formData.isActive,
         discountRate: formData.discountRate,
         discountAmount: formData.discountAmount,
+        couponType: formData.couponType,
         couponCode: formData.couponType === 'manual' ? formData.couponCode : '',
+        rewardCouponId: formData.couponType === 'auto' ? formData.rewardCouponId.trim() : '',
         hasMaxParticipants: formData.hasMaxParticipants,
         ...(formData.hasMaxParticipants && formData.maxParticipants > 0 
           ? { maxParticipants: formData.maxParticipants } 
@@ -382,6 +390,16 @@ export default function EventForm({ event, isEdit = false }: Props) {
                   onChange={(e) => handleInputChange('couponCode', e.target.value)}
                   placeholder="쿠폰 코드를 입력하세요 (예: WELCOME20)"
                 />
+              </div>
+            )}
+            {formData.couponType === 'auto' && (
+              <div className={styles.couponCodeInput}>
+                <Input
+                  value={formData.rewardCouponId}
+                  onChange={(e) => handleInputChange('rewardCouponId', e.target.value)}
+                  placeholder="쿠폰 관리 문서 ID를 입력하세요"
+                />
+                <p className={styles.helpText}>참여 완료 시 이 쿠폰을 한 번만 자동 지급합니다.</p>
               </div>
             )}
           </div>

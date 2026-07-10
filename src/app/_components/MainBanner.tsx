@@ -7,6 +7,10 @@ import Link from 'next/link';
 import styles from './MainBanner.module.css';
 
 const SLIDE_DELAY_MS = 4500;
+const STORAGE_BUCKET = 'hebimall.firebasestorage.app';
+
+const storageUrl = (path: string) =>
+  `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodeURIComponent(path)}?alt=media`;
 
 type BannerCard = {
   id: string;
@@ -17,84 +21,84 @@ type BannerCard = {
 
 type BannerPair = {
   id: string;
-  product: BannerCard;
-  event: BannerCard;
+  left: BannerCard;
+  right: BannerCard;
 };
 
 const bannerPairs: BannerPair[] = [
   {
-    id: 'cool-touch-midyear-sale',
-    product: {
-      id: 'product-cool-touch-daily',
-      href: '/categories/tops',
-      image: '/main/top_banner_01_product_cool_touch.webp',
-      alt: '쿨터치 티셔츠 셋업 상품 배너',
+    id: 'cool-touch-office',
+    left: {
+      id: 'cool-touch-oversized-shirt',
+      href: '/products/cool-touch-oversized-shirt',
+      image: storageUrl('images/main-banner/cool-touch-oversized-shirt/banner.webp'),
+      alt: '쿨터치 오버핏 반팔 셔츠 상품 배너',
     },
-    event: {
-      id: 'event-midyear-sale',
-      href: '/events/event-2026-06-midyear-sale',
-      image: '/main/top_banner_01_event_midyear_sale.webp',
-      alt: '상반기 결산 최대 60% 이벤트 배너',
-    },
-  },
-  {
-    id: 'vacation-linen-coupon',
-    product: {
-      id: 'product-vacation-linen',
-      href: '/categories/tops',
-      image: '/main/top_banner_02_product_vacation_linen.webp',
-      alt: '린넨 셔츠와 쇼츠 상품 배너',
-    },
-    event: {
-      id: 'event-vacation-coupon',
-      href: '/events/event-2026-07-vacation-coupon',
-      image: '/main/top_banner_02_event_vacation_coupon.webp',
-      alt: '휴가룩 쿠폰팩 3종 이벤트 배너',
+    right: {
+      id: 'cool-touch-wide-banding-pants',
+      href: '/products/cool-touch-wide-banding-pants',
+      image: storageUrl('images/main-banner/cool-touch-wide-banding-pants/banner.webp'),
+      alt: '쿨터치 와이드 밴딩 팬츠 착용 배너',
     },
   },
   {
-    id: 'daily-sneakers-photo-review',
-    product: {
-      id: 'product-daily-sneakers',
-      href: '/categories/shoes',
-      image: '/main/top_banner_03_product_daily_sneakers.webp',
-      alt: '클래식 캔버스 슈즈 상품 배너',
+    id: 'linen-vacation',
+    left: {
+      id: 'linen-like-half-shirt',
+      href: '/products/linen-like-half-shirt',
+      image: storageUrl('images/main-banner/linen-like-half-shirt/banner.webp'),
+      alt: '린넨 라이크 반팔 셔츠 상품 배너',
     },
-    event: {
-      id: 'event-photo-review',
-      href: '/events/event-2026-07-summer-review',
-      image: '/main/top_banner_03_event_photo_review.webp',
-      alt: '리뷰 작성 시 적립금 이벤트 배너',
-    },
-  },
-  {
-    id: 'office-bag-cool-touch-week',
-    product: {
-      id: 'product-office-bag',
-      href: '/categories/bags',
-      image: '/main/top_banner_04_product_office_bag.webp',
-      alt: '오피스 레더 토트 상품 배너',
-    },
-    event: {
-      id: 'event-cool-touch-week',
-      href: '/events/event-2026-07-cool-touch',
-      image: '/main/top_banner_04_event_cool_touch.webp',
-      alt: '쿨터치 최대 35% 이벤트 배너',
+    right: {
+      id: 'linen-like-bermuda-shorts',
+      href: '/products/linen-like-bermuda-shorts',
+      image: storageUrl('images/main-banner/linen-like-bermuda-shorts/banner.webp'),
+      alt: '린넨 라이크 버뮤다 쇼츠 착용 배너',
     },
   },
   {
-    id: 'prefall-layer-open',
-    product: {
-      id: 'product-prefall-layer',
-      href: '/categories/tops',
-      image: '/main/top_banner_05_product_prefall_layer.webp',
-      alt: '가디건 레이어드 셋업 상품 배너',
+    id: 'summer-street',
+    left: {
+      id: 'mesh-low-profile-sneakers',
+      href: '/products/mesh-low-profile-sneakers',
+      image: storageUrl('images/main-banner/mesh-low-profile-sneakers/banner.webp'),
+      alt: '메쉬 로우프로파일 스니커즈 상품 배너',
     },
-    event: {
-      id: 'event-prefall-open',
-      href: '/events/event-2026-08-pre-fall',
-      image: '/main/top_banner_05_event_prefall_open.webp',
-      alt: '프리폴 선공개 이벤트 배너',
+    right: {
+      id: 'nylon-string-crossbody-bag',
+      href: '/products/nylon-string-crossbody-bag',
+      image: storageUrl('images/main-banner/nylon-string-crossbody-bag/banner.webp'),
+      alt: '나일론 스트링 크로스백 착용 배너',
+    },
+  },
+  {
+    id: 'office-casual',
+    left: {
+      id: 'seersucker-half-jacket',
+      href: '/products/seersucker-half-jacket',
+      image: storageUrl('images/main-banner/seersucker-half-jacket/banner.webp'),
+      alt: '시어서커 반팔 재킷 상품 배너',
+    },
+    right: {
+      id: 'utility-big-tote-bag',
+      href: '/products/utility-big-tote-bag',
+      image: storageUrl('images/main-banner/utility-big-tote-bag/banner.webp'),
+      alt: '유틸리티 빅 토트백 착용 배너',
+    },
+  },
+  {
+    id: 'pre-fall-layer',
+    left: {
+      id: 'light-zip-up-jacket',
+      href: '/products/light-zip-up-jacket',
+      image: storageUrl('images/main-banner/light-zip-up-jacket/banner.webp'),
+      alt: '라이트 집업 재킷 상품 배너',
+    },
+    right: {
+      id: 'washed-wide-denim-pants',
+      href: '/products/washed-wide-denim-pants',
+      image: storageUrl('images/main-banner/washed-wide-denim-pants/banner.webp'),
+      alt: '워시드 와이드 데님 팬츠 착용 배너',
     },
   },
 ];
@@ -190,7 +194,7 @@ export default function MainBanner() {
   } as CSSProperties;
 
   return (
-    <section className={styles.bannerSection} aria-label="메인 상품 및 이벤트 배너">
+    <section className={styles.bannerSection} aria-label="메인 상품 배너">
       <div className={styles.bannerStage}>
         <div className={styles.bannerViewport}>
           <div
@@ -208,7 +212,7 @@ export default function MainBanner() {
                   className={`${styles.bannerPair} ${isActive ? styles.activePair : ''}`}
                   aria-hidden={!isActive}
                 >
-                  {[pair.product, pair.event].map((card, cardIndex) => (
+                  {[pair.left, pair.right].map((card, cardIndex) => (
                     <Link
                       key={card.id}
                       href={card.href}
@@ -237,17 +241,13 @@ export default function MainBanner() {
           className={`${styles.navButton} ${styles.prevButton}`}
           aria-label="이전 배너"
           onClick={showPrevious}
-        >
-          ‹
-        </button>
+        />
         <button
           type="button"
           className={`${styles.navButton} ${styles.nextButton}`}
           aria-label="다음 배너"
           onClick={showNext}
-        >
-          ›
-        </button>
+        />
 
         <div className={styles.pagination} aria-label="배너 순서">
           {bannerPairs.map((pair, index) => (

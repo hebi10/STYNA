@@ -8,8 +8,6 @@ export interface QnA {
   content: string;
   images?: string[];
   isSecret: boolean;
-  passwordHash?: string;
-  passwordSalt?: string;
   status: 'waiting' | 'answered' | 'closed';
   views: number;
   isNotified: boolean;
@@ -31,7 +29,6 @@ export interface CreateQnAData {
   content: string;
   images?: string[];
   isSecret: boolean;
-  password?: string;
   isNotified: boolean;
   productId?: string;
   productName?: string;

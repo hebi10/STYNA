@@ -22,14 +22,14 @@ describe('/api/qna/verify-secret', () => {
     jest.restoreAllMocks();
   });
 
-  test('proxies QnA secret verification to the Firebase Function URL in local Next dev', async () => {
+  test('proxies QnA access verification to the Firebase Function URL in local Next dev', async () => {
     const response = await POST(new Request('http://localhost:3000/api/qna/verify-secret/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: 'Bearer user-token',
       },
-      body: JSON.stringify({ qnaId: 'qna-1', password: '1234' }),
+      body: JSON.stringify({ qnaId: 'qna-1' }),
     }) as never);
 
     const body = await response.json();

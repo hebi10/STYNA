@@ -617,19 +617,17 @@ export default function EventDetailClient({ event }: EventDetailClientProps) {
     setCtaFeedback(null);
 
     try {
-      await EventService.participateInEvent(
-        event.id,
-        user.uid,
-        user.displayName || user.email || '사용자'
-      );
+      const result = await EventService.participateInEvent(event.id);
 
       setHasParticipated(true);
-      setParticipantCount(prev => prev + 1);
+      setParticipantCount(result.participantCount);
       setCtaFeedback({
-        tone: 'success',
+        tone: result.alreadyParticipated ? 'info' : 'success',
         message:
-          uiVariant === 'coupon'
-            ? '쿠폰 참여가 완료되었습니다. 하단 보조 행동에서 쿠폰함 또는 사용 조건을 바로 확인할 수 있습니다.'
+          result.alreadyParticipated
+            ? '이미 참여가 완료된 이벤트입니다. 지급 방식은 아래 안내를 확인해주세요.'
+            : result.rewardIssued
+            ? '이벤트 참여와 쿠폰 지급이 완료되었습니다. 하단 보조 행동에서 쿠폰함 또는 사용 조건을 바로 확인할 수 있습니다.'
             : uiVariant === 'review'
             ? '리뷰 이벤트 참여가 완료되었습니다. 상단 CTA 또는 리뷰 화면에서 다음 단계를 이어가세요.'
             : '이벤트 참여가 완료되었습니다. 아래 보조 행동과 상세 안내로 다음 단계를 이어가세요.',

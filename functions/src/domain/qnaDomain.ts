@@ -1,5 +1,3 @@
-import { createHash, timingSafeEqual } from "crypto";
-
 export type QnARecord = Record<string, unknown>;
 
 export interface QnAResponsePayload {
@@ -40,26 +38,6 @@ export function dateLikeToString(value: unknown): string {
   return "";
 }
 
-export function hashQnAPassword(password: string, salt: string): string {
-  return createHash("sha256").update(`${salt}:${password}`).digest("base64");
-}
-
-export function verifyQnASecret(qnaData: QnARecord, password: string | undefined): boolean {
-  const passwordHash = ensureString(qnaData.passwordHash);
-  const passwordSalt = ensureString(qnaData.passwordSalt);
-  const legacyPassword = ensureString(qnaData.password);
-
-  if (!password) {
-    return false;
-  }
-
-  if (passwordHash && passwordSalt) {
-    return safeEquals(hashQnAPassword(password, passwordSalt), passwordHash);
-  }
-
-  return !passwordHash && Boolean(legacyPassword) && legacyPassword === password;
-}
-
 export function toSafeQnA(id: string, data: QnARecord): QnAResponsePayload {
   return {
     id,
@@ -87,11 +65,4 @@ export function toSafeQnA(id: string, data: QnARecord): QnAResponsePayload {
         }
       : undefined,
   };
-}
-
-function safeEquals(left: string, right: string): boolean {
-  if (left.length !== right.length) {
-    return false;
-  }
-  return timingSafeEqual(Buffer.from(left), Buffer.from(right));
 }

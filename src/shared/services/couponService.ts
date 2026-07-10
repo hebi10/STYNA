@@ -447,20 +447,6 @@ export class CouponService {
   // ============ 쿠폰 발급/사용/등록 (Firebase Functions) ============
   
   /**
-   * 쿠폰 발급 (REST API 호출)
-   */
-  static async issueCoupon(uid: string, couponId: string): Promise<CouponResponse> {
-    void uid;
-    try {
-      const result = await callCouponAPI('issue', { couponId });
-      return { success: true, message: result.message || '쿠폰이 발급되었습니다.', data: result };
-    } catch (error) {
- console.error('쿠폰 발급 실패:', error);
-      throw new Error(getUnknownErrorMessage(error, '쿠폰 발급에 실패했습니다.'));
-    }
-  }
-
-  /**
    * 쿠폰 사용 (REST API 호출)
    */
   static async redeemCoupon(

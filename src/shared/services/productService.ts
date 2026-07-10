@@ -445,11 +445,11 @@ export class ProductService {
       constraints.push(orderBy(sort.field, sort.order));
       constraints.push(orderBy('__name__', sort.order));
 
-      let inspectedCount = 0;
       let cursor: QueryDocumentSnapshot<DocumentData> | null = queryInput.startAfterDoc || null;
-      let nextCursor: QueryDocumentSnapshot<DocumentData> | null = null;
-      let hasMore = false;
-      let collected: Product[] = [];
+      const collected: Array<{
+        product: Product;
+        cursor: QueryDocumentSnapshot<DocumentData>;
+      }> = [];
 
       while (true) {
         const pagedQuery = query(
@@ -463,39 +463,30 @@ export class ProductService {
         const docs = snapshot.docs;
 
         if (docs.length === 0) {
-          hasMore = false;
-          break;
+          return {
+            items: collected.slice(0, normalizedPageSize).map(({ product }) => product),
+            hasMore: false,
+          };
         }
 
-        inspectedCount += docs.length;
-        nextCursor = docs[docs.length - 1];
-
-        const candidates = docs.map((productDoc) =>
-          this.normalizeProduct(productDoc.id, productDoc.data())
-        );
-
-        const filtered = this.filterByKeyword(candidates, keyword);
-        collected = [...collected, ...filtered];
+        for (const productDoc of docs) {
+          const product = this.normalizeProduct(productDoc.id, productDoc.data());
+          if (this.filterByKeyword([product], keyword).length > 0) {
+            collected.push({ product, cursor: productDoc });
+          }
+        }
         cursor = docs[docs.length - 1];
 
         if (collected.length >= normalizedPageSize || docs.length < queryLimit) {
-          hasMore = collected.length >= normalizedPageSize && docs.length >= queryLimit;
-          break;
+          const items = collected.slice(0, normalizedPageSize);
+          const hasMore = collected.length > normalizedPageSize || docs.length >= queryLimit;
+          return {
+            items: items.map(({ product }) => product),
+            nextCursor: hasMore ? items[items.length - 1]?.cursor : undefined,
+            hasMore,
+          };
         }
       }
-
-      if (inspectedCount === 0) {
-        return {
-          items: [],
-          hasMore: false,
-        };
-      }
-
-      return {
-        items: collected.slice(0, normalizedPageSize),
-        nextCursor: hasMore && nextCursor ? nextCursor : undefined,
-        hasMore,
-      };
     } catch (error) {
       console.warn('Product query used client fallback:', error);
 

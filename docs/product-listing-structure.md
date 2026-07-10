@@ -49,3 +49,7 @@
 
 - `/categories/[category]/products/[productId]` 중복 상세 화면을 제거하고 `/products/[productId]`로 redirect하도록 정리했다.
 - 미사용 `CategoryClient`와 루트 `components/*` 빈 파일을 제거했다.
+
+## 2026-07-10 목록 쿼리·페이지 커서 보정
+- 목록의 기본 가격 범위(0원~100만원)는 실제 Firestore 가격 조건으로 보내지 않는다. 사용자가 범위를 좁힌 경우에만 가격 range 쿼리를 추가해 불필요한 인덱스 fallback을 줄인다.
+- 다음 페이지 커서는 표시한 마지막 상품 문서를 기준으로 유지한다. 조회 한도보다 하나 더 읽은 문서를 커서로 사용해 상품이 건너뛰는 문제를 방지했다.

@@ -1,58 +1,54 @@
 # Firebase Storage 구조
 
-## 디렉토리 구조
+## 상품 이미지 경로
 
-상품 이미지를 카테고리별로 분리 저장합니다.
+상품 이미지는 카테고리와 상품 ID 기준으로 분리해 저장한다.
 
-### 이전
-```
-products/{productId}/images/image1.jpg
-```
-
-### 이후
-```
+```text
 images/
-  tops/{productId}/{timestamp}_{index}_q75.webp
-  bottoms/{productId}/...
-  shoes/{productId}/...
-  accessories/{productId}/...
-  bags/{productId}/...
-  others/{productId}/...
+  tops/{productId}/{filename}.webp
+  bottoms/{productId}/{filename}.webp
+  shoes/{productId}/{filename}.webp
+  accessories/{productId}/{filename}.webp
+  bags/{productId}/{filename}.webp
+  others/{productId}/{filename}.webp
 ```
 
-## 카테고리 매핑
+관리자 상품 업로드는 최종 파일을 WebP로 저장하고, Firestore 상품 문서의 `mainImage`, `images`, `detailImages`에는 Firebase Storage 다운로드 URL을 저장한다.
 
-```typescript
-const categoryMap = {
-  '상의': 'tops',
-  '하의': 'bottoms',
-  '신발': 'shoes',
-  '액세서리': 'accessories',
-  '가방': 'bags',
-  '기타': 'others'
-};
+## 메인 배너 이미지
+
+메인 배너 상품 이미지는 다음 경로를 사용한다.
+
+```text
+images/main-banner/{productId}/banner.webp
 ```
 
-## 업로드 함수
+배너 클릭 후 이동하는 상품 상세 이미지는 다음 경로를 사용한다.
 
-```typescript
-uploadProductImages(
-  files: File[],
-  category: string,
-  productId: string,
-  onProgress?: (progress: number, fileName: string) => void
-): Promise<string[]>
+```text
+images/{category}/{productId}/main.webp
 ```
 
-- 파일명 규칙: `{timestamp}_{index}_q75.webp`
-- 업로드 전 브라우저에서 WebP 변환, quality 75(`0.75`) 적용
-- Storage content type은 `image/webp`로 저장
-- 업로드 전 파일 형식(이미지만) 및 크기(5MB 이하) 검증
-- 파일별 진행률 콜백 지원
+Firestore `products/{productId}`의 `mainImage`, `images`, `detailImages`는 `/products/...` 같은 로컬 경로가 아니라 `https://firebasestorage.googleapis.com/...` 다운로드 URL이어야 한다.
 
-## 기존 상품 이미지 WebP 마이그레이션
+## Storage Rules
 
-대상은 `products.images`, `products.mainImage`에 연결된 Firebase Storage 상품 이미지 URL만 포함합니다.
+- 읽기: 상품, 카테고리, 이벤트 이미지 공개 허용
+- 쓰기: 관리자 custom claim(`admin == true` 또는 `role == "admin"`) 사용자만 허용
+- 제한: 이미지 파일, 5MB 이하
+
+현재 공개 읽기 허용 경로:
+
+```text
+images/{category}/{productId}/{filename}
+categories/{filename}
+events/{type}/{filename}
+```
+
+## 관련 스크립트
+
+기존 상품 이미지 WebP 마이그레이션:
 
 ```bash
 npm run migrate:product-images:analyze
@@ -62,19 +58,7 @@ npm run migrate:product-images:validate
 npm run migrate:product-images:delete-originals
 ```
 
-- `dry-run`은 Firestore/Storage를 수정하지 않고 변환 대상과 새 경로를 로그로 남깁니다.
-- `execute`는 원본을 내려받아 `{기존파일명}_q75.webp`로 새 파일을 업로드한 뒤 상품 문서 URL을 새 URL로 교체합니다.
-- `delete-originals`는 최근 실행 로그를 기준으로 상품 문서가 더 이상 원본 URL을 참조하지 않는 파일만 삭제합니다.
-- 실행 로그는 `migration-logs/product-image-webp-*.json`, 삭제 로그는 `migration-logs/product-image-webp-delete-originals-*.json`에 생성되며 Git에는 포함하지 않습니다.
-
-## 상품 외 이미지 WebP 마이그레이션
-
-대상은 상품 외 운영 이미지입니다.
-
-- `categories.image`, `categories.imageUrl`
-- `events.bannerImage`, `events.thumbnailImage`, `events.detailImage`
-- `reviews.images`
-- `qna.images`
+콘텐츠 이미지 WebP 마이그레이션:
 
 ```bash
 npm run migrate:content-images:analyze
@@ -84,30 +68,8 @@ npm run migrate:content-images:validate
 npm run migrate:content-images:delete-originals
 ```
 
-- 카테고리/이벤트 신규 업로드도 WebP q75로 변환 후 저장합니다.
-- 실행 로그는 `migration-logs/content-image-webp-*.json`, 삭제 로그는 `migration-logs/content-image-webp-delete-originals-*.json`에 생성되며 Git에는 포함하지 않습니다.
-
-## Storage Rules
-
-- 읽기: 상품/카테고리/이벤트 이미지는 모든 사용자 허용
-- 쓰기: 관리자 custom claim(`admin == true` 또는 `role == "admin"`) 사용자만 이미지 파일, 5MB 이하
-
 ## 주의사항
 
-- 이미지 업로드 전 카테고리 선택 필수
-- JPG, PNG, GIF, WebP를 입력으로 허용하되 최종 저장 파일은 WebP
-- 한 번 생성된 경로는 변경하지 않는 것을 권장
-
-## 2026-05-12 상품 상세 이미지 검토 메모
-
-- 현재 상품 이미지는 `products.images[]`와 `products.mainImage`로 관리되며, 관리자 업로드는 WebP q75로 변환해 Storage에 저장한다.
-- 목록 카드는 1:1, 상품 상세 상단 이미지는 4:5 비율 컨테이너에서 `object-fit: cover`로 보이므로 8:16 원본은 현재 화면에서 크게 잘릴 수 있다.
-- 긴 세로형 상세 이미지를 상품 상세 본문에 한 장씩 노출하려면 `detailImages` 같은 별도 필드와 상세 탭 렌더링을 추가하는 방식이 적합하다.
-- 샘플 상품 `products/ZEMIfgpl9ZLAG8lgkMub`는 상세 본문에서 `detailImages[]`를 읽어 세로형 WebP를 렌더링하도록 클라이언트가 준비됐다.
-- 상세 이미지도 기존 상품 이미지와 같은 카테고리 경로를 사용하되 파일명에 `detail` 용도를 포함한다. 예: `images/accessories/{productId}/{timestamp}_detail_0_q75.webp`.
-- 2026-05-12 현재 작업 환경은 Google OAuth/Firestore/Storage 요청이 프록시 `127.0.0.1:9 ECONNREFUSED`로 차단되어 실제 업로드와 Firestore 문서 갱신은 네트워크 가능한 환경에서 재실행해야 한다.
-
-## 2026-06-29 WebP 스크립트 정리
-
-- 상품/콘텐츠 WebP 마이그레이션의 Storage URL 파싱, WebP 경로 생성, 변환, 로그 쓰기 공통 로직을 `scripts/webp-migration-utils.js`로 분리했다.
-- 각 스크립트는 대상 컬렉션/필드 처리만 유지한다.
+- 상품 상세가 로컬 fallback 상품 데이터를 사용하지 않도록 Firestore 문서와 Storage URL을 먼저 준비한다.
+- 배너 상품 이미지를 교체하면 Storage 업로드 후 Firestore 이미지 URL과 `MainBanner.tsx`의 배너 URL을 함께 확인한다.
+- Storage 파일 삭제는 Firestore 문서가 더 이상 해당 URL을 참조하지 않는 것을 확인한 뒤 진행한다.

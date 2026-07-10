@@ -43,6 +43,10 @@
         "function": "qna"
       },
       {
+        "source": "/api/event/participate",
+        "function": "event"
+      },
+      {
         "source": "**",
         "function": "nextjsServer"
       }

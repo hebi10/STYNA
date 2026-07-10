@@ -111,6 +111,24 @@ describe('ProductService.queryProducts', () => {
     expect(result.items.map((product) => product.id)).toEqual(['cheap-top']);
     expect(result.hasMore).toBe(false);
   });
+
+  it('uses the last displayed product as the next-page cursor without skipping the extra document', async () => {
+    jest.mocked(getDocs).mockResolvedValue({
+      docs: Array.from({ length: 13 }, (_, index) => makeDoc(`product-${index + 1}`, {
+        createdAt: new Date(`2026-01-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`),
+      })),
+    } as unknown as Awaited<ReturnType<typeof getDocs>>);
+
+    const result = await ProductService.queryProducts({
+      status: 'active',
+      sort: { field: 'createdAt', order: 'desc' },
+      limitCount: 12,
+    });
+
+    expect(result.items).toHaveLength(12);
+    expect(result.nextCursor?.id).toBe('product-12');
+    expect(result.hasMore).toBe(true);
+  });
 });
 
 describe('ProductService.getHomePageProducts', () => {

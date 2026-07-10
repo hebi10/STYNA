@@ -76,6 +76,101 @@ service cloud.firestore {
           .hasOnly(userUpdateAllowedKeys());
     }
 
+    function qnaCreateAllowedKeys() {
+      return [
+        'userId',
+        'userEmail',
+        'userName',
+        'category',
+        'title',
+        'content',
+        'images',
+        'isSecret',
+        'status',
+        'views',
+        'isNotified',
+        'createdAt',
+        'updatedAt',
+        'productId',
+        'productName'
+      ];
+    }
+
+    function isValidQnACreate() {
+      return isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasOnly(qnaCreateAllowedKeys()) &&
+        request.resource.data.status == 'waiting' &&
+        request.resource.data.views == 0 &&
+        !request.resource.data.keys().hasAny(['answer', 'password', 'passwordHash', 'passwordSalt']);
+    }
+
+    function isValidQnAOwnerUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isOwner(resource.data.userId) &&
+        request.resource.data.userId == resource.data.userId &&
+        changed.hasOnly([
+          'title',
+          'content',
+          'category',
+          'images',
+          'isSecret',
+          'isNotified',
+          'status',
+          'updatedAt'
+        ]) &&
+        (!changed.hasAny(['status']) || request.resource.data.status == 'closed');
+    }
+
+    function reviewAllowedKeys() {
+      return [
+        'productId',
+        'userId',
+        'userName',
+        'rating',
+        'title',
+        'content',
+        'images',
+        'size',
+        'color',
+        'height',
+        'weight',
+        'isRecommended',
+        'createdAt',
+        'updatedAt'
+      ];
+    }
+
+    function isValidReviewCreate() {
+      return isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasOnly(reviewAllowedKeys()) &&
+        request.resource.data.productId is string &&
+        request.resource.data.rating is number &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5;
+    }
+
+    function isValidReviewOwnerUpdate() {
+      return isOwner(resource.data.userId) &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.productId == resource.data.productId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'userName',
+          'rating',
+          'title',
+          'content',
+          'images',
+          'size',
+          'color',
+          'height',
+          'weight',
+          'isRecommended',
+          'updatedAt'
+        ]);
+    }
+
     match /categories/{categoryId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -104,6 +199,11 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    match /eventParticipants/{participantId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow write: if false;
     }
 
     match /faqs/{faqId} {
@@ -174,9 +274,9 @@ service cloud.firestore {
 
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isSignedIn() &&
-        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidReviewCreate() || isAdmin();
+      allow update: if isAdmin() || isValidReviewOwnerUpdate();
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
     }
 
     match /user_coupons/{userCouponId} {
@@ -200,12 +300,12 @@ service cloud.firestore {
     }
 
     match /qna/{qnaId} {
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if isValidQnACreate() || isAdmin();
       allow read: if isAdmin() ||
         (isSignedIn() && resource.data.userId == request.auth.uid) ||
         (resource.data.isSecret != true);
-      allow update, delete: if isAdmin() ||
-        (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow update: if isAdmin() || isValidQnAOwnerUpdate();
+      allow delete: if isAdmin();
     }
 
     match /inquiries/{inquiryId} {

@@ -43,19 +43,21 @@
     "migrate:content-images:validate": "node scripts/content-image-webp-migration.js validate",
     "test": "jest --runInBand",
     "test:functions": "jest --runInBand functions/__tests__",
+    "test:rules": "firebase emulators:exec --only firestore \"jest --config jest.rules.config.js --runInBand functions/__tests__/firestoreRules.test.ts\"",
     "test:watch": "jest --watch"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.84.1",
     "dotenv": "^17.2.1",
     "firebase": "^12.0.0",
-    "next": "^15.5.7",
+    "next": "^15.5.16",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/jest": "^30.0.0",
@@ -63,7 +65,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^15.5.7",
+    "eslint-config-next": "^15.5.16",
     "firebase-admin": "^13.6.0",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",

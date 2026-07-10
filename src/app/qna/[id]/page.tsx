@@ -15,31 +15,20 @@ export default function QnADetailPage() {
   const [qna, setQna] = useState<QnA | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [secretPassword, setSecretPassword] = useState('');
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const qnaId = params.id as string;
 
-  const loadQnA = useCallback(async (password?: string) => {
+  const loadQnA = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      setPasswordError(null);
-
-      const result = await QnAService.getQnAWithAccessCheck(qnaId, password);
+      const result = await QnAService.getQnAWithAccessCheck(qnaId);
 
       if (!result.success || !result.qna) {
-        if (result.needsPassword) {
-          setShowPasswordModal(true);
-          return;
-        }
-
         setError(result.error || 'QnA 정보를 불러오지 못했습니다.');
         return;
       }
 
-      setShowPasswordModal(false);
       setQna(result.qna);
     } catch (err) {
       console.error('Error loading QnA:', err);
@@ -48,17 +37,6 @@ export default function QnADetailPage() {
       setLoading(false);
     }
   }, [qnaId]);
-
-  const handlePasswordSubmit = async () => {
-    const result = await QnAService.getQnAWithAccessCheck(qnaId, secretPassword);
-    if (!result.success || !result.qna) {
-      setPasswordError('비밀번호가 일치하지 않습니다.');
-      return;
-    }
-
-    setShowPasswordModal(false);
-    setQna(result.qna);
-  };
 
   useEffect(() => {
     if (qnaId) {
@@ -119,7 +97,7 @@ export default function QnADetailPage() {
             <button onClick={() => router.back()} className={styles.backButton}>
               돌아가기
             </button>
-            <button onClick={() => loadQnA(secretPassword)} className={styles.retryButton}>
+            <button onClick={loadQnA} className={styles.retryButton}>
               다시 시도
             </button>
           </div>
@@ -134,41 +112,6 @@ export default function QnADetailPage() {
 
   return (
     <div className={styles.container}>
-      {showPasswordModal && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <div className={styles.modalHeader}>
-              <h3>비밀글 확인</h3>
-            </div>
-            <div className={styles.modalContent}>
-              <p>이 글은 비밀글입니다. 비밀번호를 입력하세요.</p>
-              <input
-                type="password"
-                value={secretPassword}
-                onChange={(e) => setSecretPassword(e.target.value)}
-                placeholder="비밀번호 (4자리)"
-                maxLength={4}
-                className={styles.passwordInput}
-                onKeyPress={(e) => e.key === 'Enter' && handlePasswordSubmit()}
-              />
-              {passwordError && <p className={styles.passwordError}>{passwordError}</p>}
-            </div>
-            <div className={styles.modalActions}>
-              <button onClick={() => router.back()} className={styles.cancelButton}>
-                닫기
-              </button>
-              <button
-                onClick={handlePasswordSubmit}
-                className={styles.submitButton}
-                disabled={!secretPassword.trim()}
-              >
-                조회
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className={styles.header}>
         <button onClick={() => router.back()} className={styles.backButton}>
           뒤로가기

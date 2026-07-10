@@ -2,6 +2,8 @@ import { onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import type { Response } from "express";
 import {
+  aggregateProductQuantities,
+  assertOrderableProductOption,
   calculateCouponDiscount,
   calculateDeliveryFee,
   calculateDiscountedUnitPrice,
@@ -146,13 +148,7 @@ async function readCancellationRestorationRefs(
 ): Promise<CancellationRestorationRefs> {
   const productChanges: CancellationRestorationRefs["productChanges"] = [];
 
-  for (const item of getOrderProducts(orderData)) {
-    const productId = toStringValue(item.productId);
-    const quantity = toNonNegativeInteger(item.quantity);
-    if (!productId || quantity <= 0) {
-      continue;
-    }
-
+  for (const { productId, quantity } of aggregateProductQuantities(getOrderProducts(orderData))) {
     const productSnapshot = await findProductSnapshot(transaction, productId);
     if (productSnapshot) {
       productChanges.push({
@@ -387,20 +383,36 @@ export const order = onRequest(
         let subtotal = 0;
         const resolvedItems: ResolvedOrderItem[] = [];
         const cartItemIdsToRemove = new Set<string>();
+        const productSnapshotsById = new Map<string, ProductRef>();
         const productStockDeltas: Array<{ ref: admin.firestore.DocumentReference; nextStock: number }> = [];
 
+        for (const { productId, quantity } of aggregateProductQuantities(items)) {
+          const productSnapshot = await findProductSnapshot(transaction, productId);
+          if (!productSnapshot) {
+            throw new Error(`Product not found: ${productId}`);
+          }
+
+          const stock = toNonNegativeInteger(productSnapshot.data.stock);
+          if (stock < quantity) {
+            throw new Error(`Insufficient stock for productId: ${productId}`);
+          }
+
+          productSnapshotsById.set(productId, productSnapshot);
+          productStockDeltas.push({
+            ref: productSnapshot.ref,
+            nextStock: Math.max(0, stock - quantity),
+          });
+        }
+
         for (const item of items) {
-          const productSnapshot = await findProductSnapshot(transaction, item.productId);
+          const productSnapshot = productSnapshotsById.get(item.productId);
           if (!productSnapshot) {
             throw new Error(`Product not found: ${item.productId}`);
           }
 
           const productData = productSnapshot.data;
+          assertOrderableProductOption(productData, item);
           const unitPrice = calculateDiscountedUnitPrice(productData);
-          const stock = toNonNegativeInteger(productData.stock);
-          if (stock < item.quantity) {
-            throw new Error(`Insufficient stock for productId: ${item.productId}`);
-          }
 
           for (const cartItemId of item.cartItemIds) {
             if (cartItemId) {
@@ -422,10 +434,6 @@ export const order = onRequest(
           });
 
           subtotal += unitPrice * item.quantity;
-          productStockDeltas.push({
-            ref: productSnapshot.ref,
-            nextStock: Math.max(0, stock - item.quantity),
-          });
         }
 
         let couponDiscount = 0;

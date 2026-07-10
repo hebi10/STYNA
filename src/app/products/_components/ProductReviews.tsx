@@ -26,6 +26,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
   
   const { user } = useAuth();
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [reviewForm, setReviewForm] = useState({
     rating: 5,
     title: '',
@@ -49,6 +50,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
     }
 
     try {
+      setSubmitError(null);
       await createReview(productId, {
         ...reviewForm,
         productId,
@@ -70,6 +72,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
       alert('리뷰가 등록되었습니다.');
     } catch (error) {
       console.error('리뷰 등록 실패:', error);
+      setSubmitError(error instanceof Error ? error.message : '리뷰 등록에 실패했습니다. 잠시 후 다시 시도해주세요.');
     }
   };
 
@@ -99,7 +102,11 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
         {user && (
           <button 
             className={styles.writeButton}
-            onClick={() => setShowReviewForm(!showReviewForm)}
+            onClick={() => {
+              setShowReviewForm(!showReviewForm);
+              setSubmitError(null);
+            }}
+            aria-expanded={showReviewForm}
           >
             리뷰 작성
           </button>
@@ -143,9 +150,15 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
       {/* 리뷰 작성 폼 */}
       {showReviewForm && (
         <form className={styles.reviewForm} onSubmit={handleSubmitReview}>
+          {submitError && (
+            <p className={styles.submitError} role="alert">
+              {submitError}
+            </p>
+          )}
           <div className={styles.formGroup}>
-            <label>평점</label>
+            <label htmlFor="review-rating">평점</label>
             <select 
+              id="review-rating"
               value={reviewForm.rating}
               onChange={(e) => setReviewForm(prev => ({ ...prev, rating: Number(e.target.value) }))}
             >
@@ -158,8 +171,9 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
           </div>
 
           <div className={styles.formGroup}>
-            <label>제목</label>
+            <label htmlFor="review-title">제목</label>
             <input
+              id="review-title"
               type="text"
               value={reviewForm.title}
               onChange={(e) => setReviewForm(prev => ({ ...prev, title: e.target.value }))}
@@ -169,8 +183,9 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
           </div>
 
           <div className={styles.formGroup}>
-            <label>내용</label>
+            <label htmlFor="review-content">내용</label>
             <textarea
+              id="review-content"
               value={reviewForm.content}
               onChange={(e) => setReviewForm(prev => ({ ...prev, content: e.target.value }))}
               placeholder="리뷰 내용을 입력하세요"
@@ -181,8 +196,9 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
 
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label>사이즈</label>
+              <label htmlFor="review-size">사이즈</label>
               <input
+                id="review-size"
                 type="text"
                 value={reviewForm.size}
                 onChange={(e) => setReviewForm(prev => ({ ...prev, size: e.target.value }))}
@@ -191,8 +207,9 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
             </div>
 
             <div className={styles.formGroup}>
-              <label>색상</label>
+              <label htmlFor="review-color">색상</label>
               <input
+                id="review-color"
                 type="text"
                 value={reviewForm.color}
                 onChange={(e) => setReviewForm(prev => ({ ...prev, color: e.target.value }))}
@@ -202,8 +219,9 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
           </div>
 
           <div className={styles.formGroup}>
-            <label>
+            <label htmlFor="review-recommended">
               <input
+                id="review-recommended"
                 type="checkbox"
                 checked={reviewForm.isRecommended}
                 onChange={(e) => setReviewForm(prev => ({ ...prev, isRecommended: e.target.checked }))}

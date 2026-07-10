@@ -1,23 +1,35 @@
 import { buildCheckoutDeliveryAddresses } from './deliveryAddress';
 
 describe('buildCheckoutDeliveryAddresses', () => {
-  test('uses the latest loaded user name as the recipient', () => {
-    const addresses = buildCheckoutDeliveryAddresses({ name: '홍길동' });
+  test('uses the saved profile address instead of generating a placeholder delivery address', () => {
+    const addresses = buildCheckoutDeliveryAddresses({
+      name: '홍길동',
+      addresses: [{
+        id: 'home',
+        name: '집',
+        recipient: '홍길동',
+        phone: '010-0000-0000',
+        address: '서울시 강남구',
+        detailAddress: '101호',
+        zipCode: '06234',
+        isDefault: true,
+      }],
+    });
 
     expect(addresses[0]).toMatchObject({
-      id: 'addr1',
-      name: 'default',
+      id: 'home',
+      name: '집',
       recipient: '홍길동',
-      phone: '010-1234-5678',
-      address: 'seoul',
-      detailAddress: '101-202',
+      phone: '010-0000-0000',
+      address: '서울시 강남구',
+      detailAddress: '101호',
       zipCode: '06234',
       isDefault: true,
     });
   });
 
-  test('falls back to Firebase display name or a safe placeholder when profile name is not loaded', () => {
-    expect(buildCheckoutDeliveryAddresses(null, '테스트사용자')[0].recipient).toBe('테스트사용자');
-    expect(buildCheckoutDeliveryAddresses(null, '')[0].recipient).toBe('고객');
+  test('returns no delivery address until the user registers one', () => {
+    expect(buildCheckoutDeliveryAddresses(null)).toEqual([]);
+    expect(buildCheckoutDeliveryAddresses({ name: '테스트사용자' })).toEqual([]);
   });
 });

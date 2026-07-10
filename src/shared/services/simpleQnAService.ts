@@ -12,7 +12,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/shared/libs/firebase/firebase';
 import { QnA, CreateQnAData } from '@/shared/types/qna';
-import { buildQnASecurity } from '@/shared/utils/qnaSecret';
 
 const COLLECTION_NAME = 'qna';
 
@@ -42,17 +41,6 @@ export class SimpleQnAService {
         productId: data.productId,
         productName: data.productName,
       };
-
-      if (data.isSecret) {
-        const trimmedPassword = data.password?.trim();
-        if (!trimmedPassword) {
-          throw new Error('비밀글은 비밀번호가 필요합니다.');
-        }
-
-        const secret = await buildQnASecurity(trimmedPassword);
-        qnaData.passwordHash = secret.passwordHash;
-        qnaData.passwordSalt = secret.passwordSalt;
-      }
 
       const docRef = await addDoc(collection(db, COLLECTION_NAME), qnaData);
       return docRef.id;

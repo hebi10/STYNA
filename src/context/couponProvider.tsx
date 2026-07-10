@@ -23,7 +23,6 @@ interface CouponContextType {
   refreshUserCoupons: () => Promise<void>;
   getUserCouponsWithFilter: (filter: CouponFilter) => Promise<void>;
   getAvailableCouponsForOrder: (orderAmount: number) => Promise<UserCouponView[]>;
-  issueCoupon: (couponId: string) => Promise<CouponResponse>;
   useCoupon: (userCouponId: string, orderId: string) => Promise<CouponResponse>;
   registerCouponByCode: (couponCode: string) => Promise<CouponResponse>;
   
@@ -104,30 +103,6 @@ export function CouponProvider({ children }: CouponProviderProps) {
     } catch (err) {
       console.error('주문 가능 쿠폰 조회 실패:', err);
       return [];
-    }
-  };
-
-  // 쿠폰 발급
-  const issueCoupon = async (couponId: string): Promise<CouponResponse> => {
-    if (!user?.uid) {
-      throw new Error('로그인이 필요합니다.');
-    }
-
-    try {
-      setLoading(true);
-      const response = await CouponService.issueCoupon(user.uid, couponId);
-      
-      if (response.success) {
-        // 성공시 쿠폰 목록 새로고침
-        await refreshUserCoupons();
-      }
-      
-      return response;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '쿠폰 발급에 실패했습니다.';
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -255,7 +230,6 @@ export function CouponProvider({ children }: CouponProviderProps) {
     refreshUserCoupons,
     getUserCouponsWithFilter,
     getAvailableCouponsForOrder,
-    issueCoupon,
     useCoupon,
     registerCouponByCode,
 
