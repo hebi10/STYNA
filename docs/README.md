@@ -23,6 +23,8 @@
 - 환경 변수/배포 설정 : env-setup.md
 - QnA 비밀글 검증 구조 정리 : qna-secret-password.md
 - 주문 생성 서버화 : order-serverization.md
+- 체크아웃 배송지 직접 입력 설계 : superpowers/specs/2026-07-13-checkout-delivery-address-input-design.md
+- 체크아웃 배송지 직접 입력 실행 계획 : superpowers/plans/2026-07-13-checkout-delivery-address-input.md
 - Firestore 상품 마이그레이션 계획 : firestore-migration-plan.md
 - Firestore AI 요약 Export : firestore-ai-summary.md
 - Firestore 최적화 실행 계획 : superpowers/plans/2026-06-30-firestore-optimization.md
