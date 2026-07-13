@@ -18,7 +18,7 @@
 
 .header h2 {
   margin: 0;
-  font-size: clamp(1.45rem, 2.2vw, 1.9rem);
+  font-size: clamp(1.3rem, 2vw, 1.6rem);
   font-weight: 600;
   line-height: 1.2;
   color: var(--black);
@@ -68,10 +68,9 @@
 .empty {
   display: grid;
   justify-items: center;
-  gap: 0.9rem;
-  padding: 2.5rem 1.25rem;
+  gap: 0.65rem;
+  padding: 1.5rem 1rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
   background: var(--off-white);
   text-align: center;
 }
@@ -93,7 +92,7 @@
 .embedded .error,
 .embedded .loading,
 .embedded .empty {
-  min-height: 240px;
+  min-height: 150px;
 }
 
 .loginLink,
@@ -122,22 +121,20 @@
 .productGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .productCard {
   position: relative;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
   background: var(--surface-raised);
   overflow: hidden;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .productCard:hover {
-  transform: translateY(-2px);
   border-color: var(--line-strong);
-  box-shadow: var(--shadow-sm);
+  background: var(--off-white);
 }
 
 .removeButton {
@@ -215,7 +212,7 @@
 .productInfo {
   display: grid;
   gap: 0.4rem;
-  padding: 1rem;
+  padding: 0.75rem;
 }
 
 .productName {
@@ -297,7 +294,7 @@
 }
 
 .productInfoSkeleton {
-  padding: 1rem;
+  padding: 0.75rem;
 }
 
 .skeletonLine {
@@ -341,12 +338,12 @@
 
 @media (max-width: 480px) {
   .productGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .productImage,
   .productImageSkeleton {
-    height: 200px;
+    height: 150px;
   }
 
   .removeButton {

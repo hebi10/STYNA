@@ -2,8 +2,10 @@ import { render, screen } from '@testing-library/react';
 import MyPageLayout from './layout';
 import { useAuth } from '@/context/authProvider';
 
+let mockPathname = '/mypage';
+
 jest.mock('next/navigation', () => ({
-  usePathname: () => '/mypage',
+  usePathname: () => mockPathname,
 }));
 
 jest.mock('@/context/authProvider', () => ({
@@ -37,6 +39,7 @@ jest.mock('./layout.module.css', () => ({
 describe('MyPageLayout loading behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockPathname = '/mypage';
     window.scrollTo = jest.fn();
   });
 
@@ -85,5 +88,27 @@ describe('MyPageLayout loading behavior', () => {
 
     expect(screen.queryByTestId('nested-coupon-provider')).not.toBeInTheDocument();
     expect(screen.getByText('마이페이지 본문')).toBeInTheDocument();
+  });
+
+  test('shows profile and quick actions only on the mypage overview', () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      user: { uid: 'user-1' },
+      userData: { name: '홍길동', email: 'user@example.com' },
+      isUserDataLoading: false,
+      loading: false,
+      logout: jest.fn(),
+    });
+
+    const { rerender } = render(<MyPageLayout>마이페이지 본문</MyPageLayout>);
+
+    expect(screen.getByTestId('profile-section')).toBeInTheDocument();
+    expect(screen.getByTestId('quick-actions')).toBeInTheDocument();
+
+    mockPathname = '/mypage/order-list';
+    rerender(<MyPageLayout>주문내역 본문</MyPageLayout>);
+
+    expect(screen.queryByTestId('profile-section')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('quick-actions')).not.toBeInTheDocument();
+    expect(screen.getByText('주문내역 본문')).toBeInTheDocument();
   });
 });

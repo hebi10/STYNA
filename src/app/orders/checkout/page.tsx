@@ -4,15 +4,24 @@ import { useState, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { arrayUnion, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import PageHeader from "../../_components/PageHeader";
 import { useAuth } from "@/context/authProvider";
 import { useCoupon } from "@/context/couponProvider";
 import { OrderService } from "@/shared/services/orderService";
+import { db } from "@/shared/libs/firebase/firebase";
 import { cartKeys } from "@/shared/hooks/useCart";
 import { usePointBalance } from "@/shared/hooks/usePoint";
 import { calculateOrderPreview } from "@/shared/utils/orderPricing";
 import { CheckoutDraft, parseCheckoutDraft } from "./checkoutDraft";
-import { buildCheckoutDeliveryAddresses, DeliveryAddress } from "./deliveryAddress";
+import {
+  buildCheckoutDeliveryAddresses,
+  createManualDeliveryAddress,
+  DeliveryAddress,
+  ManualDeliveryAddressErrors,
+  ManualDeliveryAddressInput,
+  validateManualDeliveryAddress,
+} from "./deliveryAddress";
 import styles from "./page.module.css";
 
 const paymentMethods = [
@@ -37,6 +46,17 @@ export default function CheckoutPage() {
 
   const [orderData, setOrderData] = useState<CheckoutDraft | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<DeliveryAddress | null>(null);
+  const [useManualAddress, setUseManualAddress] = useState(false);
+  const [manualAddress, setManualAddress] = useState<ManualDeliveryAddressInput>({
+    name: "집",
+    recipient: "",
+    phone: "",
+    address: "",
+    detailAddress: "",
+    zipCode: "",
+  });
+  const [manualAddressErrors, setManualAddressErrors] = useState<ManualDeliveryAddressErrors>({});
+  const [saveManualAddress, setSaveManualAddress] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<(typeof paymentMethods)[number]["value"]>("card");
   const [usePoints, setUsePoints] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -68,6 +88,12 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
+    if (addresses.length === 0) {
+      setSelectedAddress(null);
+      setUseManualAddress(true);
+      return;
+    }
+
     setSelectedAddress((currentAddress) => {
       const defaultAddress = addresses.find((address) => address.isDefault) || addresses[0] || null;
       if (!currentAddress) {
@@ -77,6 +103,14 @@ export default function CheckoutPage() {
       return addresses.find((address) => address.id === currentAddress.id) || defaultAddress;
     });
   }, [addresses]);
+
+  useEffect(() => {
+    setManualAddress((current) => ({
+      ...current,
+      recipient: current.recipient || (typeof userData?.name === "string" ? userData.name : user?.displayName || ""),
+      phone: current.phone || (typeof userData?.phone === "string" ? userData.phone : ""),
+    }));
+  }, [user?.displayName, userData]);
 
   const selectedCouponView = userCoupons?.find((coupon) => coupon.id === orderData?.selectedCoupon) || null;
   const orderPreview = useMemo(() => {
@@ -115,14 +149,38 @@ export default function CheckoutPage() {
     setUsePoints(Math.max(0, Math.min(maxUsablePoints, Math.floor(parsed))));
   };
 
+  const handleManualAddressChange = (field: keyof ManualDeliveryAddressInput, value: string) => {
+    setManualAddress((current) => ({ ...current, [field]: value }));
+    setManualAddressErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
   const handleCompleteOrder = async () => {
-    if (!user || !orderData || !selectedAddress || !agreeTerms) {
+    if (!user || !orderData || !agreeTerms) {
       alert("필수 정보를 입력해주세요.");
       return;
     }
 
     if (!orderData.items.length) {
       alert("주문 대상 상품이 없습니다.");
+      return;
+    }
+
+    let deliveryAddress: DeliveryAddress;
+    if (useManualAddress) {
+      const errors = validateManualDeliveryAddress(manualAddress);
+      if (Object.keys(errors).length > 0) {
+        setManualAddressErrors(errors);
+        return;
+      }
+
+      const addressId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `checkout-${Date.now()}`;
+      deliveryAddress = createManualDeliveryAddress(manualAddress, addressId, addresses.length === 0);
+    } else if (selectedAddress) {
+      deliveryAddress = selectedAddress;
+    } else {
+      alert("배송지를 선택해주세요.");
       return;
     }
 
@@ -137,20 +195,32 @@ export default function CheckoutPage() {
           quantity: item.quantity,
         })),
         deliveryAddress: {
-          id: selectedAddress.id,
-          name: selectedAddress.name,
-          recipient: selectedAddress.recipient,
-          phone: selectedAddress.phone,
-          address: selectedAddress.address,
-          detailAddress: selectedAddress.detailAddress,
-          zipCode: selectedAddress.zipCode,
-          isDefault: selectedAddress.isDefault,
+          id: deliveryAddress.id,
+          name: deliveryAddress.name,
+          recipient: deliveryAddress.recipient,
+          phone: deliveryAddress.phone,
+          address: deliveryAddress.address,
+          detailAddress: deliveryAddress.detailAddress,
+          zipCode: deliveryAddress.zipCode,
+          isDefault: deliveryAddress.isDefault,
         },
         paymentMethod,
         deliveryOption: orderData.deliveryOption,
         selectedCoupon: orderPreview?.usableCoupon?.id || undefined,
         requestedPointAmount: orderPreview?.pointUsed ?? usePoints,
       });
+
+      if (useManualAddress && saveManualAddress) {
+        try {
+          await updateDoc(doc(db, "users", user.uid), {
+            addresses: arrayUnion(deliveryAddress),
+            updatedAt: serverTimestamp(),
+          });
+        } catch (saveError) {
+          console.error("delivery address save failed:", saveError);
+          alert("주문은 완료됐지만 입력한 배송지는 저장하지 못했습니다.");
+        }
+      }
 
       sessionStorage.setItem("orderResult", JSON.stringify({ orderId: response.orderId }));
       await queryClient.invalidateQueries({ queryKey: cartKeys.list(user.uid) });
@@ -199,32 +269,6 @@ export default function CheckoutPage() {
     return <div>주문 정보 확인 중...</div>;
   }
 
-  if (addresses.length === 0 || !selectedAddress) {
-    return (
-      <div className={styles.container}>
-        <PageHeader
-          title="배송지 등록 필요"
-          description="주문을 진행하려면 실제 배송지를 먼저 등록해주세요"
-          breadcrumb={[
-            { label: "홈", href: "/" },
-            { label: "주문/결제" },
-          ]}
-        />
-        <div className={styles.content}>
-          <div className={styles.recoveryPanel} role="status" aria-live="polite">
-            <h2 className={styles.recoveryTitle}>등록된 배송지가 없습니다</h2>
-            <p className={styles.recoveryDescription}>
-              임시 주소로 주문하지 않습니다. 마이페이지에서 배송지를 등록한 뒤 다시 진행해주세요.
-            </p>
-            <Link href="/mypage/info-edit" className={styles.recoveryButton}>
-              배송지 등록하기
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={styles.container}>
       <PageHeader
@@ -265,8 +309,11 @@ export default function CheckoutPage() {
                     <input
                       type="radio"
                       name="address"
-                      checked={selectedAddress.id === address.id}
-                      onChange={() => setSelectedAddress(address)}
+                      checked={!useManualAddress && selectedAddress?.id === address.id}
+                      onChange={() => {
+                        setSelectedAddress(address);
+                        setUseManualAddress(false);
+                      }}
                     />
                     <div className={styles.addressContent}>
                       <div className={styles.addressHeader}>
@@ -279,6 +326,92 @@ export default function CheckoutPage() {
                     </div>
                   </label>
                 ))}
+                <label className={styles.addressOption}>
+                  <input
+                    type="radio"
+                    name="address"
+                    checked={useManualAddress}
+                    onChange={() => setUseManualAddress(true)}
+                  />
+                  <span className={styles.addressName}>새 배송지 입력</span>
+                </label>
+                {useManualAddress && (
+                  <div className={styles.manualAddressForm}>
+                    <div className={styles.addressFieldRow}>
+                      <label className={styles.addressField}>
+                        <span>배송지명</span>
+                        <input
+                          type="text"
+                          aria-label="배송지명"
+                          value={manualAddress.name}
+                          onChange={(event) => handleManualAddressChange("name", event.target.value)}
+                        />
+                        {manualAddressErrors.name && <span role="alert" className={styles.addressError}>{manualAddressErrors.name}</span>}
+                      </label>
+                      <label className={styles.addressField}>
+                        <span>받는 분</span>
+                        <input
+                          type="text"
+                          aria-label="받는 분"
+                          value={manualAddress.recipient}
+                          onChange={(event) => handleManualAddressChange("recipient", event.target.value)}
+                        />
+                        {manualAddressErrors.recipient && <span role="alert" className={styles.addressError}>{manualAddressErrors.recipient}</span>}
+                      </label>
+                    </div>
+                    <div className={styles.addressFieldRow}>
+                      <label className={styles.addressField}>
+                        <span>연락처</span>
+                        <input
+                          type="tel"
+                          aria-label="연락처"
+                          placeholder="010-1234-5678"
+                          value={manualAddress.phone}
+                          onChange={(event) => handleManualAddressChange("phone", event.target.value)}
+                        />
+                        {manualAddressErrors.phone && <span role="alert" className={styles.addressError}>{manualAddressErrors.phone}</span>}
+                      </label>
+                      <label className={styles.addressField}>
+                        <span>우편번호</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          aria-label="우편번호"
+                          value={manualAddress.zipCode}
+                          onChange={(event) => handleManualAddressChange("zipCode", event.target.value)}
+                        />
+                        {manualAddressErrors.zipCode && <span role="alert" className={styles.addressError}>{manualAddressErrors.zipCode}</span>}
+                      </label>
+                    </div>
+                    <label className={styles.addressField}>
+                      <span>주소</span>
+                      <input
+                        type="text"
+                        aria-label="주소"
+                        value={manualAddress.address}
+                        onChange={(event) => handleManualAddressChange("address", event.target.value)}
+                      />
+                      {manualAddressErrors.address && <span role="alert" className={styles.addressError}>{manualAddressErrors.address}</span>}
+                    </label>
+                    <label className={styles.addressField}>
+                      <span>상세 주소</span>
+                      <input
+                        type="text"
+                        aria-label="상세 주소"
+                        value={manualAddress.detailAddress}
+                        onChange={(event) => handleManualAddressChange("detailAddress", event.target.value)}
+                      />
+                    </label>
+                    <label className={styles.saveAddressCheck}>
+                      <input
+                        type="checkbox"
+                        checked={saveManualAddress}
+                        onChange={(event) => setSaveManualAddress(event.target.checked)}
+                      />
+                      <span>입력한 배송지 저장하기</span>
+                    </label>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -374,7 +507,7 @@ export default function CheckoutPage() {
                 onClick={handleCompleteOrder}
                 disabled={!agreeTerms || isProcessing}
               >
-                {isProcessing ? "주문 처리 중..." : `${finalAmount.toLocaleString()}원 데모 주문 접수하기`}
+                {isProcessing ? "주문 처리 중..." : `${finalAmount.toLocaleString()}원 주문 접수하기`}
               </button>
 
               <Link href="/orders/cart" className={styles.backButton}>

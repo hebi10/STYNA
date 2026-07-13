@@ -42,7 +42,7 @@ function getPaymentMethodText(method: string | undefined) {
 function OrderCompleteContent() {
   const router = useRouter();
   const params = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const orderId = params.get("orderId");
   const [state, setState] = useState<OrderCompleteState>({
     loading: true,
@@ -71,6 +71,10 @@ function OrderCompleteContent() {
     };
 
     const loadOrder = async () => {
+      if (authLoading) {
+        return;
+      }
+
       if (!user) {
         router.push("/auth/login");
         return;
@@ -96,7 +100,7 @@ function OrderCompleteContent() {
     };
 
     loadOrder();
-  }, [orderId, user, router]);
+  }, [authLoading, orderId, user, router]);
 
   const order = state.order;
 
@@ -142,7 +146,7 @@ function OrderCompleteContent() {
     <div className={styles.container}>
       <PageHeader
         title="주문 완료"
-        description="포트폴리오 데모 주문이 정상적으로 접수되었습니다."
+        description="포트폴리오 주문이 정상적으로 접수되었습니다."
         breadcrumb={[
           { label: "home", href: "/" },
           { label: "주문 완료" },
@@ -156,7 +160,7 @@ function OrderCompleteContent() {
             <h2 className={styles.successTitle}>주문 완료</h2>
             <p className={styles.successMessage}>주문번호: <strong>{order.orderNumber}</strong></p>
             <p className={styles.successDescription}>
-              실제 결제 없이 데모 주문이 접수되었습니다. 주문 및 배송 상태는 마이페이지에서 확인할 수 있습니다.
+              실제 결제 없이 주문이 접수되었습니다. 주문 및 배송 상태는 마이페이지에서 확인할 수 있습니다.
             </p>
           </div>
 

@@ -68,7 +68,7 @@ export default function OrderListPage() {
       return;
     }
 
-    const confirmMessage = `주문번호: ${orderNumber}\n총 주문금액: ${formatCurrency(order.finalAmount)}\n\n주문을 취소하시겠습니까?\n\n※ 데모 주문에는 실제 결제가 처리되지 않습니다.\n※ 사용된 포인트와 쿠폰은 즉시 복원됩니다.`;
+    const confirmMessage = `주문번호: ${orderNumber}\n총 주문금액: ${formatCurrency(order.finalAmount)}\n\n주문을 취소하시겠습니까?\n\n※ 주문에는 실제 결제가 처리되지 않습니다.\n※ 사용된 포인트와 쿠폰은 즉시 복원됩니다.`;
     
     if (!confirm(confirmMessage)) {
       return;
@@ -81,7 +81,7 @@ export default function OrderListPage() {
       // 주문 목록 새로고침
       await loadOrders();
       
-      alert('주문이 성공적으로 취소되었습니다.\n\n사용된 포인트와 쿠폰이 복원되었습니다.\n데모 주문에는 실제 환불이 발생하지 않습니다.');
+      alert('주문이 성공적으로 취소되었습니다.\n\n사용된 포인트와 쿠폰이 복원되었습니다.\n주문에는 실제 환불이 발생하지 않습니다.');
     } catch (error) {
       console.error('주문 취소 실패:', error);
       const message = error instanceof Error ? error.message : '';

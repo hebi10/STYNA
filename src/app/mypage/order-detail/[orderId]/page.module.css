@@ -586,3 +586,97 @@
 .status-exchanged {
   background-color: var(--black);
 }
+
+/* 컴팩트 마이페이지 밀도 */
+.container {
+  max-width: none;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.loading,
+.error,
+.notFound {
+  min-height: 240px;
+  padding: 2rem 1rem;
+}
+
+.pageHeader {
+  margin-bottom: 1rem;
+  padding: 0 0 0.75rem;
+  border-width: 0 0 1px;
+  border-radius: 0;
+}
+
+.breadcrumb {
+  margin-bottom: 0.65rem;
+}
+
+.pageTitle {
+  font-size: 1.65rem;
+}
+
+.pageDesc {
+  font-size: 0.9rem;
+}
+
+.statusSection,
+.productsSection,
+.paymentSection,
+.shippingSection {
+  margin-bottom: 1rem;
+}
+
+.statusCard,
+.paymentCard,
+.shippingCard {
+  padding: 1rem;
+  border-radius: 0;
+}
+
+.statusHeader {
+  margin-bottom: 0.75rem;
+}
+
+.statusBadge {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0;
+}
+
+.sectionTitle {
+  margin-bottom: 0.75rem;
+  font-size: 1.15rem;
+}
+
+.productsList {
+  border-radius: 0;
+}
+
+.productCard {
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.productImage {
+  width: 64px;
+  height: 64px;
+  border-radius: 0;
+}
+
+.paymentRow,
+.addressRow {
+  padding: 0.65rem 0;
+}
+
+.actionsSection {
+  margin-top: 1.25rem;
+}
+
+.backButton,
+.cancelButton,
+.trackingButton,
+.reviewButton {
+  padding: 0.65rem 1rem;
+  border-radius: 0;
+}

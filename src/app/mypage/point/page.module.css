@@ -516,3 +516,89 @@
 .pointType.use {
   color: #111;
 }
+
+/* 컴팩트 마이페이지 밀도 */
+.container {
+  max-width: none;
+  padding: 0;
+}
+
+.header {
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.header h1 {
+  font-size: 1.65rem;
+}
+
+.header p {
+  font-size: 0.9rem;
+}
+
+.balanceCard,
+.earnInfo,
+.balanceTab,
+.historyTab {
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  border-radius: 0;
+}
+
+.amount {
+  font-size: 2rem;
+}
+
+.unit {
+  font-size: 1.15rem;
+}
+
+.earnInfo h3 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.earnMethods,
+.historyList {
+  gap: 0.75rem;
+}
+
+.earnMethod,
+.historyItem,
+.pointNote {
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border-radius: 0;
+}
+
+.methodIcon {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.25rem;
+  border-radius: 0;
+}
+
+.tabMenu {
+  margin-bottom: 1rem;
+  border-radius: 0;
+}
+
+.tabButton {
+  padding: 0.6rem 0.75rem;
+  border-radius: 0;
+}
+
+.tabContent {
+  min-height: 0;
+}
+
+.balanceDetails,
+.loadMore {
+  margin-bottom: 1rem;
+  margin-top: 1rem;
+}
+
+.loading,
+.emptyState {
+  padding: 2rem 1rem;
+}

@@ -12,9 +12,17 @@ export default function SidebarMenu({ activeTab, logout }: SidebarMenuProps) {
       <div className={styles.sidebarCard}>
         <h3 className={styles.sidebarTitle}>마이메뉴</h3>
         <nav className={styles.sidebarMenu}>
+          <Link
+            href="/mypage"
+            className={`${styles.menuItem} ${activeTab === 'overview' ? styles.active : ''}`}
+            aria-current={activeTab === 'overview' ? 'page' : undefined}
+          >
+            나의 쇼핑 현황
+          </Link>
           <Link 
             href="/mypage/order-list" 
             className={`${styles.menuItem} ${activeTab === 'orders' ? styles.active : ''}`}
+            aria-current={activeTab === 'orders' ? 'page' : undefined}
           >
             주문내역
           </Link>

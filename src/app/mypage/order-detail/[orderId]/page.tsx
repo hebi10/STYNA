@@ -128,7 +128,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
     }
 
     const confirmed = confirm(
-      `주문번호: ${order.orderNumber}\n총 주문금액: ${formatCurrency(order.finalAmount)}\n\n주문을 취소하시겠습니까?\n\n※ 데모 주문에는 실제 결제가 처리되지 않습니다.\n※ 사용된 포인트와 쿠폰은 즉시 복원됩니다.`
+      `주문번호: ${order.orderNumber}\n총 주문금액: ${formatCurrency(order.finalAmount)}\n\n주문을 취소하시겠습니까?\n\n※ 주문에는 실제 결제가 처리되지 않습니다.\n※ 사용된 포인트와 쿠폰은 즉시 복원됩니다.`
     );
     if (!confirmed) return;
 
@@ -136,7 +136,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
       setIsCancelling(true);
       await OrderService.cancelOrder(order.id, '고객 직접 취소');
       await loadOrderDetails();
-      alert('주문이 성공적으로 취소되었습니다.\n\n사용된 포인트와 쿠폰이 복원되었습니다.\n데모 주문에는 실제 환불이 발생하지 않습니다.');
+      alert('주문이 성공적으로 취소되었습니다.\n\n사용된 포인트와 쿠폰이 복원되었습니다.\n주문에는 실제 환불이 발생하지 않습니다.');
     } catch (cancelError) {
       console.error('주문 취소 실패:', cancelError);
       alert(cancelError instanceof Error ? cancelError.message : '주문 취소에 실패했습니다.');

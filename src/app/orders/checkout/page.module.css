@@ -248,6 +248,70 @@
   line-height: 1.4;
 }
 
+.manualAddressForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  background-color: var(--off-white);
+}
+
+.addressFieldRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.addressField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  color: var(--black);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.addressField input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface-raised);
+  color: var(--black);
+  font: inherit;
+  font-weight: 500;
+}
+
+.addressField input:focus {
+  outline: none;
+  border-color: var(--black);
+}
+
+.addressError {
+  color: var(--danger, #c62828);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.saveAddressCheck {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 40px;
+  padding-top: 0.25rem;
+  color: var(--black);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.saveAddressCheck input {
+  margin: 0;
+}
+
 .addAddressButton {
   width: 100%;
   padding: 0.75rem;
@@ -704,6 +768,10 @@
     flex-direction: column;
     gap: 0.5rem;
   }
+
+  .addressFieldRow {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* 2nd priority clean commerce tone */
@@ -716,6 +784,7 @@
 .addressOption,
 .addAddressButton,
 .paymentMethod,
+.manualAddressForm,
 .pointInput input,
 .maxButton {
   border-radius: var(--radius-sm);

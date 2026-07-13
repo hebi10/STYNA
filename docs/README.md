@@ -11,6 +11,8 @@
 - 메인 배너 드래그·무한 순환 안정화 설계 : superpowers/specs/2026-07-13-main-banner-drag-loop-design.md
 - 메인 배너 드래그·무한 순환 안정화 실행 계획 : superpowers/plans/2026-07-13-main-banner-drag-loop.md
 - 마이페이지 UI 점검 : mypage-ui.md
+- 마이페이지 컴팩트 레이아웃 설계 : superpowers/specs/2026-07-13-mypage-compact-layout-design.md
+- 마이페이지 컴팩트 레이아웃 실행 계획 : superpowers/plans/2026-07-13-mypage-compact-layout.md
 - 인증 화면 UI 정리 : auth-ui.md
 - 상품 조회 구조 개선 : product-listing-structure.md
 - 디자인 시스템 정리/리팩터 : design-system-refactor.md

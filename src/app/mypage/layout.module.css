@@ -4,33 +4,32 @@
 }
 
 .content {
-  max-width: 1280px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 2.5rem 1rem 4rem;
+  padding: 1.5rem 1rem 3rem;
 }
 
 .profileSection {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
-  gap: 1.5rem;
+  gap: 1rem;
   align-items: stretch;
-  margin-bottom: 2rem;
-  padding: 1.75rem;
+  margin-bottom: 1rem;
+  padding: 1.25rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--surface-raised) 0%, var(--off-white) 100%);
 }
 
 .profileHeader {
   display: flex;
   align-items: flex-start;
-  gap: 1.25rem;
+  gap: 1rem;
 }
 
 .profileAvatar {
   flex-shrink: 0;
-  width: 4.75rem;
-  height: 4.75rem;
+  width: 4rem;
+  height: 4rem;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: var(--surface);
@@ -38,19 +37,19 @@
   align-items: center;
   justify-content: center;
   color: var(--black);
-  font-size: 1.55rem;
+  font-size: 1.35rem;
   font-weight: 600;
 }
 
 .profileInfo {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.4rem;
   align-content: start;
 }
 
 .profileName {
   margin: 0;
-  font-size: clamp(1.9rem, 3vw, 2.5rem);
+  font-size: clamp(1.65rem, 2.4vw, 2rem);
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: -0.03em;
@@ -59,8 +58,8 @@
 
 .profileEmail {
   margin: 0;
-  font-size: 0.96rem;
-  line-height: 1.7;
+  font-size: 0.9rem;
+  line-height: 1.55;
   color: var(--text-subtle);
 }
 
@@ -72,7 +71,6 @@
   min-height: 32px;
   padding: 0 0.85rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
   background: var(--surface-raised);
   color: var(--text-subtle);
   font-size: 0.82rem;
@@ -83,29 +81,28 @@
 .profileStats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .statItem {
   display: grid;
   gap: 0.35rem;
   align-content: center;
-  padding: 1rem;
+  padding: 0.75rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
   background: var(--surface-raised);
   text-align: left;
 }
 
 .statNumber {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   font-weight: 600;
   line-height: 1.05;
   color: var(--black);
 }
 
 .statLabel {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -115,26 +112,24 @@
 .quickActions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
-  margin-bottom: 2rem;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .actionCard {
   display: grid;
   gap: 0.4rem;
-  padding: 1.15rem 1rem;
+  padding: 0.8rem 0.85rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
   background: var(--surface-raised);
   color: inherit;
   text-decoration: none;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .actionCard:hover {
-  transform: translateY(-2px);
   border-color: var(--line-strong);
-  box-shadow: var(--shadow-sm);
+  background: var(--off-white);
 }
 
 .actionIcon {
@@ -143,22 +138,22 @@
 }
 
 .actionTitle {
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 600;
   color: var(--black);
   letter-spacing: -0.02em;
 }
 
 .actionDesc {
-  font-size: 0.88rem;
-  line-height: 1.6;
+  font-size: 0.8rem;
+  line-height: 1.45;
   color: var(--text-subtle);
 }
 
 .mainContent {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.5rem;
+  gap: 1rem;
   align-items: start;
 }
 
@@ -167,15 +162,14 @@
 }
 
 .sidebarCard {
-  padding: 1.4rem;
+  padding: 1rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
   background: var(--off-white);
 }
 
 .sidebarTitle {
-  margin: 0 0 1rem;
-  font-size: 0.92rem;
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -185,21 +179,20 @@
 .sidebarMenu {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.15rem;
 }
 
 .menuItem {
   display: flex;
   align-items: center;
-  min-height: 44px;
-  padding: 0.85rem 1rem;
+  min-height: 38px;
+  padding: 0.55rem 0.7rem;
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-subtle);
   text-decoration: none;
   text-align: left;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 600;
   transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
@@ -222,10 +215,9 @@ button.menuItem {
 }
 
 .contentArea {
-  min-height: 560px;
-  padding: 2rem;
+  min-width: 0;
+  padding: 1.5rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
   background: var(--surface-raised);
 }
 
@@ -422,7 +414,7 @@ button.menuItem {
 
 @media (max-width: 640px) {
   .content {
-    padding: 2rem 0.75rem 3rem;
+    padding: 1.25rem 0.75rem 2.5rem;
   }
 
   .profileHeader {
@@ -431,7 +423,7 @@ button.menuItem {
   }
 
   .profileSection {
-    padding: 1.25rem;
+    padding: 1rem;
   }
 }
 
@@ -447,34 +439,30 @@ button.menuItem {
 
 @media (min-width: 1024px) {
   .content {
-    padding: 2.5rem 2rem 4rem;
+    padding: 1.5rem 2rem 3rem;
   }
 
   .mainContent {
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 220px minmax(0, 1fr);
   }
 
   .sidebar {
     display: block;
     position: sticky;
-    top: 1.5rem;
+    top: 8rem;
   }
 }
 
 @media (max-width: 480px) {
   .content {
-    padding: 1.75rem 0.625rem 2.5rem;
-  }
-
-  .quickActions {
-    grid-template-columns: 1fr;
+    padding: 1rem 0.625rem 2rem;
   }
 
   .quickSkeleton {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .contentArea {
-    padding: 1.25rem;
+    padding: 1rem;
   }
 }

@@ -750,3 +750,101 @@
 .spinner {
   border-top-color: var(--black);
 }
+
+/* 컴팩트 마이페이지 밀도 */
+.loading,
+.emptyState {
+  padding: 2rem 1rem;
+}
+
+.pageHeader {
+  margin-bottom: 1rem;
+  padding: 0.75rem 0;
+}
+
+.pageTitle {
+  font-size: 1.65rem;
+}
+
+.pageDesc {
+  font-size: 0.9rem;
+}
+
+.statsGrid {
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.statCard {
+  gap: 0.7rem;
+  padding: 0.85rem;
+  border-radius: 0;
+}
+
+.statIcon {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.25rem;
+  border-radius: 0;
+}
+
+.filterSection,
+.newQAForm,
+.qaSection {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0;
+}
+
+.filtersRow,
+.form,
+.qaList {
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.filterLabel {
+  margin-bottom: 0.55rem;
+  font-size: 0.9rem;
+}
+
+.filterButtons {
+  gap: 0.4rem;
+}
+
+.filterButton,
+.newQAButton,
+.cancelButton,
+.submitButton,
+.formInput,
+.formSelect,
+.formTextarea {
+  padding: 0.55rem 0.85rem;
+  border-radius: 0;
+}
+
+.formHeader,
+.sectionHeader {
+  margin-bottom: 1rem;
+  padding-bottom: 0.65rem;
+}
+
+.formTitle,
+.sectionTitle {
+  font-size: 1.2rem;
+}
+
+.qaCard {
+  padding: 1rem;
+  border-width: 1px;
+  border-radius: 0;
+}
+
+.qaHeader {
+  margin-bottom: 0.75rem;
+}
+
+.answerText {
+  padding: 0.75rem;
+  border-radius: 0;
+}

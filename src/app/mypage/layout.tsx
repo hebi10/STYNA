@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import Link from "next/link";
 import PageHeader from "../_components/PageHeader";
 import styles from "./layout.module.css";
@@ -20,11 +20,34 @@ function getNumberValue(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+function getMyPageActiveTab(pathname: string): string {
+  if (pathname === "/mypage" || pathname === "/mypage/") {
+    return "overview";
+  }
+
+  const tabMap = {
+    "/mypage/order-list": "orders",
+    "/mypage/order-detail": "orders",
+    "/mypage/qa": "reviews",
+    "/mypage/recently-viewed": "wishlist",
+    "/mypage/wishlist": "favorite",
+    "/mypage/coupons": "coupons",
+    "/mypage/point": "point",
+    "/mypage/info-edit": "profile",
+    "/mypage/counsel": "counsel",
+    "/mypage/restock": "restock",
+  };
+
+  const found = Object.entries(tabMap).find(([key]) => pathname.startsWith(key));
+  return found?.[1] || "";
+}
+
 export default function MyPageLayout({ children }: MyPageLayoutProps) {
-  const [activeTab, setActiveTab] = useState('orders');
   const pathname = usePathname();
   const { user, userData, logout, loading, isUserDataLoading } = useAuth();
   const isPreparingMyPage = loading || Boolean(user && isUserDataLoading);
+  const isOverview = pathname === "/mypage" || pathname === "/mypage/";
+  const activeTab = getMyPageActiveTab(pathname);
 
   // 스크롤 복원 방지 (useLayoutEffect로 더 빠르게 실행)
   useLayoutEffect(() => {
@@ -57,25 +80,6 @@ export default function MyPageLayout({ children }: MyPageLayoutProps) {
       ]}
     />
   );
-
-  useEffect(() => {
-    const tabMap = {
-      "/mypage/order-list": "orders",
-      "/mypage/qa": "reviews",
-      "/mypage/recently-viewed": "wishlist",
-      "/mypage/wishlist": "favorite",
-      "/mypage/coupons": "coupons",
-      "/mypage/point": "point",
-      "/mypage/info-edit": "profile",
-      "/mypage/counsel": "counsel",
-      "/mypage/restock": "restock",
-    };
-
-    const found = Object.entries(tabMap).find(([key]) => pathname.includes(key));
-    if (found) {
-      setActiveTab(found[1]);
-    }
-  }, [pathname]);
 
   if (isPreparingMyPage) {
     return (
@@ -156,11 +160,12 @@ export default function MyPageLayout({ children }: MyPageLayoutProps) {
       {header}
       
       <div className={styles.content}>
-        {/* 프로필 섹션 */}
-        <ProfileSection userInfo={userInfo} />
-
-        {/* 빠른 메뉴 */}
-        <QuickActions actions={quickActions} />
+        {isOverview ? (
+          <>
+            <ProfileSection userInfo={userInfo} />
+            <QuickActions actions={quickActions} />
+          </>
+        ) : null}
 
         {/* 메인 콘텐츠 */}
         <div className={styles.mainContent}>
