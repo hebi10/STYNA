@@ -8,6 +8,8 @@
 - 이벤트 페이지 점검 : event-page-review.md
 - 메인 랭킹 UI 점검 : main-ranking-ui.md
 - 메인 상단 배너 작업 영역 : main-banner.md
+- 메인 배너 드래그·무한 순환 안정화 설계 : superpowers/specs/2026-07-13-main-banner-drag-loop-design.md
+- 메인 배너 드래그·무한 순환 안정화 실행 계획 : superpowers/plans/2026-07-13-main-banner-drag-loop.md
 - 마이페이지 UI 점검 : mypage-ui.md
 - 인증 화면 UI 정리 : auth-ui.md
 - 상품 조회 구조 개선 : product-listing-structure.md

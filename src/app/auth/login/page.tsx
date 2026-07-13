@@ -186,7 +186,7 @@ export default function LoginPage() {
                 disabled={isSubmitting}
               >
                 <span className={`${styles.socialBtn} ${styles.kakaoIcon}`}>U</span>
-                {isSubmitting ? "로그인 중..." : "개발용 회원 로그인"}
+                {isSubmitting ? "로그인 중..." : "일반 회원 로그인"}
               </button>
               <button
                 type="button"
@@ -195,7 +195,7 @@ export default function LoginPage() {
                 disabled={isSubmitting}
               >
                 <span className={`${styles.socialBtn} ${styles.naverIcon}`}>A</span>
-                {isSubmitting ? "로그인 중..." : "개발용 관리자 로그인"}
+                {isSubmitting ? "로그인 중..." : "관리자 로그인"}
               </button>
             </div>
           </>

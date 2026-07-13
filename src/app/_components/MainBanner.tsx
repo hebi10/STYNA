@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties, PointerEvent, TransitionEvent } from 'react';
+import type { CSSProperties, DragEvent, PointerEvent, TransitionEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import styles from './MainBanner.module.css';
 
 const SLIDE_DELAY_MS = 4500;
 const DRAG_THRESHOLD_PX = 48;
+const CLICK_SUPPRESSION_THRESHOLD_PX = 4;
 const ACTIVE_SLIDE_STORAGE_KEY = 'hebimall.main-banner.active-index';
 const STORAGE_BUCKET = 'hebimall.firebasestorage.app';
 
@@ -116,6 +117,9 @@ export default function MainBanner() {
   const [trackIndex, setTrackIndex] = useState(1);
   const [rotationKey, setRotationKey] = useState(0);
   const [isJumping, setIsJumping] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
   const [isSlideStateReady, setIsSlideStateReady] = useState(false);
   const pointerStartXRef = useRef<number | null>(null);
   const didDragRef = useRef(false);
@@ -143,75 +147,100 @@ export default function MainBanner() {
   }, [activeIndex, isSlideStateReady]);
 
   useEffect(() => {
-    if (!isSlideStateReady) {
+    if (!isSlideStateReady || isAnimating || isDragging) {
       return undefined;
     }
 
     const timer = window.setInterval(() => {
       const nextIndex = (activeIndex + 1) % bannerPairs.length;
 
+      setIsAnimating(true);
       setActiveIndex(nextIndex);
       setTrackIndex(nextIndex === 0 ? bannerPairs.length + 1 : nextIndex + 1);
     }, SLIDE_DELAY_MS);
 
     return () => window.clearInterval(timer);
-  }, [activeIndex, isSlideStateReady, rotationKey]);
+  }, [activeIndex, isAnimating, isDragging, isSlideStateReady, rotationKey]);
 
   useEffect(() => {
     if (!isJumping) {
       return undefined;
     }
 
-    const frame = window.requestAnimationFrame(() => setIsJumping(false));
+    const frame = window.requestAnimationFrame(() => {
+      setIsJumping(false);
+      setIsAnimating(false);
+    });
     return () => window.cancelAnimationFrame(frame);
   }, [isJumping]);
 
-  useEffect(() => {
-    if (trackIndex !== 0 && trackIndex !== bannerPairs.length + 1) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => {
-      setIsJumping(true);
-      setTrackIndex(trackIndex === 0 ? bannerPairs.length : 1);
-    }, 620);
-
-    return () => window.clearTimeout(timer);
-  }, [trackIndex]);
-
-  const showPrevious = () => {
-    const nextIndex = (activeIndex - 1 + bannerPairs.length) % bannerPairs.length;
+  const moveBy = (direction: -1 | 1) => {
+    const nextIndex = (activeIndex + direction + bannerPairs.length) % bannerPairs.length;
 
     setIsJumping(false);
+    setIsAnimating(true);
     setActiveIndex(nextIndex);
-    setTrackIndex(activeIndex === 0 ? 0 : nextIndex + 1);
+    setTrackIndex(direction === -1 && activeIndex === 0
+      ? 0
+      : direction === 1 && activeIndex === bannerPairs.length - 1
+        ? bannerPairs.length + 1
+        : nextIndex + 1);
     setRotationKey((key) => key + 1);
+  };
+
+  const showPrevious = () => {
+    if (isAnimating || isDragging) {
+      return;
+    }
+
+    moveBy(-1);
   };
 
   const showNext = () => {
-    const nextIndex = (activeIndex + 1) % bannerPairs.length;
+    if (isAnimating || isDragging) {
+      return;
+    }
 
-    setIsJumping(false);
-    setActiveIndex(nextIndex);
-    setTrackIndex(nextIndex === 0 ? bannerPairs.length + 1 : nextIndex + 1);
-    setRotationKey((key) => key + 1);
+    moveBy(1);
   };
 
   const showSlide = (index: number) => {
+    if (isAnimating || isDragging || index === activeIndex) {
+      return;
+    }
+
     setIsJumping(false);
+    setIsAnimating(true);
     setActiveIndex(index);
     setTrackIndex(index + 1);
     setRotationKey((key) => key + 1);
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.button > 0) {
+    if (event.button > 0 || isAnimating) {
       return;
     }
 
     pointerStartXRef.current = event.clientX;
     didDragRef.current = false;
+    setDragOffset(0);
+    setIsDragging(true);
     event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const startX = pointerStartXRef.current;
+
+    if (startX === null) {
+      return;
+    }
+
+    const nextDragOffset = event.clientX - startX;
+    setDragOffset(nextDragOffset);
+
+    if (Math.abs(nextDragOffset) >= CLICK_SUPPRESSION_THRESHOLD_PX) {
+      didDragRef.current = true;
+    }
   };
 
   const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
@@ -224,24 +253,45 @@ export default function MainBanner() {
     }
 
     const dragDistance = event.clientX - startX;
+    setIsDragging(false);
+    setDragOffset(0);
+
+    if (Math.abs(dragDistance) >= CLICK_SUPPRESSION_THRESHOLD_PX) {
+      didDragRef.current = true;
+    }
+
+    if (didDragRef.current) {
+      window.setTimeout(() => {
+        didDragRef.current = false;
+      }, 0);
+    }
+
     if (Math.abs(dragDistance) < DRAG_THRESHOLD_PX) {
+      if (dragDistance !== 0) {
+        setIsAnimating(true);
+      }
       return;
     }
 
-    didDragRef.current = true;
     if (dragDistance < 0) {
-      showNext();
+      moveBy(1);
     } else {
-      showPrevious();
+      moveBy(-1);
     }
-
-    window.setTimeout(() => {
-      didDragRef.current = false;
-    }, 0);
   };
 
   const handlePointerCancel = () => {
     pointerStartXRef.current = null;
+    setIsDragging(false);
+    setDragOffset(0);
+
+    if (dragOffset !== 0) {
+      setIsAnimating(true);
+    }
+  };
+
+  const handleNativeDragStart = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
   };
 
   const handleBannerClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -261,16 +311,21 @@ export default function MainBanner() {
     if (trackIndex === 0) {
       setIsJumping(true);
       setTrackIndex(bannerPairs.length);
+      return;
     }
 
     if (trackIndex === bannerPairs.length + 1) {
       setIsJumping(true);
       setTrackIndex(1);
+      return;
     }
+
+    setIsAnimating(false);
   };
 
   const trackStyle = {
     '--track-index': trackIndex,
+    '--drag-offset': `${dragOffset}px`,
   } as CSSProperties;
 
   return (
@@ -279,12 +334,14 @@ export default function MainBanner() {
         <div
           className={styles.bannerViewport}
           onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
+          onDragStart={handleNativeDragStart}
           onClickCapture={handleBannerClickCapture}
         >
           <div
-            className={`${styles.bannerTrack} ${isJumping ? styles.bannerTrackJumping : ''}`}
+            className={`${styles.bannerTrack} ${isJumping ? styles.bannerTrackJumping : ''} ${isDragging ? styles.bannerTrackDragging : ''}`}
             style={trackStyle}
             onTransitionEnd={handleTrackTransitionEnd}
           >
@@ -312,7 +369,7 @@ export default function MainBanner() {
                         src={card.image}
                         alt={card.alt}
                         fill
-                        priority={index === trackIndex}
+                        priority={shouldRenderImages}
                         sizes="(min-width: 1920px) 826px, 43vw"
                         className={styles.bannerImage}
                       />
@@ -329,6 +386,7 @@ export default function MainBanner() {
           type="button"
           className={`${styles.navButton} ${styles.prevButton}`}
           aria-label="이전 배너"
+          disabled={isAnimating}
           onClick={showPrevious}
         >
           <span aria-hidden="true">‹</span>
@@ -337,6 +395,7 @@ export default function MainBanner() {
           type="button"
           className={`${styles.navButton} ${styles.nextButton}`}
           aria-label="다음 배너"
+          disabled={isAnimating}
           onClick={showNext}
         >
           <span aria-hidden="true">›</span>
@@ -350,6 +409,7 @@ export default function MainBanner() {
               className={`${styles.paginationDot} ${index === activeIndex ? styles.activeDot : ''}`}
               aria-label={`${index + 1}번 배너 보기`}
               aria-current={index === activeIndex}
+              disabled={isAnimating}
               onClick={() => showSlide(index)}
             />
           ))}

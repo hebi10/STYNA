@@ -35,6 +35,12 @@ jest.mock('next/link', () => ({
 const storageUrl = (path: string) =>
   `https://firebasestorage.googleapis.com/v0/b/hebimall.firebasestorage.app/o/${encodeURIComponent(path)}?alt=media`;
 
+const finishTrackTransition = (track: HTMLElement) => {
+  const transitionEnd = new Event('transitionend', { bubbles: true });
+  Object.defineProperty(transitionEnd, 'propertyName', { value: 'transform' });
+  fireEvent(track, transitionEnd);
+};
+
 const expectedCards = [
   {
     href: '/products/cool-touch-oversized-shirt',
@@ -113,13 +119,13 @@ describe('MainBanner', () => {
     expect(links.some((link) => link.getAttribute('href')?.startsWith('/categories/'))).toBe(false);
   });
 
-  test('preloads both visible cards and only renders images for adjacent slide sets', () => {
+  test('preloads current and adjacent slide images before a user navigates', () => {
     const { container } = render(<MainBanner />);
     const images = Array.from(container.querySelectorAll<HTMLImageElement>('img'));
     const priorityImages = images.filter((image) => image.dataset.priority === 'true');
 
     expect(images).toHaveLength(6);
-    expect(priorityImages).toHaveLength(2);
+    expect(priorityImages).toHaveLength(6);
     expect(images.every((image) => image.src.startsWith('https://firebasestorage.googleapis.com/'))).toBe(true);
     expect(images.some((image) => image.src.includes('mesh-low-profile-sneakers'))).toBe(false);
   });
@@ -137,6 +143,23 @@ describe('MainBanner', () => {
     expect(screen.getByRole('button', { name: '2번 배너 보기' })).toHaveAttribute('aria-current', 'true');
   });
 
+  test('ignores repeated navigation until the current transition finishes', () => {
+    const { container } = render(<MainBanner />);
+    const track = container.querySelector<HTMLElement>('.bannerTrack');
+    const nextButton = screen.getByRole('button', { name: '다음 배너' });
+
+    fireEvent.click(screen.getByRole('button', { name: '5번 배너 보기' }));
+    finishTrackTransition(track!);
+    fireEvent.click(nextButton);
+    fireEvent.click(nextButton);
+
+    expect(track?.style.getPropertyValue('--track-index')).toBe('6');
+
+    finishTrackTransition(track!);
+
+    expect(track?.style.getPropertyValue('--track-index')).toBe('1');
+  });
+
   test('restarts auto rotation after manual navigation', () => {
     jest.useFakeTimers();
     const { container } = render(<MainBanner />);
@@ -146,6 +169,7 @@ describe('MainBanner', () => {
       jest.advanceTimersByTime(4400);
     });
     fireEvent.click(screen.getByRole('button', { name: '다음 배너' }));
+    finishTrackTransition(track!);
 
     expect(track?.style.getPropertyValue('--track-index')).toBe('2');
 
@@ -179,6 +203,90 @@ describe('MainBanner', () => {
     }));
 
     expect(track?.style.getPropertyValue('--track-index')).toBe('2');
+  });
+
+  test('moves the track by the pointer x distance while dragging', () => {
+    const { container } = render(<MainBanner />);
+    const viewport = container.querySelector<HTMLElement>('.bannerViewport');
+    const track = container.querySelector<HTMLElement>('.bannerTrack');
+
+    fireEvent(viewport!, new MouseEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      clientX: 320,
+    }));
+    fireEvent(viewport!, new MouseEvent('pointermove', {
+      bubbles: true,
+      button: 0,
+      clientX: 250,
+    }));
+
+    expect(track?.style.getPropertyValue('--drag-offset')).toBe('-70px');
+    expect(track).toHaveClass('bannerTrackDragging');
+  });
+
+  test('returns to the current slide when released near the starting point', () => {
+    const { container } = render(<MainBanner />);
+    const viewport = container.querySelector<HTMLElement>('.bannerViewport');
+    const track = container.querySelector<HTMLElement>('.bannerTrack');
+
+    fireEvent(viewport!, new MouseEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      clientX: 320,
+    }));
+    fireEvent(viewport!, new MouseEvent('pointermove', {
+      bubbles: true,
+      button: 0,
+      clientX: 300,
+    }));
+    fireEvent(viewport!, new MouseEvent('pointerup', {
+      bubbles: true,
+      button: 0,
+      clientX: 300,
+    }));
+
+    expect(track?.style.getPropertyValue('--track-index')).toBe('1');
+    expect(track?.style.getPropertyValue('--drag-offset')).toBe('0px');
+  });
+
+  test('does not open a product link after a short drag snaps back', () => {
+    const { container } = render(<MainBanner />);
+    const viewport = container.querySelector<HTMLElement>('.bannerViewport');
+    const productLink = container.querySelector<HTMLAnchorElement>(
+      'a[tabindex="0"][aria-label="쿨터치 오버핏 반팔 셔츠 상품 배너"]',
+    );
+
+    fireEvent(viewport!, new MouseEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      clientX: 320,
+    }));
+    fireEvent(viewport!, new MouseEvent('pointermove', {
+      bubbles: true,
+      button: 0,
+      clientX: 300,
+    }));
+    fireEvent(viewport!, new MouseEvent('pointerup', {
+      bubbles: true,
+      button: 0,
+      clientX: 300,
+    }));
+
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+    productLink?.dispatchEvent(clickEvent);
+
+    expect(clickEvent.defaultPrevented).toBe(true);
+  });
+
+  test('prevents the browser native image/link drag from canceling slide gestures', () => {
+    const { container } = render(<MainBanner />);
+    const viewport = container.querySelector<HTMLElement>('.bannerViewport');
+    const nativeDragStart = new Event('dragstart', { bubbles: true, cancelable: true });
+
+    viewport?.dispatchEvent(nativeDragStart);
+
+    expect(nativeDragStart.defaultPrevented).toBe(true);
   });
 
   test('restores the last viewed slide from session storage', async () => {
