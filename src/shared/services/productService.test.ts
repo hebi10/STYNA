@@ -159,3 +159,28 @@ describe('ProductService.getHomePageProducts', () => {
     expect(getDocs).toHaveBeenCalledTimes(3);
   });
 });
+
+describe('ProductService strict product loaders', () => {
+  beforeEach(() => {
+    jest.mocked(getDocs).mockReset();
+    jest.mocked(getDocs).mockRejectedValue(new Error('firestore unavailable'));
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('rejects a variant loader failure when throwOnError is true', async () => {
+    await expect(
+      ProductService.getSaleProducts(8, { throwOnError: true })
+    ).rejects.toThrow('firestore unavailable');
+  });
+
+  it('rejects a category loader failure when throwOnError is true', async () => {
+    await expect(
+      ProductService.getProductsByCategory('tops', 8, { throwOnError: true })
+    ).rejects.toBeInstanceOf(Error);
+  });
+});

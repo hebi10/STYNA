@@ -6,6 +6,12 @@
 - 관리자 페이지 권한 검토 : admin-page-review.md
 - 헤더 UI 정리 : header-ui.md
 - 이벤트 페이지 점검 : event-page-review.md
+- 이벤트 이미지 전면 교체 설계 : superpowers/specs/2026-07-14-event-image-refresh-design.md
+- 이벤트 이미지 전면 교체 실행 계획 : superpowers/plans/2026-07-14-event-image-refresh.md
+- 이벤트 상세 커머스 템플릿 리뉴얼 설계 : superpowers/specs/2026-07-15-event-detail-commerce-template-design.md
+- 이벤트 상세 커머스 템플릿 리뉴얼 실행 계획 : superpowers/plans/2026-07-15-event-detail-commerce-template.md
+- 이벤트 목록 클린 갤러리 설계 : superpowers/specs/2026-07-15-event-list-clean-gallery-design.md
+- 이벤트 목록 클린 갤러리 실행 계획 : superpowers/plans/2026-07-15-event-list-clean-gallery.md
 - 메인 랭킹 UI 점검 : main-ranking-ui.md
 - 메인 상단 배너 작업 영역 : main-banner.md
 - 메인 배너 드래그·무한 순환 안정화 설계 : superpowers/specs/2026-07-13-main-banner-drag-loop-design.md

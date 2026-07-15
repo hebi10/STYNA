@@ -14,6 +14,7 @@ const eslintConfig = [
       'tmp-edge-profile-single/**',
       'artifacts/**',
       '.gstack/**',
+      '.worktrees/**',
       'public/**',
       'scripts/**',
       'next-env.d.ts',

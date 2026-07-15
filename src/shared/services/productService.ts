@@ -67,6 +67,10 @@ interface HomePageProductLimits {
   bestSeller?: number;
 }
 
+export interface ProductLoaderOptions {
+  throwOnError?: boolean;
+}
+
 type ProductPayload = Omit<Product, 'id' | 'createdAt' | 'updatedAt'>;
 
 export class ProductService {
@@ -595,7 +599,11 @@ export class ProductService {
     }
   }
 
-  static async getProductsByCategory(categorySlug: string, limitCount?: number): Promise<Product[]> {
+  static async getProductsByCategory(
+    categorySlug: string,
+    limitCount?: number,
+    options: ProductLoaderOptions = {}
+  ): Promise<Product[]> {
     try {
       const result = await this.queryProducts({
         category: categorySlug,
@@ -607,6 +615,9 @@ export class ProductService {
       return result.items;
     } catch (error) {
       console.error('Failed to load category products:', error);
+      if (options.throwOnError) {
+        throw error;
+      }
       return [];
     }
   }
@@ -733,22 +744,34 @@ export class ProductService {
     }
   }
 
-  static async getNewProducts(limitCount: number = 8): Promise<Product[]> {
+  static async getNewProducts(
+    limitCount: number = 8,
+    options: ProductLoaderOptions = {}
+  ): Promise<Product[]> {
     try {
       const products = this.getActiveProducts(await this.getTopLevelProducts());
       return this.selectNewProducts(products, limitCount);
     } catch (error) {
       console.error('Failed to load new products:', error);
+      if (options.throwOnError) {
+        throw error;
+      }
       return [];
     }
   }
 
-  static async getSaleProducts(limitCount: number = 8): Promise<Product[]> {
+  static async getSaleProducts(
+    limitCount: number = 8,
+    options: ProductLoaderOptions = {}
+  ): Promise<Product[]> {
     try {
       const products = this.getActiveProducts(await this.getTopLevelProducts());
       return this.selectSaleProducts(products, limitCount);
     } catch (error) {
       console.error('Failed to load sale products:', error);
+      if (options.throwOnError) {
+        throw error;
+      }
       return [];
     }
   }
@@ -773,22 +796,34 @@ export class ProductService {
     }
   }
 
-  static async getReviewPopularProducts(limitCount: number = 24): Promise<Product[]> {
+  static async getReviewPopularProducts(
+    limitCount: number = 24,
+    options: ProductLoaderOptions = {}
+  ): Promise<Product[]> {
     try {
       const products = this.getActiveProducts(await this.getTopLevelProducts());
       return this.selectReviewPopularProducts(products, limitCount);
     } catch (error) {
       console.error('Failed to load review popular products:', error);
+      if (options.throwOnError) {
+        throw error;
+      }
       return [];
     }
   }
 
-  static async getRecommendedProducts(limitCount: number = 8): Promise<Product[]> {
+  static async getRecommendedProducts(
+    limitCount: number = 8,
+    options: ProductLoaderOptions = {}
+  ): Promise<Product[]> {
     try {
       const products = this.getActiveProducts(await this.getTopLevelProducts());
       return this.selectRecommendedProducts(products, limitCount);
     } catch (error) {
       console.error('Failed to load recommended products:', error);
+      if (options.throwOnError) {
+        throw error;
+      }
       return [];
     }
   }

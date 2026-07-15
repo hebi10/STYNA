@@ -31,6 +31,11 @@ function EventCount() {
   return <div>{loading ? 'loading' : `${events.length}:${events.map(event => event.id).join(',')}`}</div>;
 }
 
+function EventPaginationSize() {
+  const { eventsPerPage, loading } = useEvent();
+  return <div>{loading ? 'loading' : `page-size:${eventsPerPage}`}</div>;
+}
+
 describe('EventProvider', () => {
   afterEach(() => {
     jest.clearAllMocks();
@@ -47,6 +52,20 @@ describe('EventProvider', () => {
 
     await waitFor(() => {
       expect(screen.getByText('1:firebase-event')).toBeInTheDocument();
+    });
+  });
+
+  test('exposes eight events per page for the public event list', async () => {
+    jest.mocked(EventService.getEvents).mockResolvedValue([firebaseEvent]);
+
+    render(
+      <EventProvider>
+        <EventPaginationSize />
+      </EventProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('page-size:8')).toBeInTheDocument();
     });
   });
 });

@@ -1,0 +1,174 @@
+.hero {
+  width: 100%;
+  color: var(--black);
+}
+
+.hero > picture {
+  display: block;
+  width: 100%;
+}
+
+.campaignImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1600 / 820;
+  object-fit: cover;
+}
+
+.heroSummary {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1.25rem 0 1.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.statusBadge {
+  width: fit-content;
+  padding-left: 0.625rem;
+  border-left: 2px solid var(--event-accent, var(--black));
+  color: var(--text-subtle);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.heroTitle,
+.heroDescription,
+.heroPeriod,
+.capacity {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.heroTitle {
+  font-size: clamp(1.75rem, 4vw, 3rem);
+  line-height: 1.15;
+}
+
+.heroDescription {
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.heroPeriod,
+.capacity {
+  color: var(--text-subtle);
+  font-size: 0.875rem;
+}
+
+.actionBar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.25rem 0;
+  border-top: 2px solid var(--event-accent, var(--black));
+  border-bottom: 1px solid var(--line);
+}
+
+.summaryList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.summaryItem {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.summaryLabel {
+  color: var(--text-soft);
+  font-size: 0.75rem;
+}
+
+.summaryValue {
+  color: var(--black);
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+.actionButton,
+.mobileActionButton {
+  min-height: 2.875rem;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid var(--black);
+  background: var(--black);
+  color: var(--surface-raised);
+  font: inherit;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.actionButton:disabled,
+.mobileActionButton:disabled {
+  border-color: var(--line-strong);
+  background: var(--line-strong);
+  color: var(--text-soft);
+  cursor: not-allowed;
+}
+
+.mobileStickyAction {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .campaignImage {
+    aspect-ratio: 4 / 5;
+  }
+
+  .heroSummary {
+    padding: 1rem 0 1.25rem;
+  }
+
+  .heroTitle {
+    font-size: 1.75rem;
+  }
+
+  .actionBar {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .summaryList {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .actionButton {
+    display: none;
+  }
+
+  .mobileStickyAction {
+    position: fixed;
+    z-index: 30;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-top: 2px solid var(--event-accent, var(--black));
+    background: var(--surface-raised);
+  }
+
+  .mobileStatus {
+    color: var(--text-subtle);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .mobileActionButton {
+    width: 100%;
+  }
+}

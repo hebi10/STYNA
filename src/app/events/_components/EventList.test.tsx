@@ -112,19 +112,88 @@ describe('EventList', () => {
     jest.clearAllMocks();
   });
 
-  test('renders events as image-led poster surfaces with text overlays', () => {
+  test('renders responsive event posters without duplicate promotional copy', () => {
     const { container } = renderEventList();
 
-    const posterHero = container.querySelector('.posterHero');
+    const posterHero = container.querySelector<HTMLElement>('.posterHero');
+    const featuredPicture = posterHero?.querySelector('picture');
+    const posterCards = container.querySelectorAll<HTMLAnchorElement>('.eventPosterCard');
+    const couponCard = Array.from(posterCards).find(card =>
+      card.getAttribute('href') === '/events/coupon-event'
+    );
 
     expect(posterHero).not.toBeNull();
-    expect(container.querySelector('.posterHeroOverlay')).not.toBeNull();
-    expect(container.querySelectorAll('.eventPosterCard')).toHaveLength(2);
-    expect(container.querySelectorAll('.posterCardOverlay')).toHaveLength(2);
+    expect(container.querySelector('.posterHeroOverlay')).toBeNull();
+    expect(posterCards).toHaveLength(2);
+    expect(container.querySelectorAll('.posterCardOverlay')).toHaveLength(0);
+    expect(container.querySelectorAll('.eventBadges')).toHaveLength(0);
     expect(container.querySelector('.eventInfo')).toBeNull();
 
-    expect(posterHero).toHaveAttribute('href', '/events/featured-event');
-    expect(screen.getAllByText('미드이어 세일').length).toBeGreaterThan(0);
+    expect(posterHero?.tagName).toBe('DIV');
+    expect(posterHero?.closest('a')).toBeNull();
+    expect(couponCard).toHaveAccessibleName(
+      '바캉스 쿠폰팩: 여름 인기 상품을 큰 혜택으로 만나는 기간 한정 세일입니다.'
+    );
+
+    expect(featuredPicture?.querySelector('source')).toHaveAttribute(
+      'srcset',
+      '/events/event-hub-hero.webp'
+    );
+    expect(featuredPicture?.querySelector('img')).toHaveAttribute(
+      'src',
+      '/events/event-hub-hero.webp'
+    );
+    expect(featuredPicture?.querySelector('img')).toHaveAttribute(
+      'alt',
+      'STYNA EVENTS - 새로운 스타일과 혜택을 만나보세요'
+    );
+    expect(couponCard?.querySelector('source')).toHaveAttribute(
+      'srcset',
+      '/events/2026/event-2026-07-vacation-coupon-thumb.webp'
+    );
+    expect(couponCard?.querySelector('img')).toHaveAttribute(
+      'src',
+      '/events/2026/event-2026-07-vacation-coupon-thumb.webp'
+    );
+
+    expect(container.querySelector('.posterHeroTitle')).toBeNull();
+    expect(container.querySelector('.posterHeroDescription')).toBeNull();
+    expect(container.querySelector('.eventTitle')).toBeNull();
+    expect(container.querySelector('.eventDescription')).toBeNull();
+    expect(container.querySelector('.eventDiscount')).toBeNull();
+    expect(container.querySelectorAll('.eventPeriod')).toHaveLength(2);
+    expect(couponCard?.querySelector(':scope > .eventFooter')).not.toBeNull();
+    expect(couponCard?.querySelector('.posterCardOverlay .eventFooter')).toBeNull();
+    expect(screen.queryByText('특가 보기')).not.toBeInTheDocument();
+    expect(screen.getByText('할인 상품 보기')).toBeInTheDocument();
+  });
+
+  test('renders at most eight event cards and two numbered pages for ten events', () => {
+    const events = Array.from({ length: 10 }, (_, index) =>
+      baseEvent({ id: `event-${index + 1}`, title: `이벤트 ${index + 1}` })
+    );
+
+    useEvent.mockReturnValue({
+      events,
+      filteredEvents: events,
+      filter: {},
+      currentPage: 1,
+      eventsPerPage: 8,
+      loading: false,
+      error: null,
+      setFilter: jest.fn(),
+      setCurrentPage: jest.fn(),
+      getActiveEvents: () => events,
+      getTotalParticipants: () => 0,
+      refreshEvents: jest.fn(),
+    });
+
+    const { container } = render(<EventList />);
+
+    expect(container.querySelectorAll('.eventPosterCard')).toHaveLength(8);
+    expect(screen.getByRole('button', { name: '1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '2' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '3' })).not.toBeInTheDocument();
   });
 
   test('renders event-shaped skeleton cards while loading', () => {

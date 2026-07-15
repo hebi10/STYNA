@@ -34,7 +34,7 @@ export function EventProvider({ children }: EventProviderProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const eventsPerPage = 6;
+  const eventsPerPage = 8;
 
   // Firebase에서 이벤트 데이터 로드
   useEffect(() => {

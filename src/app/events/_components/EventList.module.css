@@ -7,26 +7,14 @@
 }
 
 .posterHero {
-  --hero-accent: #f2d37b;
   position: relative;
   display: block;
-  min-height: 520px;
+  aspect-ratio: 27 / 9;
   overflow: hidden;
   border: 1px solid var(--black);
   border-radius: var(--radius-sm);
   background: #1d1b18;
-  color: #ffffff;
   text-decoration: none;
-}
-
-.posterHero::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.48) 42%, rgba(0, 0, 0, 0.06) 100%),
-    linear-gradient(0deg, rgba(0, 0, 0, 0.56) 0%, rgba(0, 0, 0, 0) 48%);
-  pointer-events: none;
 }
 
 .posterHeroImage {
@@ -34,109 +22,8 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: right center;
-}
-
-.posterHeroOverlay {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  align-content: end;
-  min-height: 520px;
-  max-width: 650px;
-  padding: clamp(1.5rem, 4vw, 3rem);
-}
-
-.posterHeroKicker {
-  width: fit-content;
-  margin-bottom: 1rem;
-  padding: 0.42rem 0.7rem;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.posterHeroTitle {
-  margin: 0;
-  max-width: 16ch;
-  color: #ffffff;
-  font-family: var(--font-heading);
-  font-size: clamp(1.5rem, 3.5vw, 3.25rem);
-  font-weight: 700;
-  line-height: 1.04;
-  letter-spacing: 0;
-  overflow-wrap: anywhere;
-}
-
-.posterHeroDescription {
-  margin: 1rem 0 0;
-  max-width: 34rem;
-  color: rgba(255, 255, 255, 0.86);
-  font-size: 1.05rem;
-  line-height: 1.7;
-}
-
-.posterHeroActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.8rem;
-  margin-top: 1.4rem;
-}
-
-.posterHeroButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 0 1.15rem;
-  background: #ffffff;
-  color: var(--black);
-  font-size: 0.9rem;
-  font-weight: 800;
-}
-
-.posterHeroPeriod {
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 0.9rem;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.posterHeroMeta {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.7rem;
-  max-width: 560px;
-  margin-top: 1.5rem;
-}
-
-.posterHeroMetric {
-  display: grid;
-  gap: 0.2rem;
-  min-width: 0;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.posterHeroMetricValue {
-  overflow-wrap: anywhere;
-  color: var(--hero-accent);
-  font-size: 1.15rem;
-  font-weight: 800;
-  line-height: 1.1;
-}
-
-.posterHeroMetricLabel {
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 0.72rem;
-  font-weight: 700;
+  object-fit: contain;
+  object-position: center;
 }
 
 .eventToolbar {
@@ -185,32 +72,32 @@
 
 .eventGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
   margin-bottom: 2rem;
 }
 
 .eventPosterCard {
-  --card-accent: #f2d37b;
   position: relative;
-  display: block;
-  min-height: 430px;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: #1d1b18;
-  color: #ffffff;
+  background: var(--surface-raised);
+  color: var(--text);
   text-decoration: none;
 }
 
-.eventPosterCard::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.24) 44%, rgba(0, 0, 0, 0.82) 100%),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.46) 0%, rgba(0, 0, 0, 0) 68%);
-  pointer-events: none;
+.posterCardMedia {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+}
+
+.posterCardMedia picture {
+  display: block;
+  height: 100%;
 }
 
 .posterCardImage {
@@ -218,94 +105,8 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: right center;
-  transition: transform 0.25s ease;
-}
-
-.eventPosterCard:hover .posterCardImage {
-  transform: scale(1.025);
-}
-
-.posterCardOverlay {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  align-content: space-between;
-  min-height: 430px;
-  padding: 1rem;
-}
-
-.eventBadges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-}
-
-.typeBadge,
-.statusBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 30px;
-  padding: 0 0.68rem;
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--black);
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.statusBadge.ongoing {
-  background: #e9fff2;
-  color: #16653d;
-}
-
-.statusBadge.ended {
-  background: #eeeeee;
-  color: #666666;
-}
-
-.statusBadge.upcoming {
-  background: #eef4ff;
-  color: #1f4b8f;
-}
-
-.posterCardCopy {
-  display: grid;
-  gap: 0.52rem;
-  max-width: 92%;
-}
-
-.eventEyebrow {
-  color: var(--card-accent);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.eventTitle {
-  margin: 0;
-  color: #ffffff;
-  font-family: var(--font-heading);
-  font-size: clamp(1.65rem, 3vw, 2.35rem);
-  font-weight: 700;
-  line-height: 1.18;
-  letter-spacing: 0;
-  overflow-wrap: anywhere;
-}
-
-.eventDescription {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.94rem;
-  line-height: 1.6;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  line-clamp: 2;
+  object-fit: contain;
+  object-position: center;
 }
 
 .eventFooter {
@@ -313,21 +114,16 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.55rem;
-  margin-top: 0.25rem;
+  padding: 0.6rem;
+  border-top: 1px solid var(--line);
+  background: var(--surface-raised);
 }
 
-.eventDiscount {
-  display: inline-flex;
-  align-items: center;
-  max-width: 100%;
-  min-height: 32px;
-  padding: 0 0.72rem;
-  background: #ffffff;
-  color: var(--black);
-  font-size: 0.84rem;
-  font-weight: 800;
+.eventPeriod {
+  color: var(--text-subtle);
+  font-size: 0.78rem;
+  font-weight: 700;
   overflow-wrap: anywhere;
-  white-space: normal;
 }
 
 .cardCta {
@@ -336,42 +132,12 @@
   max-width: 100%;
   min-height: 32px;
   padding: 0 0.72rem;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  color: #ffffff;
+  border: 1px solid var(--line-strong);
+  color: var(--text);
   font-size: 0.82rem;
   font-weight: 800;
   overflow-wrap: anywhere;
   white-space: normal;
-}
-
-.saleBannerTheme,
-.saleCardTheme {
-  --hero-accent: #ffd166;
-  --card-accent: #ffd166;
-}
-
-.couponBannerTheme,
-.couponCardTheme {
-  --hero-accent: #baf2d8;
-  --card-accent: #baf2d8;
-}
-
-.reviewBannerTheme,
-.reviewCardTheme {
-  --hero-accent: #ffd0dc;
-  --card-accent: #ffd0dc;
-}
-
-.newBannerTheme,
-.newCardTheme {
-  --hero-accent: #bff0e1;
-  --card-accent: #bff0e1;
-}
-
-.specialBannerTheme,
-.specialCardTheme {
-  --hero-accent: #ead7b0;
-  --card-accent: #ead7b0;
 }
 
 .statePanel {
@@ -490,60 +256,14 @@
 }
 
 @media (max-width: 900px) {
-  .posterHero,
-  .posterHeroOverlay {
-    min-height: 470px;
-  }
-
   .eventGrid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
   .container {
     padding-bottom: 2.25rem;
-  }
-
-  .posterHero,
-  .posterHeroOverlay {
-    min-height: 360px;
-  }
-
-  .posterHero::after {
-    background:
-      linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.72) 100%),
-      linear-gradient(90deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0) 100%);
-  }
-
-  .posterHeroOverlay {
-    padding: 1.2rem;
-  }
-
-  .posterHeroTitle {
-    max-width: 16ch;
-    font-size: 1.18rem;
-  }
-
-  .posterHeroDescription {
-    font-size: 0.95rem;
-  }
-
-  .posterHeroMeta {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.4rem;
-  }
-
-  .posterHeroMetric {
-    padding: 0.55rem 0.45rem;
-  }
-
-  .posterHeroMetricValue {
-    font-size: 0.98rem;
-  }
-
-  .posterHeroMetricLabel {
-    font-size: 0.68rem;
   }
 
   .eventToolbar {
@@ -573,38 +293,4 @@
     grid-template-columns: 1fr;
   }
 
-  .eventPosterCard,
-  .posterCardOverlay {
-    min-height: 300px;
-  }
-
-  .eventPosterCard::after {
-    background:
-      linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.18) 42%, rgba(0, 0, 0, 0.78) 100%),
-      linear-gradient(90deg, rgba(0, 0, 0, 0.24) 0%, rgba(0, 0, 0, 0) 64%);
-  }
-
-  .posterCardOverlay {
-    padding: 0.85rem;
-  }
-
-  .posterCardCopy {
-    max-width: 100%;
-    gap: 0.42rem;
-  }
-
-  .eventEyebrow {
-    font-size: 0.68rem;
-  }
-
-  .eventTitle {
-    font-size: 1.45rem;
-  }
-
-  .eventDescription {
-    font-size: 0.84rem;
-    line-height: 1.5;
-    -webkit-line-clamp: 1;
-    line-clamp: 1;
-  }
 }

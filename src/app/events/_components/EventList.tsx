@@ -1,17 +1,12 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import Button from '@/app/_components/Button';
-import {
-  getEventUiMeta,
-  getEventUiVariant,
-} from '@/shared/constants/eventUiMeta';
-import { getEventStatus, getFeaturedEvent } from '@/shared/services/eventService';
-import { Event } from '@/shared/types/event';
+import { getEventUiMeta } from '@/shared/constants/eventUiMeta';
 import { getEventDisplayImages } from '@/shared/utils/eventImages';
 import styles from './EventList.module.css';
 import { useEvent } from '@/context/eventProvider';
+import EventResponsiveImage from './EventResponsiveImage';
 
 const FILTER_OPTIONS = [
   { type: 'all', label: '전체' },
@@ -30,34 +25,6 @@ const formatDate = (date: Date) =>
     day: 'numeric',
   });
 
-const getCardHighlightText = (event: Event, fallbackLabel: string) => {
-  if (event.discountRate && event.discountRate > 0) {
-    return `최대 ${event.discountRate}% 할인`;
-  }
-
-  if (event.discountAmount && event.discountAmount > 0) {
-    return `${event.discountAmount.toLocaleString()}원 적립`;
-  }
-
-  if (event.couponCode) {
-    return `쿠폰 코드 ${event.couponCode}`;
-  }
-
-  return fallbackLabel;
-};
-
-const getStatusLabel = (status: ReturnType<typeof getEventStatus>) => {
-  if (status === 'ended') {
-    return '종료';
-  }
-
-  if (status === 'upcoming') {
-    return '예정';
-  }
-
-  return '진행중';
-};
-
 export default function EventList() {
   const {
     events,
@@ -69,8 +36,6 @@ export default function EventList() {
     error,
     setFilter,
     setCurrentPage,
-    getActiveEvents,
-    getTotalParticipants,
     refreshEvents,
   } = useEvent();
 
@@ -83,11 +48,6 @@ export default function EventList() {
   const handleFilterChange = (type: EventFilterButton) => {
     setFilter(type === 'all' ? {} : { eventType: type });
   };
-
-  const featuredEvent = getFeaturedEvent(filteredEvents);
-  const featuredMeta = featuredEvent ? getEventUiMeta(featuredEvent) : null;
-  const featuredVariant = featuredEvent ? getEventUiVariant(featuredEvent) : null;
-  const featuredImages = featuredEvent ? getEventDisplayImages(featuredEvent) : null;
 
   if (loading) {
     return (
@@ -136,60 +96,19 @@ export default function EventList() {
 
   return (
     <div className={styles.container}>
-      {!showEmptyState && featuredEvent ? (
-        <section className={styles.bannerSection} aria-label="대표 이벤트">
-          <Link
-            href={`/events/${featuredEvent.id}`}
-            className={`${styles.posterHero} ${featuredVariant ? styles[`${featuredVariant}BannerTheme`] : ''}`}
-          >
-            <Image
-              src={
-                featuredImages?.detailImage ??
-                featuredImages?.bannerImage ??
-                featuredEvent.bannerImage
-              }
-              alt={featuredEvent.title}
-              width={1400}
-              height={620}
-              className={styles.posterHeroImage}
-              priority
-            />
-            <div className={styles.posterHeroOverlay}>
-              <span className={styles.posterHeroKicker}>
-                {featuredMeta?.featuredEyebrow ?? 'Featured Event'}
-              </span>
-              <h2 className={styles.posterHeroTitle}>{featuredEvent.title}</h2>
-              <p className={styles.posterHeroDescription}>{featuredEvent.description}</p>
-              <div className={styles.posterHeroActions}>
-                <span className={styles.posterHeroButton}>
-                  {featuredMeta?.featuredCtaLabel ?? '이벤트 보기'}
-                </span>
-                <span className={styles.posterHeroPeriod}>
-                  {formatDate(featuredEvent.startDate)} - {formatDate(featuredEvent.endDate)}
-                </span>
-              </div>
-              <div className={styles.posterHeroMeta} aria-label="이벤트 현황">
-                <span className={styles.posterHeroMetric}>
-                  <strong className={styles.posterHeroMetricValue}>
-                    {getActiveEvents().length}
-                  </strong>
-                  <span className={styles.posterHeroMetricLabel}>진행중</span>
-                </span>
-                <span className={styles.posterHeroMetric}>
-                  <strong className={styles.posterHeroMetricValue}>
-                    {getTotalParticipants()}
-                  </strong>
-                  <span className={styles.posterHeroMetricLabel}>참여 규모</span>
-                </span>
-                <span className={styles.posterHeroMetric}>
-                  <strong className={styles.posterHeroMetricValue}>{events.length}</strong>
-                  <span className={styles.posterHeroMetricLabel}>전체 이벤트</span>
-                </span>
-              </div>
-            </div>
-          </Link>
-        </section>
-      ) : null}
+      <section className={styles.bannerSection} aria-label="이벤트 안내">
+        <div className={styles.posterHero}>
+          <EventResponsiveImage
+            desktopSrc="/events/event-hub-hero.webp"
+            mobileSrc="/events/event-hub-hero.webp"
+            alt="STYNA EVENTS - 새로운 스타일과 혜택을 만나보세요"
+            width={2700}
+            height={900}
+            className={styles.posterHeroImage}
+            priority
+          />
+        </div>
+      </section>
 
       <div className={styles.eventToolbar}>
         <div className={styles.filters} aria-label="이벤트 유형 필터">
@@ -219,41 +138,31 @@ export default function EventList() {
         <>
           <div className={styles.eventGrid}>
             {displayedEvents.map(event => {
-              const status = getEventStatus(event);
-              const uiVariant = getEventUiVariant(event);
               const uiMeta = getEventUiMeta(event);
               const displayImages = getEventDisplayImages(event);
-              const cardHighlightText = getCardHighlightText(event, uiMeta.cardAccentLabel);
 
               return (
                 <Link
                   key={event.id}
                   href={`/events/${event.id}`}
-                  className={`${styles.eventPosterCard} ${styles[`${uiVariant}CardTheme`]}`}
+                  className={styles.eventPosterCard}
+                  aria-label={`${event.title}: ${event.description}`}
                 >
-                  <Image
-                    src={displayImages.thumbnailImage}
-                    alt={event.title}
-                    width={720}
-                    height={480}
-                    className={styles.posterCardImage}
-                  />
-                  <div className={styles.posterCardOverlay}>
-                    <div className={styles.eventBadges}>
-                      <span className={styles.typeBadge}>{uiMeta.badgeLabel}</span>
-                      <span className={`${styles.statusBadge} ${styles[status]}`}>
-                        {getStatusLabel(status)}
-                      </span>
-                    </div>
-                    <div className={styles.posterCardCopy}>
-                      <span className={styles.eventEyebrow}>{uiMeta.cardEyebrow}</span>
-                      <h3 className={styles.eventTitle}>{event.title}</h3>
-                      <p className={styles.eventDescription}>{event.description}</p>
-                      <div className={styles.eventFooter}>
-                        <span className={styles.eventDiscount}>{cardHighlightText}</span>
-                        <span className={styles.cardCta}>{uiMeta.cardCtaLabel}</span>
-                      </div>
-                    </div>
+                  <div className={styles.posterCardMedia}>
+                    <EventResponsiveImage
+                      desktopSrc={displayImages.thumbnailImage}
+                      mobileSrc={displayImages.thumbnailImage}
+                      alt={event.title}
+                      width={1000}
+                      height={1250}
+                      className={styles.posterCardImage}
+                    />
+                  </div>
+                  <div className={styles.eventFooter}>
+                    <span className={styles.eventPeriod}>
+                      {formatDate(event.startDate)} - {formatDate(event.endDate)}
+                    </span>
+                    <span className={styles.cardCta}>{uiMeta.cardCtaLabel}</span>
                   </div>
                 </Link>
               );
