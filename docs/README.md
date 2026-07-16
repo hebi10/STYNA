@@ -10,6 +10,8 @@
 - 이벤트 이미지 전면 교체 실행 계획 : superpowers/plans/2026-07-14-event-image-refresh.md
 - 이벤트 상세 커머스 템플릿 리뉴얼 설계 : superpowers/specs/2026-07-15-event-detail-commerce-template-design.md
 - 이벤트 상세 커머스 템플릿 리뉴얼 실행 계획 : superpowers/plans/2026-07-15-event-detail-commerce-template.md
+- 이벤트 상세 에디토리얼 스토리 설계 : superpowers/specs/2026-07-15-event-detail-editorial-story-design.md
+- 이벤트 상세 에디토리얼 스토리 실행 계획 : superpowers/plans/2026-07-15-event-detail-editorial-story.md
 - 이벤트 목록 클린 갤러리 설계 : superpowers/specs/2026-07-15-event-list-clean-gallery-design.md
 - 이벤트 목록 클린 갤러리 실행 계획 : superpowers/plans/2026-07-15-event-list-clean-gallery.md
 - 메인 랭킹 UI 점검 : main-ranking-ui.md

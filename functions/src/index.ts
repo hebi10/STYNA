@@ -4,6 +4,10 @@ import "./utils/firebaseInit";
 import { onRequest } from "firebase-functions/v2/https";
 import * as path from "path";
 import { secrets } from "./config/environment";
+import {
+  loadNextRuntimeConfig,
+  type NextRuntimeConfig,
+} from "./config/nextRuntimeConfig";
 
 // ── 핸들러 ──
 export { points } from "./handlers/points";
@@ -53,15 +57,15 @@ export const nextjsServer = onRequest(
         const next = require("next") as (options: {
           dev: boolean;
           dir: string;
-          conf: { distDir: string };
+          conf: NextRuntimeConfig;
         }) => NextApp;
+
+        const appDir = path.join(__dirname, "..");
 
         app = next({
           dev: false,
-          dir: path.join(__dirname, ".."),
-          conf: {
-            distDir: ".next",
-          },
+          dir: appDir,
+          conf: loadNextRuntimeConfig(appDir),
         });
 
         await app.prepare();

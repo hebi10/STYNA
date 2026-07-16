@@ -3,6 +3,12 @@ export type EventType = 'sale' | 'coupon' | 'special' | 'new';
 export type EventUiVariant = EventType | 'review';
 export type EventCouponType = 'manual' | 'auto';
 
+export interface EventEditorialImages {
+  benefit?: string;
+  styling?: string;
+  product?: string;
+}
+
 export interface Event {
   id: string;
   title: string;
@@ -11,6 +17,7 @@ export interface Event {
   bannerImage: string;
   thumbnailImage: string;
   detailImage?: string;
+  editorialImages?: EventEditorialImages;
   eventType: EventType;
   couponType?: EventCouponType;
   startDate: Date;

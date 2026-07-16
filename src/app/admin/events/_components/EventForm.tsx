@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Event } from '@/shared/types/event';
+import { Event, EventEditorialImages } from '@/shared/types/event';
 import { Category } from '@/shared/types/category';
 import { EventService } from '@/shared/services/eventService';
 import { CategoryService } from '@/shared/services/categoryService';
@@ -16,11 +16,45 @@ interface Props {
   isEdit?: boolean;
 }
 
+const EDITORIAL_IMAGE_FIELDS = [
+  { role: 'benefit', label: '혜택 이미지', uploadLabel: '혜택 이미지 업로드' },
+  { role: 'styling', label: 'MD 추천 이미지', uploadLabel: 'MD 추천 이미지 업로드' },
+  { role: 'product', label: '상품 에디토리얼 이미지', uploadLabel: '상품 에디토리얼 이미지 업로드' },
+] as const;
+
+type EditorialImageRole = (typeof EDITORIAL_IMAGE_FIELDS)[number]['role'];
+
+const getProvidedEditorialImages = (images: EventEditorialImages): EventEditorialImages => {
+  const provided: EventEditorialImages = {};
+
+  if (images.benefit?.trim()) {
+    provided.benefit = images.benefit.trim();
+  }
+
+  if (images.styling?.trim()) {
+    provided.styling = images.styling.trim();
+  }
+
+  if (images.product?.trim()) {
+    provided.product = images.product.trim();
+  }
+
+  return provided;
+};
+
 export default function EventForm({ event, isEdit = false }: Props) {
   const router = useRouter();
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const detailInputRef = useRef<HTMLInputElement>(null);
+  const editorialBenefitInputRef = useRef<HTMLInputElement>(null);
+  const editorialStylingInputRef = useRef<HTMLInputElement>(null);
+  const editorialProductInputRef = useRef<HTMLInputElement>(null);
+  const editorialInputRefs: Record<EditorialImageRole, RefObject<HTMLInputElement | null>> = {
+    benefit: editorialBenefitInputRef,
+    styling: editorialStylingInputRef,
+    product: editorialProductInputRef,
+  };
   
   // 카테고리 관련 상태
   const [categories, setCategories] = useState<Category[]>([]);
@@ -48,6 +82,12 @@ export default function EventForm({ event, isEdit = false }: Props) {
     bannerImage: event?.bannerImage || '',
     thumbnailImage: event?.thumbnailImage || '',
     detailImage: event?.detailImage || '',
+  });
+
+  const [editorialImages, setEditorialImages] = useState<EventEditorialImages>({
+    benefit: event?.editorialImages?.benefit || '',
+    styling: event?.editorialImages?.styling || '',
+    product: event?.editorialImages?.product || '',
   });
 
   const [uploading, setUploading] = useState(false);
@@ -140,6 +180,23 @@ export default function EventForm({ event, isEdit = false }: Props) {
     }
   };
 
+  const handleEditorialImageUpload = async (file: File, role: EditorialImageRole) => {
+    try {
+      setUploading(true);
+      const imageUrl = await EventService.uploadImage(file, `events/editorial/${role}`);
+      setEditorialImages(prev => ({
+        ...prev,
+        [role]: imageUrl,
+      }));
+      alert('에디토리얼 이미지가 업로드되었습니다.');
+    } catch (error) {
+      console.error('Error uploading editorial image:', error);
+      alert('이미지 업로드에 실패했습니다.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -160,6 +217,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
 
     try {
       setLoading(true);
+      const providedEditorialImages = getProvidedEditorialImages(editorialImages);
       
       const eventData = {
         title: formData.title,
@@ -171,6 +229,9 @@ export default function EventForm({ event, isEdit = false }: Props) {
         bannerImage: images.bannerImage,
         thumbnailImage: images.thumbnailImage,
         ...(images.detailImage ? { detailImage: images.detailImage } : {}),
+        ...(Object.keys(providedEditorialImages).length > 0
+          ? { editorialImages: providedEditorialImages }
+          : {}),
         participantCount: event?.participantCount || 0,
         targetCategories: formData.selectedCategories.length > 0 
           ? formData.selectedCategories 
@@ -321,6 +382,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
               </div>
             </div>
           </div>
+
         </div>
 
         {/* 혜택 설정 */}
@@ -470,6 +532,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
               </div>
             </div>
           </div>
+
         </div>
 
         {/* 이미지 업로드 */}
@@ -553,7 +616,51 @@ export default function EventForm({ event, isEdit = false }: Props) {
           </div>
         </div>
 
-        {/* 상세 내용 */}
+        {/* 에디토리얼 이미지 */}
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>에디토리얼 이미지</h3>
+
+          <div className={styles.imageGroup}>
+            {EDITORIAL_IMAGE_FIELDS.map(({ role, label, uploadLabel }) => (
+              <div key={role} className={styles.formGroup}>
+                <label className={styles.label}>{label}</label>
+                <div className={styles.imageUpload}>
+                  {editorialImages[role] && (
+                    <div className={styles.imagePreview}>
+                      <Image
+                        src={editorialImages[role] || ''}
+                        alt={label}
+                        width={200}
+                        height={300}
+                        className={styles.previewImage}
+                      />
+                    </div>
+                  )}
+                  <input
+                    ref={editorialInputRefs[role]}
+                    type="file"
+                    accept="image/*"
+                    aria-label={uploadLabel}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleEditorialImageUpload(file, role);
+                    }}
+                    className={styles.fileInput}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => editorialInputRefs[role].current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? '업로드 중...' : `${label} 선택`}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>상세 내용</h3>
           
