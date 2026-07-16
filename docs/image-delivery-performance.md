@@ -32,3 +32,9 @@ npm run migrate:category-images:validate
 ```
 
 업로드가 검증된 뒤에만 `src/shared/constants/categoryImages.ts`의 로컬 WebP 경로를 Storage URL로 바꾼다.
+
+## Functions 런타임 설정
+
+- `nextjsServer`는 `functions/.next/required-server-files.json`에 직렬화된 빌드 설정을 읽어 `next/image`의 `remotePatterns`를 그대로 사용한다.
+- Next.js 코드나 `next.config.ts`를 변경한 뒤 Functions만 배포할 때는 먼저 `npm run deploy:prep`으로 빌드 결과를 `functions/.next`에 복사한다.
+- 전체 검증과 복사, 배포를 한 번에 실행할 때는 `npm run deploy:firebase`를 사용한다.
