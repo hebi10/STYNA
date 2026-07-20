@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   OfflineInfoContent,
   OfflineServiceContent,
@@ -41,7 +40,7 @@ export default function OfflinePage() {
         <div className={styles.pageHeader}>
           <h1 className={styles.pageTitle}>오프라인 매장</h1>
           <p className={styles.pageDescription}>
-            전국 STYNA 매장에서 직접 체험하고 구매하세요
+            포트폴리오 데모용 가상 매장 정보입니다. 실제 방문이나 구매는 제공하지 않습니다.
           </p>
         </div>
 
@@ -83,15 +82,6 @@ export default function OfflinePage() {
                           {feature}
                         </span>
                       ))}
-                    </div>
-
-                    <div className={styles.storeActions}>
-                      <Link href={`/support/offline/${store.id}`} className={`${styles.actionButton} ${styles.primaryAction}`}>
-                        상세보기
-                      </Link>
-                      <button className={`${styles.actionButton} ${styles.secondaryAction}`}>
-                        길찾기
-                      </button>
                     </div>
                   </div>
                 </div>

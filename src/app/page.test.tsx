@@ -20,27 +20,7 @@ jest.mock('./_components/DynamicCategorySection', () => ({
   ),
 }));
 
-jest.mock('./_components/CategoryProductTabs', () => ({
-  __esModule: true,
-  default: () => <section>카테고리별 상품 모의 영역</section>,
-}));
-
 jest.mock('./_components/ProductSection', () => ({
-  __esModule: true,
-  default: ({ title, subtitle, description }: {
-    title: string;
-    subtitle?: string;
-    description?: string;
-  }) => (
-    <section>
-      <h2>{title}</h2>
-      {subtitle && <p>{subtitle}</p>}
-      {description && <p>{description}</p>}
-    </section>
-  ),
-}));
-
-jest.mock('./_components/FeaturedProducts', () => ({
   __esModule: true,
   default: ({ title, subtitle, description }: {
     title: string;

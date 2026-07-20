@@ -1,3 +1,7 @@
+export type UserRole = 'user' | 'admin';
+export type UserAccountStatus = 'active' | 'inactive' | 'banned' | 'deleted';
+export type MutableUserAccountStatus = Exclude<UserAccountStatus, 'deleted'>;
+
 // 사용자(기본 정보)
 export interface User {
   id: string;
@@ -61,7 +65,7 @@ export interface UserProfile extends User {
   preferences: UserPreferences;
   point: number;
   grade: 'bronze' | 'silver' | 'gold' | 'platinum';
-  status: 'active' | 'inactive' | 'banned';
-  role: 'user' | 'admin';
+  status: UserAccountStatus;
+  role: UserRole;
   joinDate: string;
 }

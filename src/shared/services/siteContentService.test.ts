@@ -1,4 +1,4 @@
-import { getDoc, getDocs, setDoc } from 'firebase/firestore';
+import { getDocs } from 'firebase/firestore';
 import { SiteContentService } from './siteContentService';
 
 jest.mock('firebase/firestore', () => ({
@@ -8,10 +8,6 @@ jest.mock('firebase/firestore', () => ({
   getDocs: jest.fn(),
   orderBy: jest.fn((field, direction) => ({ field, direction })),
   query: jest.fn((collectionRef, ...constraints) => ({ collectionRef, constraints })),
-  setDoc: jest.fn(),
-  Timestamp: {
-    now: jest.fn(() => ({ toDate: () => new Date('2026-06-30T00:00:00.000Z') })),
-  },
   where: jest.fn((field, op, value) => ({ field, op, value })),
 }));
 
@@ -89,30 +85,5 @@ describe('SiteContentService', () => {
         order: 1,
       },
     ]);
-  });
-
-  test('upserts recommendation settings to Firestore', async () => {
-    jest.mocked(getDoc).mockResolvedValueOnce({ exists: () => false } as never);
-
-    await SiteContentService.saveRecommendationSetting({
-      id: 'rating',
-      type: 'rating',
-      name: '평점 높은 상품',
-      description: '평점 기준 추천',
-      isActive: true,
-      criteria: { minRating: 4.3 },
-      order: 1,
-    });
-
-    expect(setDoc).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        type: 'rating',
-        name: '평점 높은 상품',
-        isActive: true,
-        order: 1,
-      }),
-      { merge: true }
-    );
   });
 });

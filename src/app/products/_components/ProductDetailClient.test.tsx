@@ -2,7 +2,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ProductDetailClient from './ProductDetailClient';
 import { Product } from '@/shared/types/product';
 import { useUserActivity } from '@/context/userActivityProvider';
-import { getProductReviewStats } from '@/shared/utils/syncProductReviews';
 import { QnAService } from '@/shared/services/qnaService';
 
 const push = jest.fn();
@@ -36,10 +35,6 @@ jest.mock('@/context/productProvider', () => ({
 
 jest.mock('@/shared/hooks/useCart', () => ({
   useAddToCart: () => ({ mutateAsync: jest.fn() }),
-}));
-
-jest.mock('@/shared/utils/syncProductReviews', () => ({
-  getProductReviewStats: jest.fn(() => new Promise(() => undefined)),
 }));
 
 jest.mock('@/shared/services/qnaService', () => ({
@@ -189,7 +184,6 @@ describe('ProductDetailClient detail images', () => {
     render(<ProductDetailClient product={product} />);
 
     expect(screen.getByText('4.5 (13개 리뷰)')).toBeInTheDocument();
-    expect(getProductReviewStats).not.toHaveBeenCalled();
   });
 });
 
@@ -212,11 +206,8 @@ describe('ProductDetailClient product Q&A', () => {
         category: 'product',
         isSecret: false,
         status: 'answered',
-        userId: 'writer-1',
-        userEmail: 'writer@example.com',
-        userName: '작성자',
+        userName: '작**',
         views: 0,
-        isNotified: false,
         createdAt: new Date('2026-05-01T00:00:00.000Z'),
         updatedAt: new Date('2026-05-01T00:00:00.000Z'),
         answer: {
@@ -237,7 +228,7 @@ describe('ProductDetailClient product Q&A', () => {
 
     expect(await screen.findByText('사이즈 문의')).toBeInTheDocument();
     expect(screen.getByText('상세 사이즈 표를 참고해 주세요.')).toBeInTheDocument();
-    expect(QnAService.getQnAList).toHaveBeenCalledWith({ productId: 'product-1', isSecret: false }, 1, 5);
+    expect(QnAService.getQnAList).toHaveBeenCalledWith({ productId: 'product-1' }, 1, 5);
 
     fireEvent.click(screen.getByRole('button', { name: '문의하기' }));
     expect(push).toHaveBeenCalledWith(

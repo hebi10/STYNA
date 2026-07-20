@@ -21,14 +21,15 @@ export async function verifyAuthContext(authHeader: string | undefined): Promise
   const token = authHeader.split("Bearer ")[1];
 
   try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
+    const decodedToken = await admin.auth().verifyIdToken(token, true);
     const userSnapshot = await admin.firestore().collection("users").doc(decodedToken.uid).get();
-    const accountStatus = userSnapshot.exists ? userSnapshot.data()?.status : undefined;
-    if (accountStatus === "inactive" || accountStatus === "banned") {
+    const userData = userSnapshot.exists ? userSnapshot.data() : undefined;
+    if (userData?.status !== "active") {
       throw new AuthError(403, "This account is not active.");
     }
-    const role = decodedToken.role as string | undefined;
-    const isAdmin = decodedToken.admin === true || role === "admin";
+    const role = typeof userData.role === "string" ? userData.role : undefined;
+    const hasAdminClaim = decodedToken.admin === true || decodedToken.role === "admin";
+    const isAdmin = hasAdminClaim && role === "admin";
 
     return {
       uid: decodedToken.uid,

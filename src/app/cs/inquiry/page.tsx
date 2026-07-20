@@ -16,11 +16,16 @@ const CATEGORY_LABELS = {
 } as const;
 
 export default function InquiryPage() {
-  const { user } = useAuth();
+  const { user, userData, isUserDataLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'write' | 'list'>('write');
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(false);
   const [openItems, setOpenItems] = useState<string[]>([]);
+  const accountEmail = typeof userData?.email === 'string' ? userData.email : '';
+  const accountName = typeof userData?.name === 'string' ? userData.name : '';
+  const hasAuthoritativeIdentity = userData?.status === 'active' &&
+    Boolean(accountEmail.trim()) &&
+    Boolean(accountName.trim());
   
   // 폼 상태
   const [formData, setFormData] = useState<CreateInquiryData>({
@@ -66,6 +71,16 @@ export default function InquiryPage() {
       return;
     }
 
+    if (isUserDataLoading) {
+      alert('회원 정보를 확인하고 있습니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+
+    if (!hasAuthoritativeIdentity) {
+      alert('회원 정보를 확인할 수 없습니다. 다시 로그인해주세요.');
+      return;
+    }
+
     if (!formData.category || !formData.title || !formData.content) {
       alert('모든 필드를 입력해주세요.');
       return;
@@ -75,8 +90,8 @@ export default function InquiryPage() {
     try {
       await InquiryService.createInquiry(
         user.uid,
-        user.email || '',
-        user.displayName || '사용자',
+        accountEmail,
+        accountName,
         formData
       );
       
@@ -221,7 +236,14 @@ export default function InquiryPage() {
             <button
               type="submit"
               className={styles.submitButton}
-              disabled={loading || !formData.category || !formData.title || !formData.content}
+              disabled={
+                loading ||
+                isUserDataLoading ||
+                !hasAuthoritativeIdentity ||
+                !formData.category ||
+                !formData.title ||
+                !formData.content
+              }
             >
               {loading ? '등록 중...' : '문의 등록'}
             </button>

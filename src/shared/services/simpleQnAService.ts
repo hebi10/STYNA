@@ -38,8 +38,8 @@ export class SimpleQnAService {
         isNotified: data.isNotified,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        productId: data.productId,
-        productName: data.productName,
+        ...(data.productId !== undefined ? { productId: data.productId } : {}),
+        ...(data.productName !== undefined ? { productName: data.productName } : {}),
       };
 
       const docRef = await addDoc(collection(db, COLLECTION_NAME), qnaData);

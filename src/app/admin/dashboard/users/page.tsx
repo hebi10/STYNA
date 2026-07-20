@@ -6,6 +6,7 @@ import { useAuth } from "@/context/authProvider";
 import styles from "./page.module.css";
 import { AdminUserService, AdminUserData, UserStats, UserFilter, PointOperation } from "@/shared/services/adminUserService";
 import { PointHistory } from "@/shared/types/point";
+import { downloadUsersCsv } from "./downloadUsersCsv";
 
 export default function AdminUsersPage() {
   const router = useRouter();
@@ -30,7 +31,6 @@ export default function AdminUsersPage() {
   // 사용자 데이터 로드
   const loadUsers = useCallback(async () => {
     try {
-      console.log('loadUsers 시작...');
       setIsLoading(true);
       setError(null);
       
@@ -40,12 +40,9 @@ export default function AdminUsersPage() {
         status: statusFilter !== 'all' ? statusFilter : undefined,
       };
 
-      console.log('필터 설정:', filters);
       const { users: fetchedUsers } = await AdminUserService.getUsers(filters, currentPage, 10);
-      console.log('사용자 데이터 조회 완료:', fetchedUsers);
       
       const userStats = await AdminUserService.getUserStats();
-      console.log('사용자 통계:', userStats);
       
       setUsers(fetchedUsers);
       setStats(userStats);
@@ -194,35 +191,10 @@ export default function AdminUsersPage() {
   const handleExport = async () => {
     try {
       const csvContent = await AdminUserService.exportUsersToCSV();
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `users_${new Date().toISOString().split('T')[0]}.csv`;
-      link.click();
+      downloadUsersCsv(csvContent);
     } catch (error) {
       console.error('Error exporting users:', error);
       alert('사용자 데이터 내보내기에 실패했습니다.');
-    }
-  };
-
-  const handleAddUser = async () => {
-    const name = prompt('사용자 이름을 입력하세요:');
-    if (!name) return;
-    
-    const email = prompt('사용자 이메일을 입력하세요:');
-    if (!email) return;
-    
-    const role = confirm('관리자 권한을 부여하시겠습니까?') ? 'admin' : 'user';
-    
-    try {
-      console.log('새 사용자 생성 중:', { name, email, role });
-      await AdminUserService.createUser({ name, email, role });
-      alert('사용자가 성공적으로 추가되었습니다.');
-      await loadUsers();
-    } catch (error) {
-      console.error('Error creating user:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      alert(`사용자 추가에 실패했습니다: ${errorMessage}`);
     }
   };
 
@@ -369,10 +341,6 @@ export default function AdminUsersPage() {
               <option value="banned">정지</option>
             </select>
 
-            <button onClick={handleAddUser} className={styles.addButton}>
-              사용자 추가
-            </button>
-
             <button onClick={handleBulkPointGift} className={styles.pointButton}>
               일괄 포인트 지급
             </button>
@@ -405,12 +373,7 @@ export default function AdminUsersPage() {
             <div className={styles.emptyState}>
               <div style={{ textAlign: 'center', padding: '40px' }}>
                 <h3>사용자가 없습니다</h3>
-                <p>아직 등록된 사용자가 없거나 검색 조건에 맞는 사용자가 없습니다.</p>
-                <div style={{ marginTop: '20px' }}>
-                  <button onClick={handleAddUser} className={styles.addButton}>
-                    첫 번째 사용자 추가
-                  </button>
-                </div>
+                <p>가입한 사용자가 없거나 현재 검색 조건에 맞는 사용자가 없습니다.</p>
                 <div style={{ marginTop: '20px', fontSize: '14px', color: '#666' }}>
                   <p>현재 검색 조건:</p>
                   <p>검색어: {searchTerm || '없음'}</p>

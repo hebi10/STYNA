@@ -14,7 +14,7 @@ import Button from '@/app/_components/Button';
 import ProductCard from './ProductCard';
 import ProductReviews from './ProductReviews';
 import { QnAService } from '@/shared/services/qnaService';
-import { QnA } from '@/shared/types/qna';
+import { PublicQnA } from '@/shared/types/qna';
 import styles from './ProductDetail.module.css';
 
 interface Props {
@@ -77,7 +77,7 @@ export default function ProductDetailClient({ product }: Props) {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isWishlistLoading, setIsWishlistLoading] = useState(false);
   const [optimisticWishlisted, setOptimisticWishlisted] = useState<boolean | null>(null);
-  const [productQnAs, setProductQnAs] = useState<QnA[]>([]);
+  const [productQnAs, setProductQnAs] = useState<PublicQnA[]>([]);
   const [isProductQnAsLoading, setIsProductQnAsLoading] = useState(false);
   const [productQnAsError, setProductQnAsError] = useState<string | null>(null);
 
@@ -104,7 +104,7 @@ export default function ProductDetailClient({ product }: Props) {
 
       try {
         const result = await QnAService.getQnAList(
-          { productId: product.id, isSecret: false },
+          { productId: product.id },
           1,
           5
         );

@@ -6,17 +6,38 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function userDocument(userId) {
+      return /databases/$(database)/documents/users/$(userId);
+    }
+
+    function isActiveAccount() {
+      return isSignedIn() &&
+        exists(userDocument(request.auth.uid)) &&
+        get(userDocument(request.auth.uid)).data.get('status', '') == 'active';
+    }
+
     function hasAdminClaim() {
       return isSignedIn() &&
-        (request.auth.token.admin == true || request.auth.token.role == 'admin');
+        (request.auth.token.get('admin', false) == true ||
+          request.auth.token.get('role', '') == 'admin');
+    }
+
+    function isStrictAdmin() {
+      return isActiveAccount() &&
+        hasAdminClaim() &&
+        get(userDocument(request.auth.uid)).data.get('role', '') == 'admin';
     }
 
     function isAdmin() {
-      return hasAdminClaim();
+      return isStrictAdmin();
     }
 
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isActiveOwner(userId) {
+      return isActiveAccount() && request.auth.uid == userId;
     }
 
     function userCreateAllowedKeys() {
@@ -38,6 +59,8 @@ service cloud.firestore {
         'addresses',
         'profileImage',
         'preferences',
+        'status',
+        'role',
         'createdAt',
         'updatedAt'
       ];
@@ -66,14 +89,36 @@ service cloud.firestore {
     function isValidSelfUserCreate(userId) {
       return isOwner(userId) &&
         request.resource.data.keys().hasOnly(userCreateAllowedKeys()) &&
-        (!request.resource.data.keys().hasAny(['id']) ||
-          request.resource.data.id == userId);
+        request.resource.data.keys().hasAll([
+          'id',
+          'email',
+          'name',
+          'status',
+          'role',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        request.resource.data.id == userId &&
+        request.resource.data.email is string &&
+        request.auth.token.get('email', '') != '' &&
+        request.resource.data.email == request.auth.token.get('email', '') &&
+        request.resource.data.name is string &&
+        request.resource.data.status == 'active' &&
+        request.resource.data.role == 'user' &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
     }
 
     function isValidSelfUserUpdate(userId) {
-      return isOwner(userId) &&
-        request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(userUpdateAllowedKeys());
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isActiveOwner(userId) &&
+        changed.hasOnly(userUpdateAllowedKeys()) &&
+        changed.hasAny(['updatedAt']) &&
+        request.resource.data.email is string &&
+        request.auth.token.get('email', '') != '' &&
+        request.resource.data.email == request.auth.token.get('email', '') &&
+        request.resource.data.name is string &&
+        request.resource.data.updatedAt == request.time;
     }
 
     function qnaCreateAllowedKeys() {
@@ -96,19 +141,65 @@ service cloud.firestore {
       ];
     }
 
+    function qnaCreateRequiredKeys() {
+      return [
+        'userId',
+        'userEmail',
+        'userName',
+        'category',
+        'title',
+        'content',
+        'images',
+        'isSecret',
+        'status',
+        'views',
+        'isNotified',
+        'createdAt',
+        'updatedAt'
+      ];
+    }
+
     function isValidQnACreate() {
-      return isSignedIn() &&
-        request.resource.data.userId == request.auth.uid &&
+      let user = get(userDocument(request.auth.uid)).data;
+      return isActiveAccount() &&
         request.resource.data.keys().hasOnly(qnaCreateAllowedKeys()) &&
+        request.resource.data.keys().hasAll(qnaCreateRequiredKeys()) &&
+        request.resource.data.userId == request.auth.uid &&
+        user.email is string &&
+        user.name is string &&
+        request.resource.data.userEmail is string &&
+        request.resource.data.userName is string &&
+        request.resource.data.userEmail == user.email &&
+        request.auth.token.get('email', '') != '' &&
+        user.email == request.auth.token.get('email', '') &&
+        request.resource.data.userName == user.name &&
+        request.resource.data.category in [
+          'product',
+          'size',
+          'delivery',
+          'return',
+          'payment',
+          'general',
+          'other'
+        ] &&
+        request.resource.data.title is string &&
+        request.resource.data.content is string &&
+        request.resource.data.images is list &&
+        request.resource.data.isSecret is bool &&
+        request.resource.data.isNotified is bool &&
+        (!request.resource.data.keys().hasAny(['productId']) ||
+          request.resource.data.productId is string) &&
+        (!request.resource.data.keys().hasAny(['productName']) ||
+          request.resource.data.productName is string) &&
         request.resource.data.status == 'waiting' &&
         request.resource.data.views == 0 &&
-        !request.resource.data.keys().hasAny(['answer', 'password', 'passwordHash', 'passwordSalt']);
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
     }
 
     function isValidQnAOwnerUpdate() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
-      return isOwner(resource.data.userId) &&
-        request.resource.data.userId == resource.data.userId &&
+      return isActiveOwner(resource.data.userId) &&
         changed.hasOnly([
           'title',
           'content',
@@ -119,11 +210,123 @@ service cloud.firestore {
           'status',
           'updatedAt'
         ]) &&
+        changed.hasAny(['updatedAt']) &&
+        request.resource.data.title is string &&
+        request.resource.data.content is string &&
+        request.resource.data.category in [
+          'product',
+          'size',
+          'delivery',
+          'return',
+          'payment',
+          'general',
+          'other'
+        ] &&
+        request.resource.data.images is list &&
+        request.resource.data.isSecret is bool &&
+        request.resource.data.isNotified is bool &&
+        request.resource.data.updatedAt == request.time &&
         (!changed.hasAny(['status']) || request.resource.data.status == 'closed');
     }
 
+    function isValidQnAAnswer() {
+      let answer = request.resource.data.answer;
+      return answer is map &&
+        answer.keys().hasOnly([
+          'content',
+          'answeredBy',
+          'answeredAt',
+          'isAdmin'
+        ]) &&
+        answer.keys().hasAll([
+          'content',
+          'answeredBy',
+          'answeredAt',
+          'isAdmin'
+        ]) &&
+        answer.content is string &&
+        answer.answeredBy is string &&
+        answer.answeredAt == request.time &&
+        answer.isAdmin == true;
+    }
+
+    function isValidQnAAdminUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isStrictAdmin() &&
+        changed.hasOnly(['answer', 'status', 'updatedAt']) &&
+        changed.hasAny(['updatedAt']) &&
+        request.resource.data.updatedAt == request.time &&
+        (!changed.hasAny(['answer']) || isValidQnAAnswer()) &&
+        (!changed.hasAny(['status']) ||
+          request.resource.data.status in ['waiting', 'answered', 'closed']);
+    }
+
+    function inquiryCreateAllowedKeys() {
+      return [
+        'userId',
+        'userEmail',
+        'userName',
+        'category',
+        'title',
+        'content',
+        'status',
+        'createdAt',
+        'updatedAt'
+      ];
+    }
+
+    function isValidInquiryCreate() {
+      let user = get(userDocument(request.auth.uid)).data;
+      return isActiveAccount() &&
+        request.resource.data.keys().hasOnly(inquiryCreateAllowedKeys()) &&
+        request.resource.data.keys().hasAll(inquiryCreateAllowedKeys()) &&
+        request.resource.data.userId == request.auth.uid &&
+        user.email is string &&
+        user.name is string &&
+        request.resource.data.userEmail is string &&
+        request.resource.data.userName is string &&
+        request.resource.data.userEmail == user.email &&
+        request.auth.token.get('email', '') != '' &&
+        user.email == request.auth.token.get('email', '') &&
+        request.resource.data.userName == user.name &&
+        request.resource.data.category in [
+          'order',
+          'delivery',
+          'exchange',
+          'product',
+          'account',
+          'other'
+        ] &&
+        request.resource.data.title is string &&
+        request.resource.data.content is string &&
+        request.resource.data.status == 'waiting' &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+    }
+
+    function isValidInquiryAnswer() {
+      let answer = request.resource.data.answer;
+      return answer is map &&
+        answer.keys().hasOnly(['content', 'answeredBy', 'answeredAt']) &&
+        answer.keys().hasAll(['content', 'answeredBy', 'answeredAt']) &&
+        answer.content is string &&
+        answer.answeredBy is string &&
+        answer.answeredAt == request.time;
+    }
+
+    function isValidInquiryAdminUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isStrictAdmin() &&
+        changed.hasOnly(['answer', 'status', 'updatedAt']) &&
+        changed.hasAny(['updatedAt']) &&
+        request.resource.data.updatedAt == request.time &&
+        (!changed.hasAny(['answer']) || isValidInquiryAnswer()) &&
+        (!changed.hasAny(['status']) ||
+          request.resource.data.status in ['waiting', 'answered', 'closed']);
+    }
+
     function isValidReviewOwnerUpdate() {
-      return isOwner(resource.data.userId) &&
+      return isActiveOwner(resource.data.userId) &&
         request.resource.data.userId == resource.data.userId &&
         request.resource.data.productId == resource.data.productId &&
         request.resource.data.createdAt == resource.data.createdAt &&
@@ -173,7 +376,8 @@ service cloud.firestore {
     }
 
     match /eventParticipants/{participantId} {
-      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow read: if isAdmin() ||
+        (isActiveAccount() && resource.data.userId == request.auth.uid);
       allow write: if false;
     }
 
@@ -188,6 +392,11 @@ service cloud.firestore {
     }
 
     match /mainBanners/{bannerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /featuredProducts/{configId} {
       allow read: if true;
       allow write: if isAdmin();
     }
@@ -207,86 +416,83 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /recommendationSettings/{settingId} {
-      allow read: if isAdmin();
-      allow write: if isAdmin();
-    }
-
     match /users/{userId} {
-      allow create: if isValidSelfUserCreate(userId) || isAdmin();
+      allow create: if isValidSelfUserCreate(userId);
       allow read: if isOwner(userId) || isAdmin();
-      allow update: if isValidSelfUserUpdate(userId) || isAdmin();
-      allow delete: if isAdmin();
+      allow update: if isValidSelfUserUpdate(userId);
+      allow delete: if false;
 
       match /pointHistory/{historyId} {
-        allow read: if isOwner(userId) || isAdmin();
+        allow read: if isActiveOwner(userId) || isAdmin();
         allow write: if isAdmin();
       }
 
       match /wishlist/{productId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if isActiveOwner(userId) || isAdmin();
       }
 
       match /recentProducts/{productId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if isActiveOwner(userId) || isAdmin();
       }
     }
 
     match /carts/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
+      allow read, write: if isActiveOwner(userId) || isAdmin();
     }
 
     match /orders/{orderId} {
-      allow create: if false;
-      allow read: if isSignedIn() &&
-        (resource.data.userId == request.auth.uid || isAdmin());
-      allow update, delete: if isAdmin();
+      allow read: if isAdmin() ||
+        (isActiveAccount() && resource.data.userId == request.auth.uid);
+      allow create, update, delete: if false;
     }
 
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if false;
       allow update: if isAdmin() || isValidReviewOwnerUpdate();
-      allow delete: if isOwner(resource.data.userId) || isAdmin();
+      allow delete: if isAdmin() || isActiveOwner(resource.data.userId);
     }
 
     match /user_coupons/{userCouponId} {
-      allow read: if isSignedIn() &&
-        (resource.data.uid == request.auth.uid || isAdmin());
+      allow read: if isAdmin() ||
+        (isActiveAccount() && resource.data.uid == request.auth.uid);
       allow write: if isAdmin();
     }
 
     match /userRecentProducts/{docId} {
-      allow create: if isSignedIn() &&
-        (request.resource.data.userId == request.auth.uid || isAdmin());
-      allow read, update, delete: if isSignedIn() &&
-        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAdmin() || isActiveOwner(request.resource.data.userId);
+      allow read, delete: if isAdmin() || isActiveOwner(resource.data.userId);
+      allow update: if isAdmin() ||
+        (isActiveOwner(resource.data.userId) &&
+          request.resource.data.userId == resource.data.userId);
     }
 
     match /userWishlist/{docId} {
-      allow create: if isSignedIn() &&
-        (request.resource.data.userId == request.auth.uid || isAdmin());
-      allow read, update, delete: if isSignedIn() &&
-        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAdmin() || isActiveOwner(request.resource.data.userId);
+      allow read, delete: if isAdmin() || isActiveOwner(resource.data.userId);
+      allow update: if isAdmin() ||
+        (isActiveOwner(resource.data.userId) &&
+          request.resource.data.userId == resource.data.userId);
     }
 
     match /qna/{qnaId} {
-      allow create: if isValidQnACreate() || isAdmin();
+      allow create: if isValidQnACreate();
       allow read: if isAdmin() ||
-        (isSignedIn() && resource.data.userId == request.auth.uid) ||
-        (resource.data.isSecret != true);
-      allow update: if isAdmin() || isValidQnAOwnerUpdate();
-      allow delete: if isAdmin();
+        (isActiveAccount() && resource.data.userId == request.auth.uid);
+      allow update: if isValidQnAAdminUpdate() || isValidQnAOwnerUpdate();
+      allow delete: if false;
     }
 
     match /inquiries/{inquiryId} {
-      allow create: if isSignedIn();
-      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow update, delete: if isAdmin();
+      allow create: if isValidInquiryCreate();
+      allow read: if isAdmin() ||
+        (isActiveAccount() && resource.data.userId == request.auth.uid);
+      allow update: if isValidInquiryAdminUpdate();
+      allow delete: if false;
     }
 
     match /coupons/{couponId} {
-      allow read: if isSignedIn();
+      allow read: if isActiveAccount();
       allow write: if isAdmin();
     }
 

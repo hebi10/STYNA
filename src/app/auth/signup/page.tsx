@@ -8,6 +8,7 @@ import useInputs from "@/shared/hooks/useInput";
 import { setDoc, doc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/shared/libs/firebase/firebase";
 import { useAuth } from "@/context/authProvider";
+import { buildSignupUserDocument } from "./signupUserDocument";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -100,26 +101,17 @@ export default function SignupPage() {
     clearError(); // 기존 에러 클리어
 
     try {
-      // AuthProvider의 signUp 사용
-      const userCredential = await signUp(formData.email, formData.password);
-      const user = userCredential.user;
-
-      await setDoc(doc(db, "users", user.uid), {
-        id: user.uid,
-        email: formData.email,
-        name: formData.name,
-        phone: formData.phone,
-        birth: {
-          year: formData.birthYear,
-          month: formData.birthMonth,
-          day: formData.birthDay
-        },
-        gender: formData.gender,
-        termsAgree: formData.termsAgree,
-        privacyAgree: formData.privacyAgree,
-        marketingAgree: formData.marketingAgree,
-        createdAt: serverTimestamp(),
-      });
+      // Auth 생성과 사용자 프로필 생성을 하나의 프로비저닝 흐름으로 처리
+      await signUp(
+        formData.email,
+        formData.password,
+        async (user) => {
+          await setDoc(
+            doc(db, "users", user.uid),
+            buildSignupUserDocument(user.uid, formData, serverTimestamp())
+          );
+        }
+      );
 
       // Firebase Functions REST API를 통한 포인트 적립
       // 회원가입 완료 후 포인트 서비스를 통해 적립

@@ -14,7 +14,7 @@
 - 2026-05-12: 실시간 상담의 상담 연결 intent를 버튼/자연어 중심으로 정리하고, 과거 붙임 명령어는 내부 호환만 처리하도록 Next/API Functions 공통 응답 파일을 함께 갱신했다.
 - 2026-05-12: `/api/order`는 주문 생성 외 관리자 주문 상태 변경 액션을 처리하며, `/api/coupon`은 관리자 쿠폰 마스터 생성/수정/보관 액션을 처리한다. 두 API 모두 인증 토큰 기반 민감 응답이라 `no-store` 대상이다.
 - 2026-05-14: `/api/chat`은 `CHAT_API_URL` 또는 `NEXT_PUBLIC_CHAT_API_URL`이 절대 URL이면 upstream 상담 API로 no-store 프록시한 뒤 실패 시 기존 메뉴/fallback 응답으로 돌아간다.
-- 2026-05-14: 실시간 상담 위젯은 브라우저 CORS 차단을 피하도록 항상 same-origin `/api/chat`만 호출한다. `/api/chat`은 upstream이 없으면 서버 환경변수 `OPENAI_API_KEY`로 OpenAI Chat Completions를 직접 호출한다. `OPENAI_CHAT_MODEL`이 없으면 `gpt-4o-mini`를 사용한다.
+- 2026-05-14: 실시간 상담 위젯은 브라우저 CORS 차단을 피하도록 항상 same-origin `/api/chat`만 호출한다. 당시에는 upstream이 없을 때 Next route가 OpenAI를 직접 호출했으나, 아래 2026-07-20 보안 경계로 대체되었다.
 - 2026-05-14: `NEXT_PUBLIC_CHAT_API_URL`은 클라이언트 직접 호출용이 아니라 Next `/api/chat`의 서버 측 upstream 프록시 후보로만 사용한다.
 - 2026-05-14: Firebase Hosting의 `/api/chat` rewrite가 사용하는 Functions `chat`도 기본 모델을 `gpt-4o-mini`로 맞추고, OpenAI 호출 실패 시 문의 내용 기반 fallback 응답을 반환하도록 보정했다.
 
@@ -45,6 +45,16 @@
   - Next `/api/chat`과 Functions `chat`에서 메시지 길이 상한, 대화 기록 개수 상한, `user`/`assistant` 외 role 제거를 공통 적용했다.
   - 포트폴리오/개인 연락처 안내 문구는 면접관 확인 목적이 있어 유지하되, 사용자 입력이 시스템 role로 주입되지 않도록 방어했다.
   - `npm test -- --runTestsByPath src/app/api/chat/route.test.ts --runInBand`: 통과.
+
+## 2026-07-20 상담 provider·사용량 제한 경계
+
+- OpenAI provider 호출은 Firebase `chat` Function 한 곳에서만 수행한다. Next `/api/chat`은 명시된 절대 upstream으로만 프록시하며, upstream 미설정·자기 참조·장애 시 규칙 기반 답변으로 대체한다.
+- Widget은 안정적인 `X-Chat-Session-Id`를 항상 보내고 로그인 상태에서는 Firebase ID token을 `Authorization: Bearer`로 함께 보낸다. 토큰 취득 실패 시 익명 provider 요청으로 낮추지 않는다.
+- Function은 인증 UID 또는 익명 세션과 `req.ip`를 `CHAT_RATE_LIMIT_SALT` HMAC-SHA256으로 해시한다. 원본 UID·세션·IP를 저장하지 않고 principal/network 두 축에 분당 10회·일 100회 제한을 한 Firestore transaction으로 적용한다.
+- `useAI: false` 메뉴 응답은 provider 사용량을 소비하지 않아 세션·counter가 필요 없지만, 명시적으로 전달된 Authorization은 같은 활성 계정 계약으로 검증한다.
+- 초과 응답은 `429`, `Retry-After`, `retryAfterSeconds`를 반환한다. Next 프록시는 이 상태·본문·헤더를 보존하며 다른 upstream 실패에서 provider를 재호출하지 않는다.
+- Next 프록시는 `Authorization`과 `X-Chat-Session-Id`만 식별 헤더로 전달하며 cookie, `X-Forwarded-For`, 기타 요청 헤더는 전달하지 않는다. 모든 응답은 `no-store`다.
+- `OPENAI_API_KEY` 또는 `CHAT_RATE_LIMIT_SALT`가 없거나 제한 저장소가 실패하면 provider를 호출하지 않고 규칙 기반 답변을 반환한다.
 
 ## 남은 작업
 - 사용자 대상 공개 API 목록 확정 시 `API_PUBLIC_CACHE_RULES`에 개별 엔드포인트 등록 및 revalidate 값 조정.

@@ -162,47 +162,6 @@
   border: 1px solid #fed7aa;
 }
 
-.storeActions {
-  display: flex;
-  gap: 1rem;
-}
-
-.actionButton {
-  flex: 1;
-  padding: 0.8rem 1rem;
-  border-radius: 12px;
-  font-weight: 600;
-  text-decoration: none;
-  text-align: center;
-  transition: all 0.3s ease;
-  border: none;
-  cursor: pointer;
-}
-
-.primaryAction {
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
-}
-
-.primaryAction:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.4);
-  color: white;
-}
-
-.secondaryAction {
-  background: white;
-  color: #f97316;
-  border: 2px solid #f97316;
-}
-
-.secondaryAction:hover {
-  background: #f97316;
-  color: white;
-  transform: translateY(-2px);
-}
-
 .servicesSection {
   background: white;
   border-radius: 20px;
@@ -384,10 +343,6 @@
     padding: 1.5rem;
   }
   
-  .storeActions {
-    flex-direction: column;
-  }
-  
   .servicesSection,
   .hoursSection {
     padding: 2rem 1rem;
@@ -507,34 +462,6 @@
   color: var(--black);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-}
-
-.actionButton {
-  border-radius: var(--radius-sm);
-  box-shadow: none;
-}
-
-.primaryAction {
-  background: var(--black);
-  color: var(--surface-raised);
-}
-
-.primaryAction:hover {
-  background: var(--action-hover);
-  transform: none;
-  box-shadow: none;
-}
-
-.secondaryAction {
-  background: var(--surface-raised);
-  color: var(--black);
-  border: 1px solid var(--line);
-}
-
-.secondaryAction:hover {
-  background: var(--off-white);
-  color: var(--black);
-  transform: none;
 }
 
 .specialNotice {

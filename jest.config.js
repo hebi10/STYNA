@@ -24,5 +24,6 @@ module.exports = {
     "<rootDir>/node_modules/",
     "<rootDir>/.worktrees/",
     "functions[\\\\/]__tests__[\\\\/]firestoreRules\\.test\\.ts$",
+    "functions[\\\\/]__tests__[\\\\/]storageRules\\.test\\.ts$",
   ],
 };

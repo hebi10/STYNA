@@ -43,3 +43,6 @@
 - 주문·권한 정합성 실행 계획 : superpowers/plans/2026-07-10-security-integrity.md
 - 품질 게이트/CI 스크립트 정리 : quality-gates.md
 - 정적 콘텐츠 Firestore 관리 : static-content.md
+- 프로젝트 정리·안정화 설계 : superpowers/specs/2026-07-20-project-hardening-design.md
+- 프로젝트 데드·중복 코드 정리 실행 계획 : superpowers/plans/2026-07-20-project-cleanup.md
+- 프로젝트 보안·품질 게이트 실행 계획 : superpowers/plans/2026-07-20-project-security-quality.md

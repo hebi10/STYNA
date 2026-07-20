@@ -22,6 +22,8 @@ const mockUsers = [
       zipCode: '12345',
     },
     pointBalance: 10000, // 초기 포인트 잔액
+    status: 'active',
+    role: 'user',
     createdAt: new Date(),
     updatedAt: new Date(),
   },
@@ -36,6 +38,8 @@ const mockUsers = [
       zipCode: '54321',
     },
     pointBalance: 5000,
+    status: 'active',
+    role: 'user',
     createdAt: new Date(),
     updatedAt: new Date(),
   }

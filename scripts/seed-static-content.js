@@ -6,7 +6,6 @@ const {
   offlineStores,
   offlineServices,
   offlineInfo,
-  recommendationSettings,
 } = require("./static-content-data");
 
 const now = () => admin.firestore.FieldValue.serverTimestamp();
@@ -33,7 +32,6 @@ async function main() {
   await upsertCollection("mainBanners", mainBanners);
   await upsertCollection("offlineStores", offlineStores);
   await upsertCollection("offlineServices", offlineServices);
-  await upsertCollection("recommendationSettings", recommendationSettings);
 
   await db.collection("offlineInfo").doc(offlineInfo.id).set({
     weekdayHours: offlineInfo.weekdayHours,

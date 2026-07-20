@@ -3,7 +3,6 @@ import "./utils/firebaseInit";
 
 import { onRequest } from "firebase-functions/v2/https";
 import * as path from "path";
-import { secrets } from "./config/environment";
 import {
   loadNextRuntimeConfig,
   type NextRuntimeConfig,
@@ -44,7 +43,6 @@ export const nextjsServer = onRequest(
     timeoutSeconds: 60,
     invoker: "public",
     cors: true,
-    secrets: [secrets.OPENAI_API_KEY],
   },
   async (req, res) => {
     if (req.method === "OPTIONS") {

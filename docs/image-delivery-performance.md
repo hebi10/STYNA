@@ -3,7 +3,7 @@
 ## 현재 적용
 
 - 메인 카테고리 4장은 기존 PNG 대신 `public/category/*_q75.webp`를 사용한다. 합계 전송 크기는 약 6MB에서 약 92KB로 줄었다.
-- `next.config.ts`는 `next/image` 최적화를 활성화하고, 최적화 결과를 하루 동안 캐시한다.
+- Cloud Functions의 이미지 최적화 경로가 원격 이미지를 거부하지 않도록 `next.config.ts`의 `unoptimized`를 활성화한다. `next/image`는 반응형 레이아웃만 담당하고 브라우저는 로컬 또는 Firebase Storage 원본 URL을 직접 요청한다.
 - 신규 상품·카테고리·이벤트 이미지 업로드는 WebP q75, 긴 변 최대 1600px, `public, max-age=31536000, immutable` 메타데이터를 사용한다.
 - 메인 배너는 활성 슬라이드와 양옆 슬라이드의 이미지 6장만 렌더링하고 모두 우선 요청한다. 링크·이미지의 브라우저 기본 드래그는 막아 가로 스와이프가 취소되지 않게 한다.
 - 상품 WebP 마이그레이션은 `images`, `mainImage`, `detailImages`를 모두 대상으로 삼는다.
@@ -35,6 +35,6 @@ npm run migrate:category-images:validate
 
 ## Functions 런타임 설정
 
-- `nextjsServer`는 `functions/.next/required-server-files.json`에 직렬화된 빌드 설정을 읽어 `next/image`의 `remotePatterns`를 그대로 사용한다.
-- Next.js 코드나 `next.config.ts`를 변경한 뒤 Functions만 배포할 때는 먼저 `npm run deploy:prep`으로 빌드 결과를 `functions/.next`에 복사한다.
-- 전체 검증과 복사, 배포를 한 번에 실행할 때는 `npm run deploy:firebase`를 사용한다.
+- `nextjsServer`는 `functions/.next/required-server-files.json`에 직렬화된 빌드 설정을 읽는다. 이미지 요청은 `unoptimized` 설정에 따라 `/_next/image`를 우회한다.
+- `npm run deploy:functions`와 직접 `firebase deploy --only functions` 모두 Firebase predeploy에서 최신 Next 빌드를 `functions/.next`에 복사하고 생성된 상담 route의 provider 경계를 검증한다.
+- 배포 없이 로컬 산출물만 준비·검증하려면 `npm run deploy:prep`, 전체 품질 검증 후 배포하려면 `npm run deploy:firebase`를 사용한다.

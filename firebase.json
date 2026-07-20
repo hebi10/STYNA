@@ -43,6 +43,10 @@
         "function": "qna"
       },
       {
+        "source": "/api/qna/public",
+        "function": "qna"
+      },
+      {
         "source": "/api/event/participate",
         "function": "event"
       },
@@ -100,7 +104,8 @@
         "*.local"
       ],
       "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run build"
+        "npm --prefix \"$RESOURCE_DIR/..\" run deploy:prep",
+        "npm --prefix \"$RESOURCE_DIR/..\" run functions:build"
       ]
     }
   ],

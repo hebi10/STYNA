@@ -3,11 +3,11 @@
 import { useCallback, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { QnAService } from '@/shared/services/qnaService';
-import { QnA, QnAFilter } from '@/shared/types/qna';
+import { PublicQnA, PublicQnAFilter } from '@/shared/types/qna';
 import styles from './page.module.css';
 
 export default function QnAListPage() {
-  const [qnas, setQnas] = useState<QnA[]>([]);
+  const [qnas, setQnas] = useState<PublicQnA[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,9 +29,9 @@ export default function QnAListPage() {
       setLoading(true);
       setError(null);
 
-      const filters: QnAFilter = { isSecret: false };
+      const filters: PublicQnAFilter = {};
       if (selectedCategory !== 'all') {
-        filters.category = selectedCategory as QnA['category'];
+        filters.category = selectedCategory as PublicQnA['category'];
       }
 
       const result = await QnAService.getQnAList(filters, 1, 50);

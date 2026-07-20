@@ -1,6 +1,7 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { User, UserCredential } from "firebase/auth";
 import { useAuthUser } from "../shared/hooks/useAuthUser";
 import { 
@@ -9,15 +10,27 @@ import {
   loginKeepAlive as firebaseLoginKeepAlive, 
   signUp as firebaseSignUp  
 } from "../shared/libs/firebase/auth";
-import { useUserData } from "../shared/hooks/useUserData";
+import {
+  isUserDataNotFoundError,
+  useUserData,
+} from "../shared/hooks/useUserData";
 import { getErrorMessage } from "../shared/utils/authErrorMessages";
 import { db } from "../shared/libs/firebase/firebase";
+import {
+  AUTH_ACCESS_CHANGED_EVENT,
+  hasActiveAccount,
+  hasStrictAdminAccess,
+} from "../shared/utils/authAccess";
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, keepAlive: boolean) => Promise<UserCredential>;
   logout: () => Promise<void>;
-  signUp: (email: string, password: string) => Promise<UserCredential>;
+  signUp: (
+    email: string,
+    password: string,
+    createProfile: (user: User) => Promise<void>
+  ) => Promise<UserCredential>;
   loading: boolean;
   userData: Record<string, unknown> | null | undefined;
   isAdmin: boolean;
@@ -58,11 +71,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isUserDataLoading, setIsUserDataLoading] = useState(true);
   const [adminClaimsLoading, setAdminClaimsLoading] = useState(false);
+  const [isLoginValidating, setIsLoginValidating] = useState(false);
+  const isLoginValidatingRef = useRef(false);
+  const [isProvisioning, setIsProvisioning] = useState(false);
+  const isProvisioningRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
 
   const login = async (email: string, password: string, keepAlive: boolean) => {
+    isLoginValidatingRef.current = true;
+    setIsLoginValidating(true);
+    let authenticated = false;
+
     try {
       setError(null);
       let userCredential;
@@ -72,43 +94,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         userCredential = await firebaseSignIn(email, password);
       }
+      authenticated = true;
       
       // 로그인 성공 후 사용자 상태 확인
       const userDoc = await import('firebase/firestore').then(module => 
         module.getDoc(module.doc(db, 'users', userCredential.user.uid))
       );
       
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        
-        // 사용자 상태 확인
-        if (userData.status === 'inactive') {
-          // 비활성화된 사용자인 경우 로그아웃 처리
-          await firebaseLogout();
+      const accountData = userDoc.exists() ? userDoc.data() : null;
+
+      if (!hasActiveAccount(accountData)) {
+        if (accountData?.status === 'inactive') {
           throw new Error('ACCOUNT_INACTIVE');
         }
-        
-        if (userData.status === 'banned') {
-          // 정지된 사용자인 경우 로그아웃 처리
-          await firebaseLogout();
+
+        if (accountData?.status === 'banned') {
           throw new Error('ACCOUNT_BANNED');
         }
+
+        throw new Error('ACCOUNT_UNAVAILABLE');
       }
+
+      queryClient.setQueryData(['user', userCredential.user.uid], accountData);
       
       return userCredential;
     } catch (err) {
+      if (authenticated) {
+        try {
+          await firebaseLogout();
+        } catch (logoutError) {
+          console.error('로그인 계정 검증 실패 후 로그아웃 실패:', logoutError);
+        }
+      }
+
       let errorMessage;
       
       if (getErrorMessageValue(err) === 'ACCOUNT_INACTIVE') {
         errorMessage = '이용이 중지된 사용자입니다. 관리자에게 문의하세요.';
       } else if (getErrorMessageValue(err) === 'ACCOUNT_BANNED') {
         errorMessage = '정지된 계정입니다. 관리자에게 문의하세요.';
+      } else if (getErrorMessageValue(err) === 'ACCOUNT_UNAVAILABLE') {
+        errorMessage = '사용할 수 없는 계정입니다. 관리자에게 문의하세요.';
       } else {
         errorMessage = getErrorMessage(getAuthErrorCode(err));
       }
       
       setError(errorMessage);
       throw err;
+    } finally {
+      isLoginValidatingRef.current = false;
+      setIsLoginValidating(false);
     }
   };
 
@@ -128,20 +163,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    createProfile: (user: User) => Promise<void>
+  ) => {
+    isProvisioningRef.current = true;
+    setIsProvisioning(true);
+    let authCreated = false;
+
     try {
       setError(null);
-      return await firebaseSignUp(email, password);
+      const userCredential = await firebaseSignUp(email, password);
+      authCreated = true;
+
+      await createProfile(userCredential.user);
+      await queryClient.invalidateQueries({
+        queryKey: ['user', userCredential.user.uid],
+        refetchType: 'none',
+      });
+      await queryClient.refetchQueries({
+        queryKey: ['user', userCredential.user.uid],
+        type: 'active',
+      });
+
+      return userCredential;
     } catch (err) {
+      if (authCreated) {
+        try {
+          await firebaseLogout();
+        } catch (logoutError) {
+          console.error('회원가입 프로필 실패 후 로그아웃 실패:', logoutError);
+        }
+      }
+
       const errorMessage = getErrorMessage(getAuthErrorCode(err));
       setError(errorMessage);
       throw err;
+    } finally {
+      isProvisioningRef.current = false;
+      setIsProvisioning(false);
     }
   };
 
   const clearError = () => setError(null);
 
-  const { data: userData, isLoading: userDataLoading } = useUserData(user?.uid || "");
+  const {
+    data: userData,
+    isLoading: userDataLoading,
+    error: userDataError,
+  } = useUserData(user?.uid || "");
 
   useEffect(() => {
     const loginRedirect = !loading && !user && pathname !== "/auth/login" && !pathname.startsWith("/admin") && pathname.includes("/mypage");
@@ -154,12 +225,92 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, pathname, router]);
 
-  // 관리자 권한 체크: users 문서가 아니라 Firebase Custom Claims만 신뢰한다.
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const handleAccessChanged = (event: Event) => {
+      const { userId } = (event as CustomEvent<{ userId?: string }>).detail || {};
+      if (userId !== user.uid) {
+        return;
+      }
+
+      setIsAdmin(false);
+      void queryClient.invalidateQueries({ queryKey: ['user', user.uid] });
+    };
+
+    window.addEventListener(AUTH_ACCESS_CHANGED_EVENT, handleAccessChanged);
+    return () => {
+      window.removeEventListener(AUTH_ACCESS_CHANGED_EVENT, handleAccessChanged);
+    };
+  }, [queryClient, user]);
+
+  useEffect(() => {
+    if (
+      !user
+      || loading
+      || userDataLoading
+      || isLoginValidating
+      || isLoginValidatingRef.current
+      || isProvisioning
+      || isProvisioningRef.current
+    ) {
+      return;
+    }
+
+    const userDataMissing = isUserDataNotFoundError(userDataError);
+
+    if (userDataError && !userDataMissing) {
+      setIsAdmin(false);
+      return;
+    }
+
+    if (!userData && !userDataMissing) {
+      setIsAdmin(false);
+      return;
+    }
+
+    if (!userDataMissing && hasActiveAccount(userData)) {
+      return;
+    }
+
+    const blockedStatus = userDataMissing
+      || userData?.status === 'inactive'
+      || userData?.status === 'banned'
+      || userData?.status === 'deleted';
+
+    setIsAdmin(false);
+    if (!blockedStatus) {
+      return;
+    }
+
+    let cancelled = false;
+    setError('사용할 수 없는 계정입니다. 관리자에게 문의하세요.');
+
+    void firebaseLogout().catch((logoutError) => {
+      if (!cancelled) {
+        console.error('비활성 계정 로그아웃 실패:', logoutError);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoginValidating, isProvisioning, loading, user, userData, userDataError, userDataLoading]);
+
+  // 관리자 권한은 Custom Claims와 활성 사용자 문서의 관리자 역할을 모두 확인한다.
   useEffect(() => {
     let cancelled = false;
 
     const loadAdminClaims = async () => {
-      if (!user) {
+      if (
+        !user
+        || isLoginValidating
+        || isLoginValidatingRef.current
+        || userDataError
+        || !hasActiveAccount(userData)
+      ) {
         setIsAdmin(false);
         setAdminClaimsLoading(false);
         return;
@@ -169,7 +320,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const tokenResult = await user.getIdTokenResult(true);
         const claims = tokenResult.claims;
-        const nextIsAdmin = claims.admin === true || claims.role === 'admin';
+        const nextIsAdmin = hasStrictAdminAccess(claims, userData);
 
         if (!cancelled) {
           setIsAdmin(nextIsAdmin);
@@ -191,11 +342,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [isLoginValidating, user, userData, userDataError]);
 
   useEffect(() => {
-    setIsUserDataLoading(userDataLoading || loading || adminClaimsLoading);
-  }, [userDataLoading, loading, adminClaimsLoading]);
+    setIsUserDataLoading(
+      userDataLoading
+      || loading
+      || adminClaimsLoading
+      || isLoginValidating
+      || isProvisioning
+    );
+  }, [userDataLoading, loading, adminClaimsLoading, isLoginValidating, isProvisioning]);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, signUp, userData, loading, isUserDataLoading, isAdmin, error, clearError }}>

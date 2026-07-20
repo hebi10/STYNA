@@ -2,9 +2,10 @@
 
 import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import styles from "./page.module.css";
 import useInputs from "@/shared/hooks/useInput";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "@/shared/libs/firebase/firebase";
 import { useAuth } from "@/context/authProvider";
 import { FirebaseError } from "firebase/app";
@@ -34,6 +35,7 @@ function getBooleanValue(value: unknown): boolean {
 
 export default function InfoEditPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, userData } = useAuth();
   const [rawFormData, onChange, setFormData] = useInputs<InfoEditFormData>({
     email: "",
@@ -156,6 +158,7 @@ export default function InfoEditPage() {
       // 이메일 업데이트
       if (formData.email !== userData?.email) {
         await updateEmail(user, formData.email);
+        await user.getIdToken(true);
       }
 
       // 비밀번호 업데이트
@@ -175,8 +178,10 @@ export default function InfoEditPage() {
         },
         gender: formData.gender,
         marketingAgree: formData.marketingAgree,
-        updatedAt: new Date(),
+        updatedAt: serverTimestamp(),
       });
+
+      await queryClient.invalidateQueries({ queryKey: ["user", user.uid] });
 
       alert("정보가 성공적으로 업데이트되었습니다!");
       router.push("/mypage");

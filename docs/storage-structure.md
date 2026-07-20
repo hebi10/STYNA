@@ -35,16 +35,19 @@ Firestore `products/{productId}`의 `mainImage`, `images`, `detailImages`는 `/p
 ## Storage Rules
 
 - 읽기: 상품, 카테고리, 이벤트 이미지 공개 허용
-- 쓰기: 관리자 custom claim(`admin == true` 또는 `role == "admin"`) 사용자만 허용
-- 제한: 이미지 파일, 5MB 이하
+- 쓰기: 관리자 claim과 Firestore `users/{uid}`의 `status == "active"`, `role == "admin"`이 모두 일치하는 사용자만 허용
+- 업로드/교체 제한: 이미지 MIME, 5MiB 미만
+- 삭제: MIME·크기 검증 없이 엄격 관리자만 허용
 
 현재 공개 읽기 허용 경로:
 
 ```text
 images/{category}/{productId}/{filename}
 categories/{filename}
-events/{type}/{filename}
+events/{allPaths=**}
 ```
+
+이벤트 경로는 배너뿐 아니라 `events/editorial/{role}/{filename}` 같은 중첩 에디토리얼 이미지도 포함한다.
 
 ## 관련 스크립트
 
@@ -73,3 +76,4 @@ npm run migrate:content-images:delete-originals
 - 상품 상세가 로컬 fallback 상품 데이터를 사용하지 않도록 Firestore 문서와 Storage URL을 먼저 준비한다.
 - 배너 상품 이미지를 교체하면 Storage 업로드 후 Firestore 이미지 URL과 `MainBanner.tsx`의 배너 URL을 함께 확인한다.
 - Storage 파일 삭제는 Firestore 문서가 더 이상 해당 URL을 참조하지 않는 것을 확인한 뒤 진행한다.
+- Storage Rules가 `firestore.get()`/`firestore.exists()`로 사용자 문서를 확인하므로 최초 배포 시 서비스 간 IAM 권한 설정 안내가 표시될 수 있다.

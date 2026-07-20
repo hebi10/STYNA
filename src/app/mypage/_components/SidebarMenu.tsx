@@ -62,18 +62,6 @@ export default function SidebarMenu({ activeTab, logout }: SidebarMenuProps) {
           >
             회원정보수정
           </Link>
-          <Link 
-            href="/mypage/counsel" 
-            className={`${styles.menuItem} ${activeTab === 'counsel' ? styles.active : ''}`}
-          >
-            상담내역
-          </Link>
-          <Link 
-            href="/mypage/restock" 
-            className={`${styles.menuItem} ${activeTab === 'restock' ? styles.active : ''}`}
-          >
-            재입고알림
-          </Link>
           <button
             className={styles.menuItem}
             onClick={logout}

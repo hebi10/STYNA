@@ -10,9 +10,14 @@ import styles from './page.module.css';
 function QnAWritePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, userData, isUserDataLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const accountEmail = typeof userData?.email === 'string' ? userData.email : '';
+  const accountName = typeof userData?.name === 'string' ? userData.name : '';
+  const hasAuthoritativeIdentity = userData?.status === 'active' &&
+    Boolean(accountEmail.trim()) &&
+    Boolean(accountName.trim());
 
   const [formData, setFormData] = useState<CreateQnAData>({
     category: searchParams.get('productId') ? 'product' : 'general',
@@ -52,6 +57,16 @@ function QnAWritePageContent() {
       return;
     }
 
+    if (isUserDataLoading) {
+      setError('회원 정보를 확인하고 있습니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+
+    if (!hasAuthoritativeIdentity) {
+      setError('회원 정보를 확인할 수 없습니다. 다시 로그인해주세요.');
+      return;
+    }
+
     if (!formData.title.trim()) {
       setError('제목을 입력해주세요.');
       return;
@@ -68,8 +83,8 @@ function QnAWritePageContent() {
 
       const qnaId = await SimpleQnAService.createQnA(
         user.uid,
-        user.email || '',
-        user.displayName || user.email || '',
+        accountEmail,
+        accountName,
         formData
       );
       
@@ -206,11 +221,15 @@ function QnAWritePageContent() {
           <div className={styles.authorDetails}>
             <div className={styles.authorItem}>
               <span className={styles.authorLabel}>이름:</span>
-              <span className={styles.authorValue}>{user.displayName || '사용자'}</span>
+              <span className={styles.authorValue}>
+                {isUserDataLoading ? '확인 중...' : accountName || '확인할 수 없음'}
+              </span>
             </div>
             <div className={styles.authorItem}>
               <span className={styles.authorLabel}>이메일:</span>
-              <span className={styles.authorValue}>{user.email}</span>
+              <span className={styles.authorValue}>
+                {isUserDataLoading ? '확인 중...' : accountEmail || '확인할 수 없음'}
+              </span>
             </div>
           </div>
         </div>
@@ -228,7 +247,7 @@ function QnAWritePageContent() {
           <button
             type="submit"
             className={styles.submitButton}
-            disabled={loading}
+            disabled={loading || isUserDataLoading || !hasAuthoritativeIdentity}
           >
             {loading ? (
               <>

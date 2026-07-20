@@ -2,22 +2,26 @@ import {
   collection,
   getDocs,
   doc,
-  updateDoc,
   query,
   orderBy,
   where,
   limit,
-  addDoc,
-  serverTimestamp,
   getDoc,
   QueryDocumentSnapshot,
   DocumentSnapshot,
   DocumentData,
 } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, signOut } from 'firebase/auth';
 import { db } from '@/shared/libs/firebase/firebase';
-import { UserProfile } from '@/shared/types/user';
+import {
+  MutableUserAccountStatus,
+  UserAccountStatus,
+  UserProfile,
+  UserRole,
+} from '@/shared/types/user';
 import { PointHistory } from '@/shared/types/point';
+import { notifyAuthAccessChanged } from '@/shared/utils/authAccess';
+import { createCsv } from '@/shared/utils/csv';
 
 const COLLECTION_NAME = 'users';
 
@@ -53,6 +57,27 @@ async function callAdminUsersAPI(action: string, data: Record<string, unknown>):
   }
 }
 
+async function refreshCurrentUserAccess(userId: string): Promise<void> {
+  const auth = getAuth();
+  const currentUser = auth.currentUser;
+
+  if (!currentUser || currentUser.uid !== userId) {
+    return;
+  }
+
+  try {
+    await currentUser.getIdToken(true);
+    notifyAuthAccessChanged(userId);
+  } catch (error) {
+    try {
+      await signOut(auth);
+    } catch (signOutError) {
+      console.error('Failed to sign out after access refresh failure:', signOutError);
+    }
+    throw error;
+  }
+}
+
 async function callPointsAPI(action: string, data: Record<string, unknown>): Promise<void> {
   const token = await getIdToken();
   const response = await fetch('/api/points', {
@@ -80,8 +105,8 @@ export interface AdminUserData extends UserProfile {
   lastLogin: Date;
   orders: number;
   totalSpent: number;
-  status: 'active' | 'inactive' | 'banned';
-  role: 'user' | 'admin';
+  status: UserAccountStatus;
+  role: UserRole;
   pointBalance: number;
 }
 
@@ -158,7 +183,6 @@ export class AdminUserService {
       const startIndex = (page - 1) * limitCount;
       const paginatedUsers = users.slice(startIndex, startIndex + limitCount);
 
- console.log(` 최종 반환: ${paginatedUsers.length}명 (전체 ${totalCount}명)`);
       return { users: paginatedUsers, totalCount };
     } catch (error) {
  console.error(' Error fetching users:', error);
@@ -169,14 +193,10 @@ export class AdminUserService {
   // 모든 사용자 조회 (간단한 쿼리, 인덱스 불필요)
   static async getAllUsersSimple(): Promise<AdminUserData[]> {
     try {
- console.log(' 모든 사용자 조회 (간단한 쿼리)...');
       const q = query(collection(db, COLLECTION_NAME));
       const querySnapshot = await getDocs(q);
       
- console.log(` 조회된 사용자 수: ${querySnapshot.size}`);
-      
       const users = querySnapshot.docs.map(doc => {
- console.log(` 사용자: ${doc.id}`, doc.data());
         return this.convertDocToUser(doc);
       });
       
@@ -216,14 +236,11 @@ export class AdminUserService {
   // 사용자 상태 업데이트
   static async updateUserStatus(
     userId: string,
-    status: 'active' | 'inactive' | 'banned'
+    status: MutableUserAccountStatus
   ): Promise<void> {
     try {
-      const userRef = doc(db, COLLECTION_NAME, userId);
-      await updateDoc(userRef, {
-        status,
-        updatedAt: serverTimestamp(),
-      });
+      await callAdminUsersAPI('setStatus', { userId, status });
+      await refreshCurrentUserAccess(userId);
     } catch (error) {
  console.error('Error updating user status:', error);
       throw error;
@@ -233,10 +250,11 @@ export class AdminUserService {
   // 사용자 역할 업데이트
   static async updateUserRole(
     userId: string,
-    role: 'user' | 'admin'
+    role: UserRole
   ): Promise<void> {
     try {
       await callAdminUsersAPI('setRole', { userId, role });
+      await refreshCurrentUserAccess(userId);
     } catch (error) {
  console.error('Error updating user role:', error);
       throw error;
@@ -246,60 +264,10 @@ export class AdminUserService {
   // 사용자 삭제 (실제로는 상태를 deleted로 변경)
   static async deleteUser(userId: string): Promise<void> {
     try {
-      const userRef = doc(db, COLLECTION_NAME, userId);
-      await updateDoc(userRef, {
-        status: 'deleted',
-        deletedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      await callAdminUsersAPI('deleteUser', { userId });
+      await refreshCurrentUserAccess(userId);
     } catch (error) {
  console.error('Error deleting user:', error);
-      throw error;
-    }
-  }
-
-  // 새 사용자 추가
-  static async createUser(userData: {
-    name: string;
-    email: string;
-    role?: 'user' | 'admin';
-    status?: 'active' | 'inactive';
-  }): Promise<string> {
-    try {
- console.log(' 사용자 생성 시작:', userData);
-      
-      const newUser = {
-        name: userData.name.trim(),
-        email: userData.email.trim().toLowerCase(),
-        role: userData.role || 'user',
-        status: userData.status || 'active',
-        orders: 0,
-        totalSpent: 0,
-        pointBalance: 0,
-        isAdmin: (userData.role || 'user') === 'admin',
-        joinDate: new Date().toISOString().split('T')[0],
-        lastLogin: serverTimestamp(),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        phone: '',
-        gender: 'male',
-        grade: 'bronze',
-        addresses: [],
-        preferences: {
-          favoriteCategories: [],
-          favoriteBrands: [],
-          sizes: {},
-          newsletter: false,
-          smsMarketing: false,
-        }
-      };
-
- console.log(' Firestore에 저장할 데이터:', newUser);
-      const docRef = await addDoc(collection(db, COLLECTION_NAME), newUser);
- console.log(' 사용자 생성 완료, ID:', docRef.id);
-      return docRef.id;
-    } catch (error) {
- console.error(' Error creating user:', error);
       throw error;
     }
   }
@@ -314,8 +282,8 @@ export class AdminUserService {
         '마지막 로그인', '주문수', '총 구매액', '포인트 잔액'
       ];
       
-      const csvContent = [
-        headers.join(','),
+      const rows = [
+        headers,
         ...users.map((user: AdminUserData) => [
           user.id,
           user.name,
@@ -323,14 +291,14 @@ export class AdminUserService {
           user.role,
           user.status,
           user.joinDate,
-          user.lastLogin.toLocaleDateString(),
+          user.lastLogin,
           user.orders,
           user.totalSpent,
           user.pointBalance || 0
-        ].join(','))
-      ].join('\n');
+        ])
+      ];
 
-      return csvContent;
+      return `\ufeff${createCsv(rows)}`;
     } catch (error) {
  console.error('Error exporting users to CSV:', error);
       throw error;
@@ -345,7 +313,6 @@ export class AdminUserService {
         amount: operation.amount,
         description: operation.description,
       });
- console.log(` 포인트 ${operation.type === 'add' ? '적립' : '차감'} 완료: ${operation.amount}원`);
     } catch (error) {
  console.error('Error updating user points:', error);
       throw error;
@@ -461,7 +428,6 @@ export class AdminUserService {
       grade: data.grade || data.tier || 'bronze',
     };
 
- console.log(` 변환된 사용자: ${user.id} - ${user.name} (${user.role})`);
     return user;
   }
 }

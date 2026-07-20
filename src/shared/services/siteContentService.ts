@@ -5,8 +5,6 @@ import {
   getDocs,
   orderBy,
   query,
-  setDoc,
-  Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/shared/libs/firebase/firebase';
 
@@ -66,22 +64,6 @@ export interface OfflineInfoContent {
   weekdayHours: Array<{ label: string; value: string; closed?: boolean }>;
   serviceHours: Array<{ label: string; value: string; closed?: boolean }>;
   noticeLines: string[];
-}
-
-export interface RecommendationSettingContent {
-  id: string;
-  type: 'rating' | 'review' | 'sale' | 'new' | 'manual';
-  name: string;
-  description: string;
-  isActive: boolean;
-  criteria: {
-    minRating?: number;
-    minReviews?: number;
-    minSaleRate?: number;
-    maxDaysOld?: number;
-  };
-  productIds?: string[];
-  order: number;
 }
 
 type RawData = Record<string, unknown>;
@@ -191,24 +173,4 @@ export class SiteContentService {
     };
   }
 
-  static async getRecommendationSettings(): Promise<RecommendationSettingContent[]> {
-    const docs = await getOrderedActiveDocs('recommendationSettings');
-    return docs.map(({ id, data }) => ({
-      id,
-      type: stringValue(data.type) as RecommendationSettingContent['type'],
-      name: stringValue(data.name),
-      description: stringValue(data.description),
-      isActive: data.isActive !== false,
-      criteria: typeof data.criteria === 'object' && data.criteria ? data.criteria as RecommendationSettingContent['criteria'] : {},
-      productIds: stringArray(data.productIds),
-      order: numberValue(data.order),
-    }));
-  }
-
-  static async saveRecommendationSetting(setting: RecommendationSettingContent): Promise<void> {
-    await setDoc(doc(db, 'recommendationSettings', setting.id), {
-      ...setting,
-      updatedAt: Timestamp.now(),
-    }, { merge: true });
-  }
 }

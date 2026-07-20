@@ -10,7 +10,11 @@
 - `offlineStores`: 오프라인 매장 목록
 - `offlineServices`: 오프라인 매장 서비스
 - `offlineInfo/main`: 오프라인 매장 운영시간/안내사항
-- `recommendationSettings`: 관리자 추천 상품 설정
+- `featuredProducts`: 홈 추천 상품 구성(공개 읽기, 관리자 쓰기)
+
+오프라인 매장 콘텐츠는 예시 데이터이며 상세·길찾기 기능은 제공하지 않는다.
+
+추천 상품은 `FeaturedProductService`와 `/admin/featured-products`에서 관리한다. 홈 연결은 후속 성능·큐레이션 단계에서 진행한다.
 
 ## 초기 데이터 반영
 
@@ -22,6 +26,5 @@ npm run seed:content
 
 ## 보안 규칙
 
-- 공개 화면 콘텐츠(`faqs`, `notices`, `mainBanners`, `offlineStores`, `offlineServices`, `offlineInfo`)는 공개 읽기를 허용한다.
-- `recommendationSettings`는 관리자 화면용이라 관리자만 읽고 쓸 수 있다.
+- 공개 화면 콘텐츠(`faqs`, `notices`, `mainBanners`, `featuredProducts`, `offlineStores`, `offlineServices`, `offlineInfo`)는 공개 읽기를 허용한다.
 - 모든 쓰기는 Firebase Custom Claims 관리자 권한 기준이다.

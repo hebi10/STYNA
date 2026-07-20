@@ -12,7 +12,9 @@
 - `npm run test:functions`: `functions/__tests__`만 실행.
 - `npm run ci`: `typecheck -> lint -> test -> functions:build` 순서로 실행.
 - `npm run verify`: `typecheck -> lint -- --max-warnings=0 -> test -> functions:build -> build` 순서로 배포 전 전체 검증을 실행한다.
-- `npm run deploy:firebase`: `verify`를 먼저 통과한 뒤 Next 산출물 복사와 Firebase 배포를 실행한다.
+- `npm run deploy:prep`: 최신 Next 빌드를 `functions/.next`에 복사한 뒤 생성된 서버 bundle에 직접 OpenAI 호출 경로가 없는지 검증한다.
+- `npm run deploy:firebase`: `verify`를 먼저 통과한 뒤 Firebase 배포를 실행한다. Functions predeploy는 `deploy:prep -> functions:build`를 항상 다시 적용한다.
+- `npm run deploy:functions`, `npm run functions:deploy`: Firebase Functions 배포를 시작하며 동일한 predeploy 계약을 사용한다.
 
 ## ESLint 구성
 - `eslint.config.mjs`는 Next 15 문서의 flat config 예시를 따라 `FlatCompat`와 `next/core-web-vitals`, `next/typescript`를 사용한다.
@@ -79,3 +81,9 @@
 
 - 과설계 레이어 삭제 후 `npm run typecheck`, `npm run lint -- --max-warnings=0`, `npm test`, `npm run functions:build`, `npm run build`를 통과했다.
 - 삭제된 route 타입 캐시 때문에 첫 typecheck가 `.next/types`에서 실패해 `.next/types`만 삭제 후 재실행했다.
+
+## 2026-07-20 Functions 배포 산출물 경계
+
+- Firebase Functions predeploy는 루트 `deploy:prep`과 `functions:build`를 순서대로 실행한다. 따라서 직접 `firebase deploy --only functions`를 사용해도 오래된 `functions/.next`를 그대로 배포하지 않는다.
+- `deploy:prep`은 런타임에 불필요한 `.next/cache`를 제외해 Functions 소스 크기를 줄이고, 복사 후 `scripts/verify-functions-next-chat-boundary.js`로 생성된 서버 bundle 전체를 검사한다. `api.openai.com` 또는 `OPENAI_API_KEY` 직접 참조가 남으면 배포 전 실패한다.
+- `scripts/functions-deploy-contract.test.js`가 package script와 Firebase predeploy 순서, 생성 bundle 검사기의 허용·거부 동작을 고정한다.

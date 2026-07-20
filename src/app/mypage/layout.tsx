@@ -34,8 +34,6 @@ function getMyPageActiveTab(pathname: string): string {
     "/mypage/coupons": "coupons",
     "/mypage/point": "point",
     "/mypage/info-edit": "profile",
-    "/mypage/counsel": "counsel",
-    "/mypage/restock": "restock",
   };
 
   const found = Object.entries(tabMap).find(([key]) => pathname.startsWith(key));

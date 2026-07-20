@@ -23,6 +23,8 @@ export interface QnA {
   };
 }
 
+export type PublicQnA = Omit<QnA, 'userId' | 'userEmail' | 'isNotified'>;
+
 export interface CreateQnAData {
   category: QnA['category'];
   title: string;
@@ -41,11 +43,9 @@ export interface QnAAnswer {
   isAdmin: boolean;
 }
 
-export interface QnAFilter {
-  category?: QnA['category'];
-  status?: QnA['status'];
-  isSecret?: boolean;
-  userId?: string;
+export interface PublicQnAFilter {
+  category?: PublicQnA['category'];
+  status?: PublicQnA['status'];
   productId?: string;
   searchTerm?: string;
 }

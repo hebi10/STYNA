@@ -6,30 +6,51 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    function isAdmin() {
+    function hasAdminClaim() {
       return isSignedIn() &&
-        (request.auth.token.admin == true || request.auth.token.role == 'admin');
+        (request.auth.token.get('admin', false) == true ||
+          request.auth.token.get('role', '') == 'admin');
+    }
+
+    function isActiveAccount() {
+      return isSignedIn() &&
+        firestore.exists(
+          /databases/(default)/documents/users/$(request.auth.uid)
+        ) &&
+        firestore.get(
+          /databases/(default)/documents/users/$(request.auth.uid)
+        ).data.get('status', '') == 'active';
+    }
+
+    function isAdmin() {
+      return isActiveAccount() &&
+        hasAdminClaim() &&
+        firestore.get(
+          /databases/(default)/documents/users/$(request.auth.uid)
+        ).data.get('role', '') == 'admin';
+    }
+
+    function isValidImageUpload() {
+      return request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
     }
 
     match /images/{category}/{productId}/{filename} {
       allow read: if true;
-      allow write: if isAdmin() &&
-        request.resource.size < 5 * 1024 * 1024 &&
-        request.resource.contentType.matches('image/.*');
+      allow create, update: if isAdmin() && isValidImageUpload();
+      allow delete: if isAdmin();
     }
 
     match /categories/{filename} {
       allow read: if true;
-      allow write: if isAdmin() &&
-        request.resource.size < 5 * 1024 * 1024 &&
-        request.resource.contentType.matches('image/.*');
+      allow create, update: if isAdmin() && isValidImageUpload();
+      allow delete: if isAdmin();
     }
 
-    match /events/{type}/{filename} {
+    match /events/{allPaths=**} {
       allow read: if true;
-      allow write: if isAdmin() &&
-        request.resource.size < 5 * 1024 * 1024 &&
-        request.resource.contentType.matches('image/.*');
+      allow create, update: if isAdmin() && isValidImageUpload();
+      allow delete: if isAdmin();
     }
 
     match /{allPaths=**} {

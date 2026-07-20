@@ -3,13 +3,18 @@ import * as admin from "firebase-admin";
 import type { Response } from "express";
 import {
   ensureString,
+  parsePublicQnAListRequest,
   QnARecord,
   toSafeQnA,
 } from "../domain/qnaDomain";
 import { AuthError, verifyAuthContext } from "../utils/auth";
 
 interface VerifySecretRequest {
+  action?: unknown;
   qnaId?: unknown;
+  filters?: unknown;
+  page?: unknown;
+  limit?: unknown;
 }
 
 const NO_STORE_HEADERS = {
@@ -45,6 +50,62 @@ export const qna = onRequest(
     }
 
     const body = req.body as VerifySecretRequest;
+    const action = ensureString(body.action);
+
+    if (action === "publicList") {
+      const publicRequest = parsePublicQnAListRequest(body);
+      if (!publicRequest) {
+        res.status(400).json({ success: false, error: "Invalid public QnA list request." });
+        return;
+      }
+
+      try {
+        const qnaCollection = admin.firestore().collection("qna");
+        let publicQuery = qnaCollection.where("isSecret", "==", false);
+        const { filters, page, limit } = publicRequest;
+
+        if (filters.category) {
+          publicQuery = publicQuery.where("category", "==", filters.category);
+        } else if (filters.status) {
+          publicQuery = publicQuery.where("status", "==", filters.status);
+        } else if (filters.productId) {
+          publicQuery = publicQuery.where("productId", "==", filters.productId);
+        }
+
+        const [listSnapshot, countSnapshot] = await Promise.all([
+          publicQuery
+            .orderBy("createdAt", "desc")
+            .offset((page - 1) * limit)
+            .limit(limit)
+            .get(),
+          publicQuery.count().get(),
+        ]);
+        const totalCount = countSnapshot.data().count;
+
+        res.status(200).json({
+          success: true,
+          qnas: listSnapshot.docs.map((snapshot) =>
+            toSafeQnA(snapshot.id, snapshot.data() as QnARecord)
+          ),
+          pagination: {
+            page,
+            limit,
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+          },
+        });
+      } catch (error) {
+        console.error("Public QnA list error:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+      }
+      return;
+    }
+
+    if (action && action !== "getDetail") {
+      res.status(400).json({ success: false, error: "Unsupported QnA action." });
+      return;
+    }
+
     const qnaId = ensureString(body.qnaId);
 
     if (!qnaId) {
@@ -76,11 +137,11 @@ export const qna = onRequest(
       }
 
       const qnaData = qnaSnapshot.data() as QnARecord;
-      const isSecret = qnaData.isSecret === true;
+      const isPublic = qnaData.isSecret === false;
       const actorUidFromData = ensureString(qnaData.userId);
       const isOwner = actorUid === actorUidFromData;
 
-      if (isSecret) {
+      if (!isPublic) {
         const isOwnerOrAdmin = actorIsAdmin || isOwner;
 
         if (!actorUid) {
@@ -102,14 +163,20 @@ export const qna = onRequest(
         await qnaRef.update({
           views: admin.firestore.FieldValue.increment(1),
         });
-        res.status(200).json({ success: true, qna: toSafeQnA(qnaId, qnaData) });
+        res.status(200).json({
+          success: true,
+          qna: toSafeQnA(qnaId, qnaData),
+        });
         return;
       }
 
       await qnaRef.update({
         views: admin.firestore.FieldValue.increment(1),
       });
-      res.status(200).json({ success: true, qna: toSafeQnA(qnaId, qnaData) });
+      res.status(200).json({
+        success: true,
+        qna: toSafeQnA(qnaId, qnaData),
+      });
     } catch (error) {
       if (error instanceof AuthError) {
         res.status(error.statusCode).json({ success: false, error: error.message });

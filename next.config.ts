@@ -16,8 +16,8 @@ const nextConfig: NextConfig = {
 
   images: {
     // 호스팅 환경에서 안정성을 위해 이미지 최적화 비활성화
-    unoptimized: false,
-    // 이미지 캐시 설정 (2분)
+    unoptimized: true,
+    // 원본 이미지 캐시 설정 (하루)
     minimumCacheTTL: 86400,
     formats: ['image/avif', 'image/webp'],
     // 이미지 크기 제한

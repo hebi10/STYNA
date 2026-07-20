@@ -1,9 +1,11 @@
 import { defineSecret } from "firebase-functions/params";
 
-// Firebase Functions secrets/params 정의 - OpenAI API Key만 Secret으로 관리
+// Firebase Functions에서만 사용하는 민감값
 export const secrets = {
   // OpenAI API (민감한 정보)
   OPENAI_API_KEY: defineSecret("OPENAI_API_KEY"),
+  // 공개 채팅 식별자 HMAC salt
+  CHAT_RATE_LIMIT_SALT: defineSecret("CHAT_RATE_LIMIT_SALT"),
 };
 
 // 환경변수 타입 정의

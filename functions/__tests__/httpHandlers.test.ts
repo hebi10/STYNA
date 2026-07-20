@@ -81,6 +81,7 @@ describe("sensitive function cache headers", () => {
     ["points", points as unknown as Handler],
     ["coupon", coupon as unknown as Handler],
     ["adminUsers", adminUsers as unknown as Handler],
+    ["qna", qna as unknown as Handler],
   ])("%s sets no-store headers before returning", async (_name, handler) => {
     const response = createResponse();
 
@@ -89,6 +90,623 @@ describe("sensitive function cache headers", () => {
     expect(response.set).toHaveBeenCalledWith("Cache-Control", "no-store, max-age=0");
     expect(response.set).toHaveBeenCalledWith("Pragma", "no-cache");
     expect(response.set).toHaveBeenCalledWith("Expires", "0");
+  });
+});
+
+describe("admin user lifecycle", () => {
+  const operationOrder: string[] = [];
+  let userData: Record<string, unknown>;
+  let userExists: boolean;
+  let authClaims: Record<string, unknown>;
+  let authDisabled: boolean;
+  let userRef: {
+    get: jest.Mock;
+    update: jest.Mock;
+    delete: jest.Mock;
+  };
+  let authApi: {
+    getUser: jest.Mock;
+    setCustomUserClaims: jest.Mock;
+    updateUser: jest.Mock;
+    revokeRefreshTokens: jest.Mock;
+    deleteUser: jest.Mock;
+  };
+
+  beforeEach(() => {
+    operationOrder.length = 0;
+    userExists = true;
+    authClaims = { newsletter: true, role: "user" };
+    authDisabled = false;
+    userData = {
+      role: "user",
+      isAdmin: false,
+      status: "active",
+    };
+    userRef = {
+      get: jest.fn(async () => ({
+        exists: userExists,
+        data: () => ({ ...userData }),
+      })),
+      update: jest.fn(async (updates: Record<string, unknown>) => {
+        if ("role" in updates) {
+          operationOrder.push("document-role");
+        }
+        if ("status" in updates) {
+          operationOrder.push(`document-status:${updates.status}`);
+        }
+        Object.assign(userData, updates);
+      }),
+      delete: jest.fn(),
+    };
+    authApi = {
+      getUser: jest.fn(async () => ({
+        uid: "user-1",
+        customClaims: { ...authClaims },
+        disabled: authDisabled,
+      })),
+      setCustomUserClaims: jest.fn(async (_userId: string, claims: Record<string, unknown>) => {
+        operationOrder.push("claims");
+        authClaims = { ...claims };
+      }),
+      updateUser: jest.fn(async (_userId: string, updates: { disabled: boolean }) => {
+        operationOrder.push(updates.disabled ? "auth-disable" : "auth-enable");
+        authDisabled = updates.disabled;
+      }),
+      revokeRefreshTokens: jest.fn(async () => {
+        operationOrder.push("revoke");
+      }),
+      deleteUser: jest.fn(),
+    };
+    jest.mocked(admin.firestore).mockReturnValue({
+      collection: jest.fn(() => ({
+        doc: jest.fn(() => userRef),
+      })),
+    } as never);
+    jest.mocked(admin.auth).mockReturnValue(authApi as never);
+    jest.mocked(requireAdmin).mockResolvedValue({
+      uid: "admin-1",
+      token: {} as never,
+      role: "admin",
+      isAdmin: true,
+    });
+    jest.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+    jest.restoreAllMocks();
+  });
+
+  async function request(body: Record<string, unknown>) {
+    const response = createResponse();
+    await (adminUsers as unknown as Handler)({
+      method: "POST",
+      headers: { authorization: "Bearer admin-token" },
+      body,
+    }, response);
+    return response;
+  }
+
+  test.each([
+    ["unsupported action", { action: "unknown", userId: "user-1" }],
+    ["invalid role", { action: "setRole", userId: "user-1", role: "owner" }],
+    ["invalid status", { action: "setStatus", userId: "user-1", status: "deleted" }],
+    ["missing userId", { action: "deleteUser" }],
+    ["userId with surrounding whitespace", { action: "deleteUser", userId: " user-1 " }],
+    ["userId with a path separator", { action: "deleteUser", userId: "users/user-1" }],
+    ["userId longer than Firebase Auth permits", { action: "deleteUser", userId: "a".repeat(129) }],
+  ])("rejects %s after requiring strict admin access", async (_caseName, body) => {
+    const response = await request(body);
+
+    expect(requireAdmin).toHaveBeenCalledWith("Bearer admin-token");
+    expect(response.status).toHaveBeenCalledWith(400);
+    expect(userRef.update).not.toHaveBeenCalled();
+    expect(authApi.updateUser).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    { action: "setRole", userId: "user-1", role: "admin" },
+    { action: "setStatus", userId: "user-1", status: "inactive" },
+    { action: "deleteUser", userId: "user-1" },
+  ])("does not mutate a missing target document for $action", async (body) => {
+    userExists = false;
+
+    const response = await request(body);
+
+    expect(response.status).toHaveBeenCalledWith(404);
+    expect(userRef.update).not.toHaveBeenCalled();
+    expect(authApi.setCustomUserClaims).not.toHaveBeenCalled();
+    expect(authApi.updateUser).not.toHaveBeenCalled();
+    expect(authApi.revokeRefreshTokens).not.toHaveBeenCalled();
+  });
+
+  test("normalizes missing admin claims for an existing admin document", async () => {
+    userData.role = "admin";
+    userData.isAdmin = true;
+    authClaims = { newsletter: true, role: "user" };
+
+    const response = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(operationOrder).toEqual(["claims", "revoke"]);
+    expect(userRef.update).not.toHaveBeenCalled();
+    expect(authApi.getUser).toHaveBeenCalledWith("user-1");
+    expect(authClaims).toEqual({ newsletter: true, role: "admin", admin: true });
+    expect(response.status).toHaveBeenCalledWith(200);
+  });
+
+  test("repairs a mismatched role marker after confirming matching claims", async () => {
+    userData.role = "admin";
+    userData.isAdmin = false;
+    authClaims = { newsletter: true, role: "admin", admin: true };
+
+    const response = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(userRef.update).toHaveBeenCalledWith({
+      role: "admin",
+      isAdmin: true,
+      updatedAt: "server-time",
+    });
+    expect(operationOrder).toEqual(["document-role"]);
+    expect(authApi.getUser).toHaveBeenCalledWith("user-1");
+    expect(authApi.setCustomUserClaims).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(200);
+  });
+
+  test("recovers disabled Auth for an already active document after revoking tokens", async () => {
+    userData.status = "active";
+    authDisabled = true;
+
+    const response = await request({ action: "setStatus", userId: "user-1", status: "active" });
+
+    expect(operationOrder).toEqual(["revoke", "auth-enable"]);
+    expect(userRef.update).not.toHaveBeenCalled();
+    expect(authApi.updateUser).toHaveBeenCalledWith("user-1", { disabled: false });
+    expect(authDisabled).toBe(false);
+    expect(response.status).toHaveBeenCalledWith(200);
+  });
+
+  test("returns unchanged for an active document with enabled Auth", async () => {
+    const response = await request({ action: "setStatus", userId: "user-1", status: "active" });
+
+    expect(authApi.getUser).toHaveBeenCalledWith("user-1");
+    expect(operationOrder).toEqual([]);
+    expect(userRef.update).not.toHaveBeenCalled();
+    expect(authApi.updateUser).not.toHaveBeenCalled();
+    expect(response.json).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ unchanged: true }),
+    }));
+  });
+
+  test.each(["inactive", "banned"])(
+    "disables Auth and revokes tokens for an already %s document",
+    async (status) => {
+      userData.status = status;
+
+      const response = await request({ action: "setStatus", userId: "user-1", status });
+
+      expect(operationOrder).toEqual(["auth-disable", "revoke"]);
+      expect(userRef.update).not.toHaveBeenCalled();
+      expect(authDisabled).toBe(true);
+      expect(response.status).toHaveBeenCalledWith(200);
+    }
+  );
+
+  test("returns unchanged for an inactive document with disabled Auth", async () => {
+    userData.status = "inactive";
+    authDisabled = true;
+
+    const response = await request({ action: "setStatus", userId: "user-1", status: "inactive" });
+
+    expect(authApi.getUser).toHaveBeenCalledWith("user-1");
+    expect(operationOrder).toEqual([]);
+    expect(response.json).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ unchanged: true }),
+    }));
+  });
+
+  test("removes stale admin claims for an existing user document", async () => {
+    authClaims = { newsletter: true, role: "admin", admin: true };
+
+    const response = await request({ action: "setRole", userId: "user-1", role: "user" });
+
+    expect(operationOrder).toEqual(["claims", "revoke"]);
+    expect(userRef.update).not.toHaveBeenCalled();
+    expect(authClaims).toEqual({ newsletter: true, role: "user" });
+    expect(response.status).toHaveBeenCalledWith(200);
+  });
+
+  test("revokes stale admin claims before opening the document for promotion", async () => {
+    authClaims.admin = true;
+
+    const response = await request({
+      action: "setRole",
+      userId: "user-1",
+      role: "admin",
+    });
+
+    expect(userRef.update).toHaveBeenCalledWith({
+      role: "admin",
+      isAdmin: true,
+      updatedAt: "server-time",
+    });
+    expect(authApi.setCustomUserClaims).toHaveBeenCalledWith("user-1", {
+      newsletter: true,
+      role: "admin",
+      admin: true,
+    });
+    expect(operationOrder).toEqual(["claims", "revoke", "document-role"]);
+    expect(response.status).toHaveBeenCalledWith(200);
+  });
+
+  test("enables a disabled active user only after completing promotion gates", async () => {
+    authDisabled = true;
+
+    const response = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(operationOrder).toEqual(["claims", "revoke", "auth-enable", "document-role"]);
+    expect(userData.role).toBe("admin");
+    expect(authClaims).toEqual(expect.objectContaining({ role: "admin", admin: true }));
+    expect(authDisabled).toBe(false);
+    expect(response.status).toHaveBeenCalledWith(200);
+  });
+
+  test("keeps a disabled inactive user disabled after changing the role to admin", async () => {
+    userData.status = "inactive";
+    authDisabled = true;
+
+    const response = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(operationOrder).toEqual(["claims", "revoke", "document-role"]);
+    expect(userData.role).toBe("admin");
+    expect(authDisabled).toBe(true);
+    expect(authApi.updateUser).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(200);
+  });
+
+  test("removes the legacy admin claim when demoting an administrator", async () => {
+    userData.role = "admin";
+    userData.isAdmin = true;
+    authApi.getUser.mockResolvedValue({
+      uid: "user-1",
+      customClaims: { newsletter: true, role: "admin", admin: true },
+    });
+
+    await request({ action: "setRole", userId: "user-1", role: "user" });
+
+    expect(authApi.setCustomUserClaims).toHaveBeenCalledWith("user-1", {
+      newsletter: true,
+      role: "user",
+    });
+    expect(operationOrder).toEqual(["document-role", "claims", "revoke"]);
+  });
+
+  test.each(["inactive", "banned"])(
+    "writes %s before disabling Auth and revoking tokens",
+    async (status) => {
+      const response = await request({ action: "setStatus", userId: "user-1", status });
+
+      expect(userRef.update).toHaveBeenCalledWith({
+        status,
+        updatedAt: "server-time",
+      });
+      expect(authApi.updateUser).toHaveBeenCalledWith("user-1", { disabled: true });
+      expect(operationOrder).toEqual([`document-status:${status}`, "auth-disable", "revoke"]);
+      expect(response.status).toHaveBeenCalledWith(200);
+    }
+  );
+
+  test("enables Auth and revokes old tokens before opening the active document", async () => {
+    userData.status = "inactive";
+
+    const response = await request({
+      action: "setStatus",
+      userId: "user-1",
+      status: "active",
+    });
+
+    expect(authApi.updateUser).toHaveBeenCalledWith("user-1", { disabled: false });
+    expect(userRef.update).toHaveBeenCalledWith({
+      status: "active",
+      updatedAt: "server-time",
+    });
+    expect(operationOrder).toEqual(["auth-enable", "revoke", "document-status:active"]);
+    expect(response.status).toHaveBeenCalledWith(200);
+  });
+
+  test("soft deletes the document before disabling Auth and revoking tokens", async () => {
+    const response = await request({ action: "deleteUser", userId: "user-1" });
+
+    expect(userRef.update).toHaveBeenCalledWith({
+      status: "deleted",
+      deletedAt: "server-time",
+      updatedAt: "server-time",
+    });
+    expect(authApi.updateUser).toHaveBeenCalledWith("user-1", { disabled: true });
+    expect(operationOrder).toEqual(["document-status:deleted", "auth-disable", "revoke"]);
+    expect(userRef.delete).not.toHaveBeenCalled();
+    expect(authApi.deleteUser).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(200);
+  });
+
+  test("keeps the document closed after an ambiguous claims failure and converges on retry", async () => {
+    authApi.setCustomUserClaims.mockImplementationOnce(async (_userId, claims) => {
+      operationOrder.push("claims");
+      authClaims = { ...claims };
+      throw new Error("claims unavailable");
+    });
+
+    const failedResponse = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(userData.role).toBe("user");
+    expect(userData.isAdmin).toBe(false);
+    expect(authClaims.role).toBe("admin");
+    expect(operationOrder).toEqual(["claims"]);
+    expect(userRef.update).not.toHaveBeenCalled();
+    expect(failedResponse.status).toHaveBeenCalledWith(503);
+    expect(failedResponse.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: false,
+      retryable: true,
+      outcome: "unknown",
+    }));
+
+    operationOrder.length = 0;
+    const retriedResponse = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(operationOrder).toEqual(["claims", "revoke", "document-role"]);
+    expect(userData.role).toBe("admin");
+    expect(retriedResponse.status).toHaveBeenCalledWith(200);
+  });
+
+  test("keeps the document closed after a revoke failure and converges on retry", async () => {
+    authApi.revokeRefreshTokens.mockImplementationOnce(async () => {
+      operationOrder.push("revoke");
+      throw new Error("revoke unavailable");
+    });
+
+    const failedResponse = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(userData.role).toBe("user");
+    expect(authClaims.role).toBe("admin");
+    expect(operationOrder).toEqual(["claims", "revoke"]);
+    expect(userRef.update).not.toHaveBeenCalled();
+    expect(failedResponse.status).toHaveBeenCalledWith(503);
+
+    operationOrder.length = 0;
+    const retriedResponse = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(operationOrder).toEqual(["claims", "revoke", "document-role"]);
+    expect(userData.role).toBe("admin");
+    expect(authClaims.role).toBe("admin");
+    expect(authDisabled).toBe(false);
+    expect(retriedResponse.status).toHaveBeenCalledWith(200);
+  });
+
+  test("treats a committed final promotion write as forward progress and converges on retry", async () => {
+    userRef.update.mockImplementationOnce(async (updates: Record<string, unknown>) => {
+      operationOrder.push("document-role");
+      Object.assign(userData, updates);
+      throw new Error("commit response unavailable");
+    });
+
+    const failedResponse = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(userData.role).toBe("admin");
+    expect(userData.isAdmin).toBe(true);
+    expect(authClaims.role).toBe("admin");
+    expect(operationOrder).toEqual(["claims", "revoke", "document-role"]);
+    expect(failedResponse.status).toHaveBeenCalledWith(503);
+
+    operationOrder.length = 0;
+    const retriedResponse = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(operationOrder).toEqual([]);
+    expect(retriedResponse.status).toHaveBeenCalledWith(200);
+    expect(retriedResponse.json).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ unchanged: true }),
+    }));
+  });
+
+  test("leaves the document closed after an ambiguous enable failure and converges on retry", async () => {
+    authDisabled = true;
+    authApi.updateUser.mockImplementationOnce(async (_userId, updates) => {
+      operationOrder.push(updates.disabled ? "auth-disable" : "auth-enable");
+      authDisabled = updates.disabled;
+      throw new Error("enable response unavailable");
+    });
+
+    const failedResponse = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(userData.role).toBe("user");
+    expect(authClaims.role).toBe("admin");
+    expect(authDisabled).toBe(false);
+    expect(operationOrder).toEqual(["claims", "revoke", "auth-enable"]);
+    expect(userRef.update).not.toHaveBeenCalled();
+    expect(failedResponse.status).toHaveBeenCalledWith(503);
+
+    operationOrder.length = 0;
+    const retriedResponse = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(operationOrder).toEqual(["claims", "revoke", "document-role"]);
+    expect(userData.role).toBe("admin");
+    expect(authDisabled).toBe(false);
+    expect(retriedResponse.status).toHaveBeenCalledWith(200);
+  });
+
+  test("treats a pre-commit final promotion failure as closed and converges on retry", async () => {
+    userRef.update.mockImplementationOnce(async () => {
+      operationOrder.push("document-role");
+      throw new Error("final write unavailable");
+    });
+
+    const failedResponse = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(userData.role).toBe("user");
+    expect(authClaims.role).toBe("admin");
+    expect(operationOrder).toEqual(["claims", "revoke", "document-role"]);
+    expect(failedResponse.status).toHaveBeenCalledWith(503);
+
+    operationOrder.length = 0;
+    const retriedResponse = await request({ action: "setRole", userId: "user-1", role: "admin" });
+
+    expect(operationOrder).toEqual(["claims", "revoke", "document-role"]);
+    expect(userData.role).toBe("admin");
+    expect(retriedResponse.status).toHaveBeenCalledWith(200);
+  });
+
+  test("treats a committed final active write as forward progress and converges on retry", async () => {
+    userData.status = "inactive";
+    authDisabled = true;
+    userRef.update.mockImplementationOnce(async (updates: Record<string, unknown>) => {
+      operationOrder.push(`document-status:${updates.status}`);
+      Object.assign(userData, updates);
+      throw new Error("commit response unavailable");
+    });
+
+    const failedResponse = await request({
+      action: "setStatus",
+      userId: "user-1",
+      status: "active",
+    });
+
+    expect(userData.status).toBe("active");
+    expect(authDisabled).toBe(false);
+    expect(operationOrder).toEqual(["auth-enable", "revoke", "document-status:active"]);
+    expect(failedResponse.status).toHaveBeenCalledWith(503);
+
+    operationOrder.length = 0;
+    const retriedResponse = await request({
+      action: "setStatus",
+      userId: "user-1",
+      status: "active",
+    });
+
+    expect(operationOrder).toEqual([]);
+    expect(retriedResponse.status).toHaveBeenCalledWith(200);
+    expect(retriedResponse.json).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ unchanged: true }),
+    }));
+  });
+
+  test("keeps a failed suspension non-active and marks it retryable", async () => {
+    authApi.updateUser.mockImplementationOnce(async () => {
+      operationOrder.push("auth-disable");
+      throw new Error("auth unavailable");
+    });
+
+    const response = await request({
+      action: "setStatus",
+      userId: "user-1",
+      status: "inactive",
+    });
+
+    expect(userData.status).toBe("inactive");
+    expect(operationOrder).toEqual(["document-status:inactive", "auth-disable"]);
+    expect(authApi.revokeRefreshTokens).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(503);
+    expect(response.json).toHaveBeenCalledWith(expect.objectContaining({ retryable: true }));
+
+    operationOrder.length = 0;
+    const retriedResponse = await request({
+      action: "setStatus",
+      userId: "user-1",
+      status: "inactive",
+    });
+
+    expect(operationOrder).toEqual(["auth-disable", "revoke"]);
+    expect(authDisabled).toBe(true);
+    expect(retriedResponse.status).toHaveBeenCalledWith(200);
+  });
+
+  test("treats a pre-commit final active failure as closed and converges on retry", async () => {
+    userData.status = "inactive";
+    authDisabled = true;
+    userRef.update.mockImplementationOnce(async (updates: Record<string, unknown>) => {
+      operationOrder.push(`document-status:${updates.status}`);
+      throw new Error("firestore unavailable");
+    });
+
+    const failedResponse = await request({
+      action: "setStatus",
+      userId: "user-1",
+      status: "active",
+    });
+
+    expect(userData.status).toBe("inactive");
+    expect(authDisabled).toBe(false);
+    expect(operationOrder).toEqual(["auth-enable", "revoke", "document-status:active"]);
+    expect(authApi.revokeRefreshTokens).toHaveBeenCalledTimes(1);
+    expect(failedResponse.status).toHaveBeenCalledWith(503);
+
+    operationOrder.length = 0;
+    const retriedResponse = await request({
+      action: "setStatus",
+      userId: "user-1",
+      status: "active",
+    });
+
+    expect(operationOrder).toEqual(["auth-enable", "revoke", "document-status:active"]);
+    expect(userData.status).toBe("active");
+    expect(retriedResponse.status).toHaveBeenCalledWith(200);
+  });
+
+  test("keeps the active document closed after a revoke failure and converges on retry", async () => {
+    userData.status = "inactive";
+    authDisabled = true;
+    authApi.revokeRefreshTokens.mockImplementationOnce(async () => {
+      operationOrder.push("revoke");
+      throw new Error("revoke unavailable");
+    });
+
+    const failedResponse = await request({
+      action: "setStatus",
+      userId: "user-1",
+      status: "active",
+    });
+
+    expect(userData.status).toBe("inactive");
+    expect(authDisabled).toBe(false);
+    expect(operationOrder).toEqual(["auth-enable", "revoke"]);
+    expect(userRef.update).not.toHaveBeenCalled();
+    expect(failedResponse.status).toHaveBeenCalledWith(503);
+
+    operationOrder.length = 0;
+    const retriedResponse = await request({
+      action: "setStatus",
+      userId: "user-1",
+      status: "active",
+    });
+
+    expect(operationOrder).toEqual(["auth-enable", "revoke", "document-status:active"]);
+    expect(userData.status).toBe("active");
+    expect(retriedResponse.status).toHaveBeenCalledWith(200);
+  });
+
+  test("preserves the first deletion timestamp when a partial delete is retried", async () => {
+    jest.mocked(admin.firestore.FieldValue.serverTimestamp)
+      .mockReturnValueOnce("delete-time" as never)
+      .mockReturnValueOnce("retry-time" as never);
+    authApi.updateUser.mockImplementationOnce(async (_userId, updates) => {
+      operationOrder.push(updates.disabled ? "auth-disable" : "auth-enable");
+      authDisabled = updates.disabled;
+      throw new Error("auth unavailable");
+    });
+
+    const failedResponse = await request({ action: "deleteUser", userId: "user-1" });
+    const retriedResponse = await request({ action: "deleteUser", userId: "user-1" });
+
+    expect(failedResponse.status).toHaveBeenCalledWith(503);
+    expect(retriedResponse.status).toHaveBeenCalledWith(200);
+    expect(userRef.update.mock.calls[0][0]).toEqual({
+      status: "deleted",
+      deletedAt: "delete-time",
+      updatedAt: "delete-time",
+    });
+    expect(userRef.update.mock.calls[1][0]).toEqual({
+      status: "deleted",
+      updatedAt: "retry-time",
+    });
+    expect(userData.deletedAt).toBe("delete-time");
+    expect(authApi.deleteUser).not.toHaveBeenCalled();
   });
 });
 
@@ -502,6 +1120,171 @@ describe("QnA secret access", () => {
     expect(response.status).toHaveBeenCalledWith(401);
     expect(qnaRef.update).not.toHaveBeenCalled();
   });
+
+  test("returns a public list through an email-free server projection", async () => {
+    const response = createResponse();
+    const publicDoc = {
+      id: "qna-1",
+      data: () => ({
+        userId: "owner-1",
+        userEmail: "owner@example.com",
+        userName: "owner name",
+        category: "product",
+        title: "문의",
+        content: "문의 내용",
+        images: [],
+        isSecret: false,
+        status: "waiting",
+        views: 0,
+        isNotified: true,
+        internalNote: "must not be returned",
+        createdAt: { toDate: () => new Date("2026-07-20T00:00:00.000Z") },
+        updatedAt: { toDate: () => new Date("2026-07-20T00:00:00.000Z") },
+      }),
+    };
+    const qnaQuery = {
+      where: jest.fn(),
+      orderBy: jest.fn(),
+      offset: jest.fn(),
+      limit: jest.fn(),
+      count: jest.fn(),
+      get: jest.fn().mockResolvedValue({ docs: [publicDoc] }),
+    };
+    qnaQuery.where.mockReturnValue(qnaQuery);
+    qnaQuery.orderBy.mockReturnValue(qnaQuery);
+    qnaQuery.offset.mockReturnValue(qnaQuery);
+    qnaQuery.limit.mockReturnValue(qnaQuery);
+    qnaQuery.count.mockReturnValue({
+      get: jest.fn().mockResolvedValue({ data: () => ({ count: 1 }) }),
+    });
+    jest.mocked(admin.firestore).mockReturnValue({
+      collection: jest.fn(() => qnaQuery),
+    } as never);
+
+    await (qna as unknown as Handler)({
+      method: "POST",
+      headers: {},
+      body: {
+        action: "publicList",
+        filters: { category: "product" },
+        page: 1,
+        limit: 10,
+      },
+    }, response);
+
+    expect(qnaQuery.where).toHaveBeenNthCalledWith(1, "isSecret", "==", false);
+    expect(qnaQuery.where).toHaveBeenNthCalledWith(2, "category", "==", "product");
+    expect(qnaQuery.orderBy).toHaveBeenCalledWith("createdAt", "desc");
+    expect(qnaQuery.offset).toHaveBeenCalledWith(0);
+    expect(qnaQuery.limit).toHaveBeenCalledWith(10);
+    expect(response.set).toHaveBeenCalledWith("Cache-Control", "no-store, max-age=0");
+    expect(response.status).toHaveBeenCalledWith(200);
+    const payload = response.json.mock.calls[0][0];
+    expect(payload.qnas[0]).not.toHaveProperty("userEmail");
+    expect(payload.qnas[0]).not.toHaveProperty("userId");
+    expect(payload.qnas[0]).not.toHaveProperty("isNotified");
+    expect(payload.qnas[0]).not.toHaveProperty("internalNote");
+    expect(payload.qnas[0].userName).not.toBe("owner name");
+    expect(payload.pagination).toEqual({ page: 1, limit: 10, totalCount: 1, totalPages: 1 });
+  });
+
+  test("rejects unbounded or unsupported public list filters before querying", async () => {
+    const response = createResponse();
+    const collection = jest.fn();
+    jest.mocked(admin.firestore).mockReturnValue({ collection } as never);
+
+    await (qna as unknown as Handler)({
+      method: "POST",
+      headers: {},
+      body: {
+        action: "publicList",
+        filters: { userId: "owner-1" },
+        page: 1,
+        limit: 1000,
+      },
+    }, response);
+
+    expect(response.status).toHaveBeenCalledWith(400);
+    expect(collection).not.toHaveBeenCalled();
+  });
+
+  test("returns an owner-visible secret QnA without exposing owner identity", async () => {
+    const response = createResponse();
+    const qnaRef = {
+      get: jest.fn().mockResolvedValue({
+        exists: true,
+        data: () => ({
+          userId: "owner-1",
+          userEmail: "owner@example.com",
+          userName: "owner name",
+          category: "general",
+          title: "비밀 문의",
+          content: "내용",
+          images: [],
+          isSecret: true,
+          status: "waiting",
+          views: 0,
+          isNotified: true,
+        }),
+      }),
+      update: jest.fn(),
+    };
+    jest.mocked(admin.firestore).mockReturnValue({
+      collection: jest.fn(() => ({ doc: jest.fn(() => qnaRef) })),
+    } as never);
+    jest.mocked(verifyAuthContext).mockResolvedValue({
+      uid: "owner-1",
+      token: {} as never,
+      isAdmin: false,
+    });
+
+    await (qna as unknown as Handler)({
+      method: "POST",
+      headers: { authorization: "Bearer owner-token" },
+      body: { qnaId: "qna-1" },
+    }, response);
+
+    const payload = response.json.mock.calls[0][0];
+    expect(payload.qna).not.toHaveProperty("userId");
+    expect(payload.qna).not.toHaveProperty("userEmail");
+    expect(payload.qna).not.toHaveProperty("isNotified");
+  });
+
+  test.each([undefined, null])(
+    "fails closed for an unauthenticated legacy QnA with isSecret=%s",
+    async (isSecret) => {
+      const response = createResponse();
+      const qnaRef = {
+        get: jest.fn().mockResolvedValue({
+          exists: true,
+          data: () => ({
+            userId: "owner-1",
+            userEmail: "owner@example.com",
+            userName: "owner name",
+            category: "general",
+            title: "legacy",
+            content: "legacy content",
+            isSecret,
+            status: "waiting",
+            views: 0,
+          }),
+        }),
+        update: jest.fn(),
+      };
+      jest.mocked(admin.firestore).mockReturnValue({
+        collection: jest.fn(() => ({ doc: jest.fn(() => qnaRef) })),
+      } as never);
+
+      await (qna as unknown as Handler)({
+        method: "POST",
+        headers: {},
+        body: { action: "getDetail", qnaId: "legacy-qna" },
+      }, response);
+
+      expect(response.status).toHaveBeenCalledWith(401);
+      expect(qnaRef.update).not.toHaveBeenCalled();
+    }
+  );
 });
 
 describe("event participation", () => {

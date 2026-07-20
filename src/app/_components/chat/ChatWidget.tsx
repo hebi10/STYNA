@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
+import { auth } from '@/shared/libs/firebase/firebase';
+import { getChatSessionId } from '@/shared/utils/chatSession';
 import styles from './ChatWidget.module.css';
 
 // ─── 상수 ──────────────────────────────────────────────
@@ -97,9 +99,19 @@ function typingDelay(): Promise<void> {
 
 // ─── API 호출 함수 ─────────────────────────────────────
 async function callChatAPI(params: ChatAPIParams): Promise<ChatAPIResponse> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'X-Chat-Session-Id': getChatSessionId(),
+  };
+  const currentUser = auth.currentUser;
+  if (currentUser) {
+    const token = await currentUser.getIdToken();
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(getChatAPIUrl(), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(params),
   });
 

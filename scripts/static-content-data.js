@@ -214,55 +214,6 @@ const offlineInfo = {
   ],
 };
 
-const recommendationSettings = [
-  {
-    id: "rating",
-    type: "rating",
-    name: "평점 높은 상품",
-    description: "평점 4.3 이상, 리뷰 50개 이상인 상품",
-    isActive: true,
-    criteria: { minRating: 4.3, minReviews: 50 },
-    order: 1,
-  },
-  {
-    id: "review",
-    type: "review",
-    name: "리뷰 많은 상품",
-    description: "리뷰 80개 이상인 인기 상품",
-    isActive: true,
-    criteria: { minReviews: 80 },
-    order: 2,
-  },
-  {
-    id: "sale",
-    type: "sale",
-    name: "할인 상품",
-    description: "현재 할인 중인 상품",
-    isActive: true,
-    criteria: { minSaleRate: 15 },
-    order: 3,
-  },
-  {
-    id: "new",
-    type: "new",
-    name: "신상품",
-    description: "최근 30일 이내 출시 상품",
-    isActive: true,
-    criteria: { maxDaysOld: 30 },
-    order: 4,
-  },
-  {
-    id: "manual",
-    type: "manual",
-    name: "수동 선택 상품",
-    description: "관리자가 직접 선택한 추천 상품",
-    isActive: false,
-    criteria: {},
-    productIds: [],
-    order: 5,
-  },
-];
-
 module.exports = {
   faqs,
   notices,
@@ -270,5 +221,4 @@ module.exports = {
   offlineStores,
   offlineServices,
   offlineInfo,
-  recommendationSettings,
 };
