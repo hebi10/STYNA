@@ -210,6 +210,7 @@ export default function InquiryPage() {
                 type="text"
                 id="title"
                 name="title"
+                maxLength={100}
                 value={formData.title}
                 onChange={handleInputChange}
                 className={styles.input}
@@ -225,6 +226,7 @@ export default function InquiryPage() {
               <textarea
                 id="content"
                 name="content"
+                maxLength={2000}
                 value={formData.content}
                 onChange={handleInputChange}
                 className={styles.textarea}

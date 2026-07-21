@@ -63,13 +63,21 @@ describe('qna domain logic', () => {
   test('accepts one whitelisted public filter with bounded pagination', () => {
     expect(parsePublicQnAListRequest({
       filters: { category: 'product' },
-      page: 2,
+      page: 1,
       limit: 25,
     })).toEqual({
       filters: { category: 'product' },
-      page: 2,
+      page: 1,
       limit: 25,
     });
+  });
+
+  test('rejects public list pages after the latest bounded batch', () => {
+    expect(parsePublicQnAListRequest({
+      filters: {},
+      page: 2,
+      limit: 25,
+    })).toBeNull();
   });
 
   test.each([undefined, null])('treats legacy isSecret=%s as protected', (isSecret) => {

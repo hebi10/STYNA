@@ -40,6 +40,27 @@ service cloud.firestore {
       return isActiveAccount() && request.auth.uid == userId;
     }
 
+    function isNonEmptyStringAtMost(value, maxLength) {
+      return value is string &&
+        value.size() >= 1 &&
+        value.size() <= maxLength;
+    }
+
+    function isOptionalNonEmptyStringAtMost(data, field, maxLength) {
+      return !data.keys().hasAny([field]) ||
+        isNonEmptyStringAtMost(data[field], maxLength);
+    }
+
+    function isValidQnAImages(images) {
+      return images is list &&
+        images.size() <= 5 &&
+        (images.size() < 1 || isNonEmptyStringAtMost(images[0], 2048)) &&
+        (images.size() < 2 || isNonEmptyStringAtMost(images[1], 2048)) &&
+        (images.size() < 3 || isNonEmptyStringAtMost(images[2], 2048)) &&
+        (images.size() < 4 || isNonEmptyStringAtMost(images[3], 2048)) &&
+        (images.size() < 5 || isNonEmptyStringAtMost(images[4], 2048));
+    }
+
     function userCreateAllowedKeys() {
       return [
         'id',
@@ -182,15 +203,13 @@ service cloud.firestore {
           'general',
           'other'
         ] &&
-        request.resource.data.title is string &&
-        request.resource.data.content is string &&
-        request.resource.data.images is list &&
+        isNonEmptyStringAtMost(request.resource.data.title, 100) &&
+        isNonEmptyStringAtMost(request.resource.data.content, 2000) &&
+        isValidQnAImages(request.resource.data.images) &&
         request.resource.data.isSecret is bool &&
         request.resource.data.isNotified is bool &&
-        (!request.resource.data.keys().hasAny(['productId']) ||
-          request.resource.data.productId is string) &&
-        (!request.resource.data.keys().hasAny(['productName']) ||
-          request.resource.data.productName is string) &&
+        isOptionalNonEmptyStringAtMost(request.resource.data, 'productId', 128) &&
+        isOptionalNonEmptyStringAtMost(request.resource.data, 'productName', 200) &&
         request.resource.data.status == 'waiting' &&
         request.resource.data.views == 0 &&
         request.resource.data.createdAt == request.time &&
@@ -210,9 +229,8 @@ service cloud.firestore {
           'status',
           'updatedAt'
         ]) &&
-        changed.hasAny(['updatedAt']) &&
-        request.resource.data.title is string &&
-        request.resource.data.content is string &&
+        isNonEmptyStringAtMost(request.resource.data.title, 100) &&
+        isNonEmptyStringAtMost(request.resource.data.content, 2000) &&
         request.resource.data.category in [
           'product',
           'size',
@@ -222,9 +240,11 @@ service cloud.firestore {
           'general',
           'other'
         ] &&
-        request.resource.data.images is list &&
+        isValidQnAImages(request.resource.data.images) &&
         request.resource.data.isSecret is bool &&
         request.resource.data.isNotified is bool &&
+        isOptionalNonEmptyStringAtMost(request.resource.data, 'productId', 128) &&
+        isOptionalNonEmptyStringAtMost(request.resource.data, 'productName', 200) &&
         request.resource.data.updatedAt == request.time &&
         (!changed.hasAny(['status']) || request.resource.data.status == 'closed');
     }
@@ -244,8 +264,8 @@ service cloud.firestore {
           'answeredAt',
           'isAdmin'
         ]) &&
-        answer.content is string &&
-        answer.answeredBy is string &&
+        isNonEmptyStringAtMost(answer.content, 2000) &&
+        isNonEmptyStringAtMost(answer.answeredBy, 200) &&
         answer.answeredAt == request.time &&
         answer.isAdmin == true;
     }
@@ -297,8 +317,8 @@ service cloud.firestore {
           'account',
           'other'
         ] &&
-        request.resource.data.title is string &&
-        request.resource.data.content is string &&
+        isNonEmptyStringAtMost(request.resource.data.title, 100) &&
+        isNonEmptyStringAtMost(request.resource.data.content, 2000) &&
         request.resource.data.status == 'waiting' &&
         request.resource.data.createdAt == request.time &&
         request.resource.data.updatedAt == request.time;
@@ -309,8 +329,8 @@ service cloud.firestore {
       return answer is map &&
         answer.keys().hasOnly(['content', 'answeredBy', 'answeredAt']) &&
         answer.keys().hasAll(['content', 'answeredBy', 'answeredAt']) &&
-        answer.content is string &&
-        answer.answeredBy is string &&
+        isNonEmptyStringAtMost(answer.content, 2000) &&
+        isNonEmptyStringAtMost(answer.answeredBy, 200) &&
         answer.answeredAt == request.time;
     }
 

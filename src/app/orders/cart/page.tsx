@@ -9,6 +9,10 @@ import Button from "../../_components/Button";
 import { useAuth } from "@/context/authProvider";
 import { useCoupon } from "@/context/couponProvider";
 import { useCart, useUpdateCartItem, useRemoveFromCart } from "@/shared/hooks/useCart";
+import {
+  COMMERCE_POLICY,
+  formatShippingPolicy,
+} from "@/shared/constants/commercePolicy";
 import { CartItem } from "@/shared/types/cart";
 import {
   calculateOrderPreview,
@@ -23,7 +27,7 @@ interface CartItemWithSelection extends CartItem {
 
 export default function OrderCartPage() {
   const router = useRouter();
-  const { user, userData, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { userCoupons } = useCoupon();
   
   // Firebase 장바구니 데이터 가져오기
@@ -135,6 +139,16 @@ export default function OrderCartPage() {
       pointBalance: 0,
     }),
     [selectedItems, deliveryOption, selectedCouponView]
+  );
+  const standardDeliveryPreview = useMemo(
+    () => calculateOrderPreview({
+      items: selectedItems,
+      deliveryOption: "standard",
+      selectedCoupon: selectedCouponView,
+      requestedPointAmount: 0,
+      pointBalance: 0,
+    }),
+    [selectedItems, selectedCouponView]
   );
 
   const subtotal = orderPreview.subtotal;
@@ -387,9 +401,11 @@ export default function OrderCartPage() {
                   />
                   <div className={styles.optionContent}>
                     <div className={styles.optionTitle}>일반 배송</div>
-                    <div className={styles.optionDesc}>2-3일 소요 / 5만원 이상 무료</div>
+                    <div className={styles.optionDesc}>{formatShippingPolicy()}</div>
                     <div className={styles.optionPrice}>
-                      {subtotal >= 50000 ? "무료" : "3,000원"}
+                      {standardDeliveryPreview.deliveryFee === 0
+                        ? "무료"
+                        : `${standardDeliveryPreview.deliveryFee.toLocaleString("ko-KR")}원`}
                     </div>
                   </div>
                 </label>
@@ -403,9 +419,11 @@ export default function OrderCartPage() {
                     onChange={(e) => setDeliveryOption(e.target.value as "express")}
                   />
                   <div className={styles.optionContent}>
-                    <div className={styles.optionTitle}>특급 배송</div>
-                    <div className={styles.optionDesc}>당일/익일 배송</div>
-                    <div className={styles.optionPrice}>5,000원</div>
+                    <div className={styles.optionTitle}>특급 배송 옵션(데모)</div>
+                    <div className={styles.optionDesc}>배송 일정은 주문별 배송 상태에서 확인할 수 있습니다.</div>
+                    <div className={styles.optionPrice}>
+                      {COMMERCE_POLICY.shipping.expressFee.toLocaleString("ko-KR")}원
+                    </div>
                   </div>
                 </label>
               </div>
@@ -515,11 +533,7 @@ export default function OrderCartPage() {
               <div className={styles.benefitInfo}>
                 <div className={styles.benefitTitle}>혜택 정보</div>
                 <ul className={styles.benefitList}>
-                  <li>5만원 이상 구매 시 무료배송</li>
-                  <li>구매 시 적립금 {Math.floor(finalAmount * 0.01).toLocaleString()}원 적립</li>
-                  {userData?.membershipLevel === 'gold' && (
-                    <li>골드 회원 추가 할인 혜택</li>
-                  )}
+                  <li>{formatShippingPolicy()}</li>
                 </ul>
               </div>
             </div>

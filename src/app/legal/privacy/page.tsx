@@ -1,4 +1,5 @@
 import { SITE_INFO } from '@/shared/constants/siteInfo';
+import { buildDemoDataNotice } from '@/shared/constants/commercePolicy';
 import styles from '../terms/page.module.css';
 
 export default function PrivacyPage() {
@@ -7,7 +8,7 @@ export default function PrivacyPage() {
       <section className={styles.section}>
         <h1 className={styles.title}>개인정보 안내</h1>
         <div className={styles.important}>
-          <strong>안내:</strong> {SITE_INFO.demoNotice}
+          <strong>안내:</strong> {buildDemoDataNotice()}
         </div>
         <div className={styles.content}>
           이 페이지는 실제 개인정보처리방침이 아닙니다. 실제 결제·배송·고객지원 서비스를 제공하지 않으므로,

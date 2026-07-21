@@ -139,30 +139,10 @@ export const useRefundPoint = () => {
   });
 };
 
-// 특정 상황별 포인트 적립 Hook들
+// 회원가입 포인트 적립 Hook
 export const useSignupPoint = () => {
   return useMutation({
     mutationFn: () => PointService.addSignupPoint(),
-  });
-};
-
-export const useOrderPoint = () => {
-  return useMutation({
-    mutationFn: ({ orderAmount, orderId }: { orderAmount: number; orderId: string }) => 
-      PointService.addOrderPoint(orderAmount, orderId),
-  });
-};
-
-export const useReviewPoint = () => {
-  return useMutation({
-    mutationFn: ({ productName, orderId }: { productName: string; orderId: string }) => 
-      PointService.addReviewPoint(productName, orderId),
-  });
-};
-
-export const useBirthdayPoint = () => {
-  return useMutation({
-    mutationFn: () => PointService.addBirthdayPoint(),
   });
 };
 
@@ -173,9 +153,6 @@ const pointHooks = {
   useUsePoint,
   useRefundPoint,
   useSignupPoint,
-  useOrderPoint,
-  useReviewPoint,
-  useBirthdayPoint,
 };
 
 export default pointHooks;

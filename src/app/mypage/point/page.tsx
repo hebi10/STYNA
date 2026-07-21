@@ -118,40 +118,6 @@ export default function PointPage() {
         </div>
       </div>
 
-      <div className={styles.earnInfo} hidden>
-        <h3>포인트 적립 안내</h3>
-        <div className={styles.earnMethods}>
-          <div className={styles.earnMethod}>
-            <span className={styles.methodIcon}></span>
-            <div className={styles.methodInfo}>
-              <h4>신규 가입</h4>
-              <p>5,000P 지급</p>
-            </div>
-          </div>
-          <div className={styles.earnMethod}>
-            <span className={styles.methodIcon}></span>
-            <div className={styles.methodInfo}>
-              <h4>상품 구매</h4>
-              <p>구매금액의 1% 적립</p>
-            </div>
-          </div>
-          <div className={styles.earnMethod}>
-            <span className={styles.methodIcon}></span>
-            <div className={styles.methodInfo}>
-              <h4>리뷰 작성</h4>
-              <p>500P 적립</p>
-            </div>
-          </div>
-          <div className={styles.earnMethod}>
-            <span className={styles.methodIcon}></span>
-            <div className={styles.methodInfo}>
-              <h4>생일 혜택</h4>
-              <p>3,000P 적립</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* 탭 메뉴 */}
       <div className={styles.tabMenu}>
         <button
@@ -207,15 +173,6 @@ export default function PointPage() {
                 <li>포인트는 1P = 1원으로 사용할 수 있습니다.</li>
                 <li>주문 시 보유 포인트와 포인트 사용 전 결제 예정 금액 중 작은 금액까지 사용할 수 있습니다.</li>
                 <li>적립·사용·환불 내역은 서버에서 처리된 기록을 기준으로 표시됩니다.</li>
-              </ul>
-            </div>
-            <div className={styles.pointNote} hidden>
-              <h4>포인트 사용 안내</h4>
-              <ul>
-                <li>포인트는 적립일로부터 6개월간 유효합니다</li>
-                <li>주문 시 최대 50%까지 포인트로 결제 가능합니다</li>
-                <li>포인트는 1P = 1원으로 사용됩니다</li>
-                <li>환불 시 사용한 포인트는 다시 적립됩니다</li>
               </ul>
             </div>
           </div>

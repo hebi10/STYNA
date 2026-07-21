@@ -3,6 +3,7 @@ import { updateDoc } from 'firebase/firestore';
 import CheckoutPage from './page';
 import { useAuth } from '@/context/authProvider';
 import { OrderService } from '@/shared/services/orderService';
+import { buildDemoDataNotice } from '@/shared/constants/commercePolicy';
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -117,6 +118,26 @@ describe('CheckoutPage recovery state', () => {
     expect(screen.getByRole('textbox', { name: '받는 분' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: '입력한 배송지 저장하기' })).toBeChecked();
     expect(screen.queryByText('등록된 배송지가 없습니다')).not.toBeInTheDocument();
+  });
+
+  test('discloses the exact demo payment and Firebase persistence boundary', async () => {
+    sessionStorage.setItem('orderData', JSON.stringify({
+      items: [{
+        productId: 'product-1',
+        size: 'M',
+        color: 'black',
+        quantity: 1,
+        price: 12000,
+      }],
+      deliveryOption: 'standard',
+    }));
+
+    const { container } = render(<CheckoutPage />);
+
+    expect(await screen.findByText(buildDemoDataNotice())).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(
+      /카카오페이|네이버페이|페이코|토스페이|구매.*1%/,
+    );
   });
 
   test('saves the manual delivery address after the order succeeds', async () => {

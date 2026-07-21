@@ -46,3 +46,4 @@
 - 프로젝트 정리·안정화 설계 : superpowers/specs/2026-07-20-project-hardening-design.md
 - 프로젝트 데드·중복 코드 정리 실행 계획 : superpowers/plans/2026-07-20-project-cleanup.md
 - 프로젝트 보안·품질 게이트 실행 계획 : superpowers/plans/2026-07-20-project-security-quality.md
+- 프로젝트 정책·구매 흐름 실행 계획 : superpowers/plans/2026-07-20-project-policy-purchase.md

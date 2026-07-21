@@ -3,10 +3,16 @@
 import { useState, useRef, useEffect, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Event, EventEditorialImages } from '@/shared/types/event';
+import {
+  Event,
+  EventEditorialImages,
+  EventEligibilityType,
+  EventRewardType,
+} from '@/shared/types/event';
 import { Category } from '@/shared/types/category';
 import { EventService } from '@/shared/services/eventService';
 import { CategoryService } from '@/shared/services/categoryService';
+import { REVIEW_EVENT_KEYWORDS } from '@/shared/constants/eventUiMeta';
 import Button from '@/app/_components/Button';
 import Input from '@/app/_components/Input';
 import styles from './EventForm.module.css';
@@ -42,6 +48,38 @@ const getProvidedEditorialImages = (images: EventEditorialImages): EventEditoria
   return provided;
 };
 
+const normalizeTargetProducts = (value: string): string[] => (
+  Array.from(new Set(
+    value
+      .split(/[\s,]+/)
+      .map(productId => productId.trim())
+      .filter(Boolean)
+  ))
+);
+
+const LEGACY_REVIEW_EVENT_IDS = new Set([
+  'event-2026-02-knit-review',
+  'event-2026-03-photo-review',
+  'event-2026-05-best-review',
+  'event-2026-07-summer-review',
+]);
+
+const getInitialEligibilityType = (event?: Event): EventEligibilityType => {
+  if (event?.eligibilityType) {
+    return event.eligibilityType;
+  }
+
+  if (!event) {
+    return 'none';
+  }
+
+  const searchableText = [event.title, event.description, event.content ?? ''].join(' ');
+  return LEGACY_REVIEW_EVENT_IDS.has(event.id)
+    || REVIEW_EVENT_KEYWORDS.some(keyword => searchableText.includes(keyword))
+    ? 'review'
+    : 'none';
+};
+
 export default function EventForm({ event, isEdit = false }: Props) {
   const router = useRouter();
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -65,17 +103,18 @@ export default function EventForm({ event, isEdit = false }: Props) {
     description: event?.description || '',
     content: event?.content || '',
     eventType: event?.eventType || 'sale' as 'sale' | 'coupon' | 'special' | 'new',
+    eligibilityType: getInitialEligibilityType(event),
+    rewardType: event?.rewardType || (event?.rewardCouponId ? 'coupon' : 'none') as EventRewardType,
+    targetProductsText: event?.targetProducts?.join('\n') || '',
     startDate: event?.startDate ? new Date(event.startDate).toISOString().slice(0, 16) : '',
     endDate: event?.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : '',
     isActive: event?.isActive ?? true,
     discountRate: event?.discountRate || 0,
     discountAmount: event?.discountAmount || 0,
-    couponCode: event?.couponCode || '',
     rewardCouponId: event?.rewardCouponId || '',
     maxParticipants: event?.maxParticipants || 0,
     hasMaxParticipants: event?.hasMaxParticipants ?? false,
     selectedCategories: event?.targetCategories || [],
-    couponType: event?.couponType || (event?.couponCode ? 'manual' : 'auto') as 'auto' | 'manual',
   });
 
   const [images, setImages] = useState({
@@ -210,8 +249,14 @@ export default function EventForm({ event, isEdit = false }: Props) {
       return;
     }
 
-    if (formData.eventType === 'coupon' && formData.couponType === 'auto' && !formData.rewardCouponId.trim()) {
-      alert('자동 지급 쿠폰 이벤트에는 쿠폰 관리 문서 ID를 입력해주세요.');
+    const targetProducts = normalizeTargetProducts(formData.targetProductsText);
+    if (formData.eligibilityType !== 'none' && targetProducts.length === 0) {
+      alert('구매 자격 이벤트에는 대상 상품 ID가 필요합니다.');
+      return;
+    }
+
+    if (formData.rewardType === 'coupon' && !formData.rewardCouponId.trim()) {
+      alert('쿠폰 보상에는 쿠폰 관리 문서 ID가 필요합니다.');
       return;
     }
 
@@ -224,6 +269,14 @@ export default function EventForm({ event, isEdit = false }: Props) {
         description: formData.description,
         content: formData.content,
         eventType: formData.eventType as Event['eventType'],
+        eligibilityType: formData.eligibilityType,
+        rewardType: formData.rewardType,
+        ...(formData.eligibilityType !== 'none' && targetProducts.length > 0
+          ? { targetProducts }
+          : {}),
+        ...(formData.rewardType === 'coupon'
+          ? { rewardCouponId: formData.rewardCouponId.trim() }
+          : {}),
         startDate: new Date(formData.startDate),
         endDate: new Date(formData.endDate),
         bannerImage: images.bannerImage,
@@ -239,9 +292,6 @@ export default function EventForm({ event, isEdit = false }: Props) {
         isActive: formData.isActive,
         discountRate: formData.discountRate,
         discountAmount: formData.discountAmount,
-        couponType: formData.couponType,
-        couponCode: formData.couponType === 'manual' ? formData.couponCode : '',
-        rewardCouponId: formData.couponType === 'auto' ? formData.rewardCouponId.trim() : '',
         hasMaxParticipants: formData.hasMaxParticipants,
         ...(formData.hasMaxParticipants && formData.maxParticipants > 0 
           ? { maxParticipants: formData.maxParticipants } 
@@ -388,6 +438,61 @@ export default function EventForm({ event, isEdit = false }: Props) {
         {/* 혜택 설정 */}
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>혜택 설정</h3>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="event-eligibility-type" className={styles.label}>참여 자격</label>
+            <select
+              id="event-eligibility-type"
+              value={formData.eligibilityType}
+              onChange={(e) => handleInputChange('eligibilityType', e.target.value)}
+              className={styles.select}
+            >
+              <option value="none">제한 없음</option>
+              <option value="purchase">구매 완료</option>
+              <option value="delivered">배송 완료</option>
+              <option value="review">리뷰 작성</option>
+            </select>
+          </div>
+
+          {formData.eligibilityType !== 'none' && (
+            <div className={styles.formGroup}>
+              <label htmlFor="event-target-products" className={styles.label}>대상 상품 ID</label>
+              <textarea
+                id="event-target-products"
+                value={formData.targetProductsText}
+                onChange={(e) => handleInputChange('targetProductsText', e.target.value)}
+                placeholder="상품 ID를 줄바꿈 또는 쉼표로 구분하세요"
+                className={styles.textarea}
+                rows={4}
+              />
+            </div>
+          )}
+
+          <div className={styles.formGroup}>
+            <label htmlFor="event-reward-type" className={styles.label}>보상 유형</label>
+            <select
+              id="event-reward-type"
+              value={formData.rewardType}
+              onChange={(e) => handleInputChange('rewardType', e.target.value)}
+              className={styles.select}
+            >
+              <option value="none">보상 없음</option>
+              <option value="coupon">쿠폰</option>
+            </select>
+          </div>
+
+          {formData.rewardType === 'coupon' && (
+            <div className={styles.formGroup}>
+              <label htmlFor="event-reward-coupon-id" className={styles.label}>보상 쿠폰 문서 ID</label>
+              <Input
+                id="event-reward-coupon-id"
+                value={formData.rewardCouponId}
+                onChange={(e) => handleInputChange('rewardCouponId', e.target.value)}
+                placeholder="쿠폰 관리 문서 ID를 입력하세요"
+              />
+              <p className={styles.helpText}>참여 완료 시 이 쿠폰을 한 번만 지급합니다.</p>
+            </div>
+          )}
           
           <div className={styles.benefitGroup}>
             <div className={styles.formGroup}>
@@ -403,7 +508,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>적립금 (원)</label>
+              <label className={styles.label}>할인 표시 금액 (원)</label>
               <Input
                 type="number"
                 value={formData.discountAmount}
@@ -412,58 +517,6 @@ export default function EventForm({ event, isEdit = false }: Props) {
                 min="0"
               />
             </div>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>쿠폰 지급 방식</label>
-            <div className={styles.couponTypeContainer}>
-              <label className={styles.radioLabel}>
-                <input
-                  type="radio"
-                  name="couponType"
-                  value="auto"
-                  checked={formData.couponType === 'auto'}
-                  onChange={(e) => {
-                    handleInputChange('couponType', e.target.value);
-                    if (e.target.value === 'auto') {
-                      handleInputChange('couponCode', '');
-                    }
-                  }}
-                  className={styles.radio}
-                />
-                <span>자동 지급 (시스템에서 자동으로 쿠폰 생성)</span>
-              </label>
-              <label className={styles.radioLabel}>
-                <input
-                  type="radio"
-                  name="couponType"
-                  value="manual"
-                  checked={formData.couponType === 'manual'}
-                  onChange={(e) => handleInputChange('couponType', e.target.value)}
-                  className={styles.radio}
-                />
-                <span>수동 입력 (사용자가 코드 입력 필요)</span>
-              </label>
-            </div>
-            {formData.couponType === 'manual' && (
-              <div className={styles.couponCodeInput}>
-                <Input
-                  value={formData.couponCode}
-                  onChange={(e) => handleInputChange('couponCode', e.target.value)}
-                  placeholder="쿠폰 코드를 입력하세요 (예: WELCOME20)"
-                />
-              </div>
-            )}
-            {formData.couponType === 'auto' && (
-              <div className={styles.couponCodeInput}>
-                <Input
-                  value={formData.rewardCouponId}
-                  onChange={(e) => handleInputChange('rewardCouponId', e.target.value)}
-                  placeholder="쿠폰 관리 문서 ID를 입력하세요"
-                />
-                <p className={styles.helpText}>참여 완료 시 이 쿠폰을 한 번만 자동 지급합니다.</p>
-              </div>
-            )}
           </div>
 
           <div className={styles.formGroup}>

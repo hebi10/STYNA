@@ -260,12 +260,6 @@
   color: #6b778c;
 }
 
-.views {
-  display: flex;
-  align-items: center;
-  gap: 0.2rem;
-}
-
 .date {
   color: #97a0af;
 }
@@ -328,42 +322,6 @@
 .answerDate {
   font-size: 0.75rem;
   color: #6b778c;
-}
-
-/* 페이지네이션 */
-.pagination {
-  display: flex;
-  justify-content: center;
-  gap: 0.25rem;
-  margin: 2rem 0;
-}
-
-.pageButton {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #dfe1e6;
-  background: white;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: border-color 0.15s;
-  font-weight: 500;
-  font-size: 0.85rem;
-  color: #42526e;
-}
-
-.pageButton:hover:not(:disabled) {
-  border-color: #2b6cb0;
-  color: #2b6cb0;
-}
-
-.pageButton.active {
-  background: #2b6cb0;
-  color: white;
-  border-color: #2b6cb0;
-}
-
-.pageButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* 문의하기 섹션 */
@@ -507,15 +465,6 @@
     gap: 0.15rem;
   }
 
-  .pagination {
-    flex-wrap: wrap;
-    gap: 0.2rem;
-  }
-
-  .pageButton {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.8rem;
-  }
 }
 
 /* 2nd priority clean board tone */
@@ -561,7 +510,6 @@
 .searchInput,
 .searchButton,
 .categoryButton,
-.pageButton,
 .writeButton,
 .retryButton {
   border-radius: var(--radius-sm);
@@ -574,7 +522,6 @@
 
 .searchButton,
 .categoryButton.active,
-.pageButton.active,
 .writeButton,
 .retryButton {
   background: var(--black);
@@ -589,7 +536,6 @@
 }
 
 .categoryButton:hover,
-.pageButton:hover:not(:disabled),
 .titleLink:hover,
 .product,
 .product:hover {
@@ -631,7 +577,6 @@
 
   .categoryButton,
   .searchButton,
-  .pageButton,
   .writeButton {
     min-height: 44px;
   }

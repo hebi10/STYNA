@@ -67,6 +67,13 @@ describe('Inquiry account identity', () => {
     ));
   });
 
+  test('matches the Firestore length limits before submission', () => {
+    const { container } = render(<InquiryPage />);
+
+    expect(container.querySelector<HTMLInputElement>('#title')).toHaveAttribute('maxlength', '100');
+    expect(container.querySelector<HTMLTextAreaElement>('#content')).toHaveAttribute('maxlength', '2000');
+  });
+
   test.each([
     ['loading', { isUserDataLoading: true }],
     ['missing', { userData: null }],

@@ -19,7 +19,7 @@
   - 사용자 쿠폰 상태 갱신(`사용가능` → `사용완료`/`기간만료`)
   - 포인트 차감
   - 장바구니 선택 항목 정리
-- `firestore.rules`에서 `orders` 생성은 `allow create: if false`로 막고, 읽기만 소유자/관리자로 허용하도록 유지해 일반 사용자의 임의 생성·변조를 차단한다.
+- `firestore.rules`에서 `orders`의 클라이언트 `create`, `update`, `delete`를 모두 차단한다. 읽기는 활성 주문 소유자 또는 엄격 관리자에게만 허용한다.
 - 클라이언트 완료 화면은 URL 파라미터(`orderId`) 혹은 이전 저장한 `orderResult`를 기반으로 `OrderService.getOrder`로 조회하도록 변경해, 로컬 계산값 의존도를 낮췄다.
 
 ## 검증
@@ -38,23 +38,19 @@
 
 ## 2026-05-12 관리자 주문 상태 변경 서버화
 - `/api/order`에 관리자 전용 `action: "updateStatus"` 분기를 추가했다.
-- 상태 변경은 custom claim 기반 관리자만 가능하며 `pending -> confirmed -> preparing/shipped -> delivered` 등 허용된 전이만 통과한다.
+- 상태 변경은 token claim과 활성 admin 사용자 문서를 함께 만족하는 엄격 관리자만 가능하며 `pending -> confirmed -> preparing/shipped -> delivered` 등 허용된 전이만 통과한다.
 - 변경 시 `statusHistory`에 이전 상태, 다음 상태, 관리자 uid, 변경 시각을 남긴다.
 - 관리자 주문 화면의 `OrderService.updateOrderStatus`는 Firestore 직접 업데이트 대신 `/api/order`를 호출한다.
 
-## 2026-05-12 구매 흐름 점검
+## 2026-05-12 구매 흐름 점검 (후속 해결됨)
 - `OrderService.createOrder`는 클라이언트 계산값을 보내지 않고 상품/옵션/배송지/결제수단/쿠폰/포인트만 `POST /api/order`로 전달한다.
 - Functions 주문 생성은 인증, 상품 조회, 재고 확인, 쿠폰 소유자/상태/만료/최소금액, 포인트 잔액, 장바구니 선택 항목 제거를 트랜잭션에서 처리한다.
-- 확인된 리스크:
-  - `/categories/[category]/products/[productId]` 상세의 장바구니 담기는 실제 저장 없이 alert만 표시하고, 바로 구매 버튼에는 실행 핸들러가 없다.
-  - `/orders/cart`의 쿠폰 드롭다운은 `사용가능` 상태만 필터링하고 최소 주문금액/만료/무료배송 조건을 화면 계산에 반영하지 않아, checkout 또는 서버 확정 금액과 달라질 수 있다.
-  - `/orders/checkout`은 상품별 할인 합계를 주문 금액에서 다시 빼고 있어 이미 할인 단가로 담긴 장바구니/바로구매 데이터와 서버 확정 금액이 어긋날 수 있다.
-  - 로컬 `next dev`/`next build`는 Next worker `spawn EPERM`으로 브라우저 E2E 확인이 막혔다. 배포 환경은 Firebase Hosting rewrite의 `/api/order` 경로 확인이 필요하다.
+- 당시 확인한 상품 상세 CTA, 쿠폰 미리보기, 중복 할인 계산 문제는 같은 달 구매 흐름 보정과 서버 최종 재계산으로 정리했다. 2026-06-29 Chrome QA에서 주문 생성·완료·마이페이지 노출·관리자 상태 변경·취소 복구까지 확인했다.
 
 ## 2026-05-12 주문 완료 빌드 오류 보정
 - `/orders/complete`에서 `useSearchParams()`를 쓰는 실제 콘텐츠를 `Suspense` 하위 컴포넌트로 분리해 Next 15 prerender 오류를 막았다.
 - 루트 `themeColor`는 `metadata`가 아니라 `viewport` export에서 설정한다.
-- `npm run typecheck`는 통과했고, `npm run build`는 이 환경의 Next worker `spawn EPERM` 제약으로 중단됐다.
+- 당시 로컬 Next worker 제약은 이후 해소됐으며, 현재 `npm run build`와 Functions 배포 준비 빌드가 통과한다.
 
 ## 2026-05-12 구매 흐름 보정
 - 두 상품 상세 경로(`/products/[productId]`, `/categories/[category]/products/[productId]`)의 장바구니/바로구매 진입 동작을 맞췄다.
@@ -70,13 +66,13 @@
 - 주문 상품 조회는 최상위 `products/{productId}`만 기준으로 단일화했고, `categories/{id}/products` 전체 스캔 fallback은 제거했다.
 
 ## 2026-06-05 Chrome 구매 흐름 보정
-- 로컬 Next 개발 서버에서도 주문 생성을 확인할 수 있도록 `src/app/api/order/route.ts`에서 `/api/order/` 프록시를 추가했다.
-- `OrderService`는 `trailingSlash` 설정에 따른 308 redirect를 피하기 위해 `/api/order/`를 호출한다.
+- 로컬 Next 개발 서버에서도 주문 생성을 확인할 수 있도록 `src/app/api/order/route.ts`에서 `/api/order` 프록시를 추가했다.
+- `OrderService`는 308 redirect를 피하도록 프록시 경로와 동일한 `/api/order`를 호출한다.
 - Functions 주문 생성 트랜잭션은 장바구니 문서 읽기를 모든 쓰기보다 먼저 수행하도록 순서를 바꿔 `Firestore transactions require all reads to be executed before all writes.` 오류를 해결했다.
 - 상품 가격 계산은 `getProductPricing`/`calculateDiscountedUnitPrice` 기준으로 통합해 `originalPrice > price`인 상품을 다시 할인하지 않는다.
 - 장바구니 조회 시 기존에 잘못 저장된 단가/할인 요약은 상품 문서 기준으로 보정해 저장한다.
 - 장바구니와 checkout의 인증 가드는 `authLoading`이 끝난 뒤에만 리다이렉트하고, checkout 결제수단/배송지 라벨은 사용자 표시용 한국어로 정리했다.
-- 현재 Chrome 실제 구매 완료 확인은 배포된 Cloud Function이 아직 이전 코드라 실패한다. `functions:build`는 통과했으며, 함수 배포 후 다시 전체 구매 완료와 마이페이지 주문 노출을 확인해야 한다.
+- 당시 배포 Function 버전 차이로 남았던 확인 항목은 2026-06-29 Chrome QA에서 실제 주문 완료와 마이페이지 주문 노출까지 검증해 해소했다.
 
 ## 2026-06-05 checkout 반응형 UI 보정
 - `/orders/checkout`의 주문 상품, 배송 주소, 결제 방식, 포인트 사용 영역을 실제 `.section` 카드 구조로 감싸 CSS와 JSX 구조를 맞췄다.
@@ -116,7 +112,7 @@
 - `functions/__tests__/httpHandlers.test.ts`에서 합산 재고 부족, 비활성 상품, 선언되지 않은 옵션, 취소 복원 및 구형 상품 호환을 검증한다.
 
 ## 2026-07-10 주문·배송지 안내
-- checkout은 임시 주소를 생성하지 않고 회원 프로필의 실제 `addresses` 또는 기존 `address` 데이터만 사용한다. 등록된 주소가 없으면 주문을 막고 정보 수정 화면으로 안내한다.
+- 저장 주소만 허용하던 이 시점의 제약은 아래 2026-07-13 직접 입력 기능으로 대체됐다.
 - 실제 PG 연동 전 포트폴리오 범위를 명확히 하기 위해 checkout CTA와 완료 화면에 실제 결제가 없는 주문임을 표시한다.
 
 ## 2026-07-10 포인트 사용 한도
@@ -135,3 +131,10 @@
 - `입력한 배송지 저장하기`는 기본 체크 상태이며, 주문 생성이 성공한 뒤에만 회원 `addresses`에 새 주소를 추가한다.
 - 저장 체크를 해제하면 입력 주소는 해당 주문에만 사용한다.
 - 주문 성공 후 프로필 주소 저장만 실패한 경우 주문을 취소하지 않고 저장 실패를 별도로 안내한다.
+
+## 2026-07-20 인증·Rules 경계
+
+- 주문 생성, 고객 취소, 관리자 상태 변경은 모두 공통 서버 인증을 거친다. 서버는 `verifyIdToken(token, true)`로 revoked token을 확인하고 `users/{uid}.status == active`인 계정만 허용한다.
+- `inactive`, `banned`, `deleted`, 사용자 문서 부재는 fail-closed 처리한다. 관리자 동작은 token admin claim과 활성 사용자 문서의 `role: admin`을 모두 요구한다.
+- Firestore Rules는 주문 문서의 클라이언트 `create`, `update`, `delete`를 관리자에게도 허용하지 않는다. 주문 쓰기는 Admin SDK Function만 수행하고, 읽기는 활성 소유자 또는 엄격 관리자에게만 허용한다.
+- 상품 조회·재고 차감·복구는 이미 최상위 `products/{productId}`를 사용한다. 레거시 `categories/{categoryId}/products/{productId}` 전체 스캔 fallback은 없다.

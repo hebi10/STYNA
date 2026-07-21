@@ -1,6 +1,13 @@
 // ─── 채팅 공통 응답 로직 (Next.js 환경) ────────────────
 // functions/src/chatResponses.ts 와 내용이 동일합니다.
 
+import {
+  buildDemoDataNotice,
+  formatShippingPolicy,
+  formatSignupBenefit,
+  formatSupportHours,
+} from '@/shared/constants/commercePolicy';
+
 export type MenuKey =
   | 'agent'
   | 'order'
@@ -38,15 +45,14 @@ function matchMenu(lower: string): MenuKey {
 const RESPONSES: Record<MenuKey, string> = {
   agent: `상담 연결 요청을 확인했습니다.
 
-평일 10:00~18:00에는 순차적으로 확인합니다.
+${formatSupportHours()}에는 순차적으로 확인합니다.
 운영시간 외에는 1:1 문의를 남겨주시면 다음 영업일에 답변드리겠습니다.`,
 
   order: `주문 · 배송 안내
 
-주문 확인: 마이페이지 > 주문내역에서 실시간 확인 가능합니다.
-배송 시간: 평일 오후 2시 이전 주문 시 당일 발송됩니다.
-배송비: 3,000원 (50,000원 이상 구매 시 무료)
-배송 기간: 1~3일 (도서·산간 지역 제외)
+주문 확인: 마이페이지 > 주문내역에서 확인할 수 있습니다.
+배송비: ${formatShippingPolicy()}
+출고 안내: 확정 일정을 약속하지 않으며 주문별 배송 상태를 확인해 주세요.
 
 추가 문의: 고객센터 sevim0104@naver.com
 
@@ -54,14 +60,8 @@ const RESPONSES: Record<MenuKey, string> = {
 
   return: `반품 · 교환 안내
 
-신청 기간: 상품 수령 후 7일 이내
-신청 조건: 상품 태그 및 포장 상태 유지
-신청 방법: 마이페이지 > 주문내역 > 반품·교환 신청
-배송비: 단순 변심의 경우 왕복 배송비 고객 부담
-
-반품·교환 불가 상품
-- 속옷, 양말 등 위생용품
-- 커스텀 제작 상품
+마이페이지 > 주문내역에서 주문 상태를 확인한 뒤 1:1 문의를 남겨주세요.
+가능 여부, 접수 기간, 배송비는 상품과 주문 상태를 확인해 개별 안내합니다.
 
 고객센터: sevim0104@naver.com`,
 
@@ -73,18 +73,16 @@ const RESPONSES: Record<MenuKey, string> = {
 빠른 확인 경로
 - 상품문의: 하단 상품문의 바로가기
 - 1:1 문의: 고객센터 > 1:1 문의
-- 운영시간: 평일 10:00~18:00`,
+- 운영시간: ${formatSupportHours()}`,
 
   coupon: `쿠폰 · 할인 혜택 안내
 
-현재 진행 중인 혜택
-- 신규 회원 10% 할인 쿠폰 (즉시 사용 가능)
-- 생일 월 15% 할인 쿠폰
-- 50,000원 이상 구매 시 무료배송
-- 구매 금액의 1% 적립금 자동 지급
+현재 구현된 공통 혜택
+- ${formatSignupBenefit()}
+- ${formatShippingPolicy()}
 
 쿠폰 확인: 마이페이지 > 쿠폰함
-등급별 추가 혜택은 회원 혜택(6번)에서 확인하세요.`,
+화면에 실제 발급된 쿠폰과 사용 조건을 기준으로 확인해 주세요.`,
 
   size: `사이즈 가이드
 
@@ -92,22 +90,14 @@ const RESPONSES: Record<MenuKey, string> = {
 신발: 230~280mm (5mm 단위 제공, 브랜드별 핏 정보 제공)
 
 사이즈 교환
-- 수령 후 7일 이내 무료 교환 1회 가능
-- 왕복 배송비 무료
+- 가능 여부와 비용은 상품 및 주문 상태 확인 후 안내
 
 정확한 사이즈 상담은 상담 연결 버튼을 이용해 문의해 주세요.`,
 
   payment: `결제 방법 안내
 
-지원 결제 수단
-- 신용카드 (국내 전 카드사)
-- 무통장입금
-- 카카오페이
-- 네이버페이
-- 페이코
-- 토스페이
-
-결제 보안: SSL 암호화 및 개인정보 보호 적용
+선택한 결제 방식은 데모 주문 기록에만 사용되며 실제 승인·청구가 발생하지 않습니다.
+${buildDemoDataNotice()}
 
 결제 오류 발생 시 고객센터(sevim0104@naver.com) 또는
 상담 연결 버튼으로 문의해 주세요.`,
@@ -115,17 +105,9 @@ const RESPONSES: Record<MenuKey, string> = {
   member: `회원 혜택 안내
 
 신규 회원 혜택
-- 10% 할인 쿠폰 (즉시 사용 가능)
-- 첫 구매 무료배송
-- 1,000원 적립금 지급
+- ${formatSignupBenefit()}
 
-등급별 혜택
-- 실버: 구매액 1% 적립 + 생일 쿠폰 10%
-- 골드: 구매액 2% 적립 + 생일 쿠폰 15%
-- 플래티넘: 구매액 3% 적립 + 생일 쿠폰 20%
-- VIP: 구매액 5% 적립 + 생일 쿠폰 25%, 신상품 우선 구매
-
-더 자세한 혜택은 상담 연결을 통해 확인하세요.`,
+그 외 혜택은 마이페이지에 실제 발급된 쿠폰과 포인트를 기준으로 확인해 주세요.`,
 
   greeting: `안녕하세요, STYNA 고객 지원팀입니다.
 
@@ -148,7 +130,7 @@ const RESPONSES: Record<MenuKey, string> = {
 4. 사이즈 가이드  5. 결제 방법  6. 회원 혜택
 
 1:1 맞춤 상담: 상담 연결 버튼 선택
-고객센터: sevim0104@naver.com (평일 09:00 ~ 18:00)`,
+고객센터: sevim0104@naver.com (${formatSupportHours()})`,
 };
 
 /** useAI = false 일 때 메뉴 기반 응답 */

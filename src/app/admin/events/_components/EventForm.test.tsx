@@ -64,6 +64,8 @@ const baseEvent: Event = {
     product: '/product.webp',
   },
   eventType: 'sale',
+  eligibilityType: 'none',
+  rewardType: 'none',
   startDate: new Date('2026-06-01T00:00:00+09:00'),
   endDate: new Date('2026-06-30T23:59:59+09:00'),
   isActive: true,
@@ -167,5 +169,173 @@ describe('EventForm', () => {
         })
       );
     });
+  });
+
+  test('requires target product ids for purchase evidence', async () => {
+    jest.mocked(CategoryService.getCategories).mockResolvedValue([]);
+
+    const { container } = render(<EventForm event={baseEvent} />);
+    await waitFor(() => {
+      expect(screen.queryByText('카테고리를 불러오는 중...')).not.toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('참여 자격'), {
+      target: { value: 'delivered' },
+    });
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    expect(window.alert).toHaveBeenCalledWith(
+      '구매 자격 이벤트에는 대상 상품 ID가 필요합니다.'
+    );
+    expect(EventService.createEvent).not.toHaveBeenCalled();
+  });
+
+  test('offers only none or coupon rewards', async () => {
+    jest.mocked(CategoryService.getCategories).mockResolvedValue([]);
+
+    render(<EventForm event={baseEvent} />);
+    await waitFor(() => {
+      expect(screen.queryByText('카테고리를 불러오는 중...')).not.toBeInTheDocument();
+    });
+
+    const rewardSelect = screen.getByLabelText('보상 유형');
+    expect(rewardSelect).toHaveTextContent('보상 없음');
+    expect(rewardSelect).toHaveTextContent('쿠폰');
+    expect(rewardSelect).not.toHaveTextContent('적립금');
+  });
+
+  test('normalizes target products and includes a coupon id only for coupon rewards', async () => {
+    jest.mocked(CategoryService.getCategories).mockResolvedValue([]);
+    jest.mocked(EventService.createEvent).mockResolvedValue('new-event');
+
+    const { container } = render(<EventForm event={baseEvent} />);
+
+    fireEvent.change(screen.getByLabelText('참여 자격'), {
+      target: { value: 'purchase' },
+    });
+    fireEvent.change(screen.getByLabelText('대상 상품 ID'), {
+      target: { value: ' product-1\nproduct-2, product-1 ' },
+    });
+    fireEvent.change(screen.getByLabelText('보상 유형'), {
+      target: { value: 'coupon' },
+    });
+    fireEvent.change(screen.getByLabelText('보상 쿠폰 문서 ID'), {
+      target: { value: ' coupon-1 ' },
+    });
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(EventService.createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eligibilityType: 'purchase',
+          targetProducts: ['product-1', 'product-2'],
+          rewardType: 'coupon',
+          rewardCouponId: 'coupon-1',
+        })
+      );
+    });
+  });
+
+  test('requires a coupon document id for coupon rewards', async () => {
+    jest.mocked(CategoryService.getCategories).mockResolvedValue([]);
+
+    const { container } = render(<EventForm event={baseEvent} />);
+    await waitFor(() => {
+      expect(screen.queryByText('카테고리를 불러오는 중...')).not.toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('보상 유형'), {
+      target: { value: 'coupon' },
+    });
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    expect(window.alert).toHaveBeenCalledWith(
+      '쿠폰 보상에는 쿠폰 관리 문서 ID가 필요합니다.'
+    );
+    expect(EventService.createEvent).not.toHaveBeenCalled();
+  });
+
+  test('omits coupon ids when no reward is selected', async () => {
+    jest.mocked(CategoryService.getCategories).mockResolvedValue([]);
+    jest.mocked(EventService.createEvent).mockResolvedValue('new-event');
+
+    const { container } = render(<EventForm event={{
+      ...baseEvent,
+      rewardType: 'none',
+      rewardCouponId: 'legacy-coupon',
+    }} />);
+
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(EventService.createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rewardType: 'none',
+        })
+      );
+    });
+    expect(EventService.createEvent).toHaveBeenCalledWith(
+      expect.not.objectContaining({ rewardCouponId: expect.anything() })
+    );
+  });
+
+  test('classifies a legacy review event and requires target products before editing', async () => {
+    jest.mocked(CategoryService.getCategories).mockResolvedValue([]);
+    const legacyReviewEvent = {
+      ...baseEvent,
+      id: 'event-2026-03-photo-review',
+      title: '포토 리뷰 이벤트',
+      eligibilityType: undefined,
+    } as Event;
+    const { container } = render(<EventForm event={legacyReviewEvent} isEdit />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('카테고리를 불러오는 중...')).not.toBeInTheDocument();
+    });
+    expect(screen.getByLabelText('참여 자격')).toHaveValue('review');
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    expect(window.alert).toHaveBeenCalledWith(
+      '구매 자격 이벤트에는 대상 상품 ID가 필요합니다.'
+    );
+    expect(EventService.updateEvent).not.toHaveBeenCalled();
+  });
+
+  test('omits stale conditional fields when editing an event to none', async () => {
+    jest.mocked(CategoryService.getCategories).mockResolvedValue([]);
+    jest.mocked(EventService.updateEvent).mockResolvedValue(undefined);
+    const configuredEvent: Event = {
+      ...baseEvent,
+      eligibilityType: 'review',
+      rewardType: 'coupon',
+      targetProducts: ['product-1'],
+      rewardCouponId: 'coupon-1',
+    };
+    const { container } = render(<EventForm event={configuredEvent} isEdit />);
+
+    fireEvent.change(screen.getByLabelText('참여 자격'), {
+      target: { value: 'none' },
+    });
+    fireEvent.change(screen.getByLabelText('보상 유형'), {
+      target: { value: 'none' },
+    });
+    fireEvent.submit(container.querySelector('form') as HTMLFormElement);
+
+    await waitFor(() => {
+      expect(EventService.updateEvent).toHaveBeenCalledWith(
+        configuredEvent.id,
+        expect.objectContaining({
+          eligibilityType: 'none',
+          rewardType: 'none',
+        })
+      );
+    });
+    expect(EventService.updateEvent).toHaveBeenCalledWith(
+      configuredEvent.id,
+      expect.not.objectContaining({
+        targetProducts: expect.anything(),
+        rewardCouponId: expect.anything(),
+      })
+    );
   });
 });

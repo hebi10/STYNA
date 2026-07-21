@@ -3,12 +3,10 @@ import {
   doc,
   getDoc,
   getDocs,
-  updateDoc,
   query,
   where,
   orderBy,
   limit,
-  serverTimestamp,
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '@/shared/libs/firebase/firebase';
@@ -324,23 +322,4 @@ export class OrderService {
     }
   }
 
-  static async updateDeliveryInfo(
-    orderId: string,
-    deliveryInfo: {
-      trackingNumber?: string;
-      deliveryCompany?: string;
-      estimatedDeliveryDate?: Date;
-    }
-  ): Promise<void> {
-    try {
-      const orderRef = doc(db, this.COLLECTION_NAME, orderId);
-      await updateDoc(orderRef, {
-        ...deliveryInfo,
-        updatedAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.error('Failed to update delivery info:', error);
-      throw error;
-    }
-  }
 }

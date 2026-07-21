@@ -12,8 +12,6 @@ export default function QnAListPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState<Record<string, number>>({});
 
   const categories = [
@@ -47,7 +45,6 @@ export default function QnAListPage() {
       }
 
       setQnas(filteredQnas);
-      setTotalPages(result.pagination.totalPages || 1);
     } catch (err) {
       setError('QnA 목록을 불러오지 못했습니다.');
       console.error('Error loading QnAs:', err);
@@ -79,17 +76,11 @@ export default function QnAListPage() {
   }, [qnas, loadStats]);
 
   const handleSearch = () => {
-    setCurrentPage(1);
     loadQnAs();
   };
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
-    setCurrentPage(1);
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
   };
 
   const formatDate = (date: Date) => {
@@ -225,7 +216,6 @@ export default function QnAListPage() {
                 {qna.isSecret && <span className={styles.secretBadge}>비밀글</span>}
               </div>
               <div className={styles.qnaStats}>
-                <span className={styles.views}>조회 {qna.views}</span>
                 <span className={styles.date}>{formatDate(qna.createdAt)}</span>
               </div>
             </div>
@@ -254,38 +244,6 @@ export default function QnAListPage() {
           </div>
         ))}
       </div>
-
-      {totalPages > 1 && (
-        <div className={styles.pagination}>
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className={styles.pageButton}
-          >
-            이전
-          </button>
-          
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-            <button
-              key={page}
-              onClick={() => handlePageChange(page)}
-              className={`${styles.pageButton} ${
-                currentPage === page ? styles.active : ''
-              }`}
-            >
-              {page}
-            </button>
-          ))}
-          
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className={styles.pageButton}
-          >
-            다음
-          </button>
-        </div>
-      )}
 
       <div className={styles.writeSection}>
         <Link href="/qna/write" className={styles.writeButton}>

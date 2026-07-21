@@ -50,6 +50,7 @@ import { order } from "../src/handlers/order";
 import { qna } from "../src/handlers/qna";
 import { event } from "../src/handlers/event";
 import { review } from "../src/handlers/review";
+import { ExpiredOrderCouponError } from "../src/domain/orderDomain";
 import { AuthError, verifyAuthContext, verifyAuth, requireAdmin } from "../src/utils/auth";
 
 type Handler = (req: {
@@ -780,6 +781,7 @@ describe("coupon issuance", () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     jest.clearAllMocks();
   });
 
@@ -787,6 +789,8 @@ describe("coupon issuance", () => {
     ["issue", { couponId: "coupon-1" }],
     ["register", { couponCode: "WELCOME" }],
   ])("%s runs duplicate check and usedCount update in a transaction", async (action, payload) => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-07-20T15:00:00.000Z"));
     const response = createResponse();
     const couponRef = { id: "coupon-1" };
     const userCouponRef = { id: "user-coupon-1" };
@@ -800,6 +804,8 @@ describe("coupon issuance", () => {
       where: jest.fn(),
     };
     userCouponsCollection.where.mockReturnValue(userCouponsCollection);
+    const set = jest.fn();
+    const update = jest.fn();
     const db = {
       collection: jest.fn((name: string) => (name === "coupons" ? couponsCollection : userCouponsCollection)),
       runTransaction: jest.fn(async (callback: (tx: {
@@ -835,8 +841,8 @@ describe("coupon issuance", () => {
                 }),
               })
           .mockResolvedValueOnce({ empty: true }),
-        set: jest.fn(),
-        update: jest.fn(),
+        set,
+        update,
       })),
     };
     jest.mocked(getFirestore).mockReturnValue(db as never);
@@ -848,6 +854,7 @@ describe("coupon issuance", () => {
     }, response);
 
     expect(db.runTransaction).toHaveBeenCalledTimes(1);
+    expect(set).toHaveBeenCalledWith(userCouponRef, expect.objectContaining({ issuedDate: "2026-07-21" }));
     expect(response.status).toHaveBeenCalledWith(200);
   });
 
@@ -1086,6 +1093,147 @@ describe("order inventory integrity", () => {
     expect(response.status).toHaveBeenCalledWith(200);
     expect(transaction.set).toHaveBeenCalledTimes(1);
   });
+
+  test("commits only expired coupon status after the order transaction rolls back", async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-07-21T15:00:00.000Z"));
+
+    const response = createResponse();
+    const product = { name: "테스트 상품", stock: 10, price: 10000, status: "active" };
+    const cart = {
+      items: [{ id: "cart-1", productId: "product-1", quantity: 1, price: 10000 }],
+      totalAmount: 10000,
+      totalItems: 1,
+    };
+    const userCoupon = { uid: "user-1", couponId: "coupon-1", status: "사용가능" };
+    const couponMaster = {
+      isActive: true,
+      expiryDate: "2026-07-21",
+      type: "할인금액",
+      value: 1000,
+    };
+    const orderStore: Record<string, unknown>[] = [];
+
+    const userRef = { kind: "user", id: "user-1" };
+    const productRef = { kind: "product", id: "product-1" };
+    const cartRef = { kind: "cart", id: "user-1" };
+    const userCouponRef = { kind: "user-coupon", id: "user-coupon-1" };
+    const couponRef = { kind: "coupon", id: "coupon-1" };
+    const orderRef = { kind: "order", id: "order-1" };
+    const collections = {
+      users: { doc: jest.fn(() => userRef) },
+      products: { doc: jest.fn(() => productRef) },
+      carts: { doc: jest.fn(() => cartRef) },
+      user_coupons: { doc: jest.fn(() => userCouponRef) },
+      coupons: { doc: jest.fn(() => couponRef) },
+      orders: { doc: jest.fn(() => orderRef) },
+    };
+
+    const read = async (ref: unknown) => {
+      if (ref === userRef) return { exists: true, data: () => ({ pointBalance: 0 }) };
+      if (ref === productRef) return { exists: true, data: () => ({ ...product }) };
+      if (ref === cartRef) return { exists: true, data: () => ({ ...cart, items: [...cart.items] }) };
+      if (ref === userCouponRef) return { exists: true, data: () => ({ ...userCoupon }) };
+      if (ref === couponRef) return { exists: true, data: () => ({ ...couponMaster }) };
+      return { exists: false, data: () => ({}) };
+    };
+
+    const db = {
+      collection: jest.fn((name: keyof typeof collections) => collections[name]),
+      runTransaction: jest.fn(async (callback: (tx: {
+        get: (ref: unknown) => Promise<unknown>;
+        set: (ref: unknown, data: Record<string, unknown>) => void;
+        update: (ref: unknown, data: Record<string, unknown>) => void;
+      }) => unknown) => {
+        const staged: Array<() => void> = [];
+        const result = await callback({
+          get: read,
+          set: (ref, data) => staged.push(() => {
+            if (ref === orderRef) orderStore.push({ ...data });
+          }),
+          update: (ref, data) => staged.push(() => {
+            if (ref === productRef) Object.assign(product, data);
+            if (ref === cartRef) Object.assign(cart, data);
+            if (ref === userCouponRef) Object.assign(userCoupon, data);
+          }),
+        });
+        staged.forEach((commit) => commit());
+        return result;
+      }),
+    };
+    jest.mocked(admin.firestore).mockReturnValue(db as never);
+
+    try {
+      await (order as unknown as Handler)({
+        method: "POST",
+        headers: { authorization: "Bearer user-token" },
+        body: {
+          items: [{ id: "cart-1", productId: "product-1", size: "M", color: "black", quantity: 1 }],
+          deliveryAddress: {
+            id: "address-1",
+            name: "집",
+            recipient: "사용자",
+            phone: "010-0000-0000",
+            address: "서울시",
+            detailAddress: "101호",
+            zipCode: "12345",
+            isDefault: true,
+          },
+          paymentMethod: "card",
+          deliveryOption: "standard",
+          selectedCoupon: "user-coupon-1",
+        },
+      }, response);
+    } finally {
+      jest.useRealTimers();
+    }
+
+    expect(response.status).toHaveBeenCalledWith(410);
+    expect(orderStore).toHaveLength(0);
+    expect(product.stock).toBe(10);
+    expect(cart.items).toEqual([{ id: "cart-1", productId: "product-1", quantity: 1, price: 10000 }]);
+    expect(userCoupon.status).toBe("기간만료");
+    expect(db.runTransaction).toHaveBeenCalledTimes(2);
+  });
+
+  test("returns 500 when the separate expired coupon status transaction fails", async () => {
+    const response = createResponse();
+    const db = {
+      runTransaction: jest.fn()
+        .mockRejectedValueOnce(new ExpiredOrderCouponError("user-coupon-1"))
+        .mockRejectedValueOnce(new Error("expired status write failed")),
+    };
+    jest.mocked(admin.firestore).mockReturnValue(db as never);
+
+    await (order as unknown as Handler)({
+      method: "POST",
+      headers: { authorization: "Bearer user-token" },
+      body: {
+        items: [{ productId: "product-1", size: "M", color: "black", quantity: 1 }],
+        deliveryAddress: {
+          id: "address-1",
+          name: "집",
+          recipient: "사용자",
+          phone: "010-0000-0000",
+          address: "서울시",
+          detailAddress: "101호",
+          zipCode: "12345",
+          isDefault: true,
+        },
+        paymentMethod: "card",
+        deliveryOption: "standard",
+        selectedCoupon: "user-coupon-1",
+      },
+    }, response);
+
+    expect(db.runTransaction).toHaveBeenCalledTimes(2);
+    expect(response.status).toHaveBeenCalledTimes(1);
+    expect(response.status).toHaveBeenCalledWith(500);
+    expect(response.json).toHaveBeenCalledWith({
+      success: false,
+      error: "Failed to persist expired coupon status.",
+    });
+  });
 });
 
 describe("QnA secret access", () => {
@@ -1175,7 +1323,8 @@ describe("QnA secret access", () => {
     expect(qnaQuery.where).toHaveBeenNthCalledWith(1, "isSecret", "==", false);
     expect(qnaQuery.where).toHaveBeenNthCalledWith(2, "category", "==", "product");
     expect(qnaQuery.orderBy).toHaveBeenCalledWith("createdAt", "desc");
-    expect(qnaQuery.offset).toHaveBeenCalledWith(0);
+    expect(qnaQuery.offset).not.toHaveBeenCalled();
+    expect(qnaQuery.count).not.toHaveBeenCalled();
     expect(qnaQuery.limit).toHaveBeenCalledWith(10);
     expect(response.set).toHaveBeenCalledWith("Cache-Control", "no-store, max-age=0");
     expect(response.status).toHaveBeenCalledWith(200);
@@ -1186,6 +1335,44 @@ describe("QnA secret access", () => {
     expect(payload.qnas[0]).not.toHaveProperty("internalNote");
     expect(payload.qnas[0].userName).not.toBe("owner name");
     expect(payload.pagination).toEqual({ page: 1, limit: 10, totalCount: 1, totalPages: 1 });
+  });
+
+  test("keeps repeated public detail reads free of Firestore writes", async () => {
+    const qnaRef = {
+      get: jest.fn().mockResolvedValue({
+        exists: true,
+        data: () => ({
+          userId: "owner-1",
+          userName: "owner name",
+          category: "general",
+          title: "공개 문의",
+          content: "내용",
+          images: [],
+          isSecret: false,
+          status: "waiting",
+          views: 7,
+        }),
+      }),
+      update: jest.fn(),
+    };
+    jest.mocked(admin.firestore).mockReturnValue({
+      collection: jest.fn(() => ({ doc: jest.fn(() => qnaRef) })),
+    } as never);
+
+    const firstResponse = createResponse();
+    const secondResponse = createResponse();
+    const request = {
+      method: "POST",
+      headers: {},
+      body: { action: "getDetail", qnaId: "public-qna" },
+    };
+
+    await (qna as unknown as Handler)(request, firstResponse);
+    await (qna as unknown as Handler)(request, secondResponse);
+
+    expect(firstResponse.status).toHaveBeenCalledWith(200);
+    expect(secondResponse.status).toHaveBeenCalledWith(200);
+    expect(qnaRef.update).not.toHaveBeenCalled();
   });
 
   test("rejects unbounded or unsupported public list filters before querying", async () => {
@@ -1201,6 +1388,26 @@ describe("QnA secret access", () => {
         filters: { userId: "owner-1" },
         page: 1,
         limit: 1000,
+      },
+    }, response);
+
+    expect(response.status).toHaveBeenCalledWith(400);
+    expect(collection).not.toHaveBeenCalled();
+  });
+
+  test("rejects public list pages after page 1 before querying", async () => {
+    const response = createResponse();
+    const collection = jest.fn();
+    jest.mocked(admin.firestore).mockReturnValue({ collection } as never);
+
+    await (qna as unknown as Handler)({
+      method: "POST",
+      headers: {},
+      body: {
+        action: "publicList",
+        filters: {},
+        page: 2,
+        limit: 10,
       },
     }, response);
 
@@ -1248,6 +1455,7 @@ describe("QnA secret access", () => {
     expect(payload.qna).not.toHaveProperty("userId");
     expect(payload.qna).not.toHaveProperty("userEmail");
     expect(payload.qna).not.toHaveProperty("isNotified");
+    expect(qnaRef.update).not.toHaveBeenCalled();
   });
 
   test.each([undefined, null])(
@@ -1296,6 +1504,121 @@ describe("event participation", () => {
     jest.clearAllMocks();
   });
 
+  function createEventParticipationHarness(options: {
+    eventData?: Record<string, unknown>;
+    participantExists?: boolean;
+    orders?: Array<{ id: string; data: Record<string, unknown> }>;
+    reviews?: Record<string, Record<string, unknown>>;
+    couponData?: Record<string, unknown>;
+  } = {}) {
+    const eventRef = { kind: "event", id: "event-1" };
+    const participantRef = { kind: "participant", id: "event-1_user-1" };
+    const couponRef = { kind: "coupon", id: "coupon-1" };
+    const userCouponRef = { kind: "user-coupon", id: "user-coupon-1" };
+    const orderQuery = { kind: "orders-query" };
+    const operationOrder: string[] = [];
+    const events = { doc: jest.fn(() => eventRef) };
+    const participants = { doc: jest.fn(() => participantRef) };
+    const orders = { where: jest.fn(() => orderQuery) };
+    const reviews = { doc: jest.fn((id: string) => ({ kind: "review", id })) };
+    const coupons = { doc: jest.fn(() => couponRef) };
+    const userCoupons: { doc: jest.Mock; where: jest.Mock } = {
+      doc: jest.fn(() => userCouponRef),
+      where: jest.fn(),
+    };
+    userCoupons.where.mockReturnValue(userCoupons);
+    let participantExists = options.participantExists ?? false;
+    const eventData = {
+      isActive: true,
+      startDate: new Date(Date.now() - 60_000),
+      endDate: new Date(Date.now() + 60_000),
+      participantCount: 0,
+      eventType: "special",
+      eligibilityType: "none",
+      rewardType: "none",
+      ...options.eventData,
+    };
+    const transaction = {
+      get: jest.fn(async (target: unknown) => {
+        const kind = (target as { kind?: string })?.kind;
+        operationOrder.push(`read:${kind || "query"}`);
+        if (target === eventRef) {
+          return { exists: true, data: () => eventData };
+        }
+        if (target === participantRef) {
+          return {
+            exists: participantExists,
+            data: () => ({ rewardCouponId: null }),
+          };
+        }
+        if (target === orderQuery) {
+          return {
+            docs: (options.orders || []).map((order) => ({
+              id: order.id,
+              data: () => order.data,
+            })),
+          };
+        }
+        if (kind === "review") {
+          const reviewId = (target as { id: string }).id;
+          const reviewData = options.reviews?.[reviewId];
+          return {
+            exists: Boolean(reviewData),
+            data: () => reviewData || {},
+          };
+        }
+        if (target === couponRef) {
+          return {
+            exists: true,
+            data: () => options.couponData || {
+              name: "이벤트 쿠폰",
+              isActive: true,
+              isDirectAssign: true,
+              expiryDate: "2099-01-01",
+              usedCount: 0,
+              usageLimit: 10,
+            },
+          };
+        }
+        if (target === userCoupons) {
+          return { empty: true, docs: [] };
+        }
+        return { exists: false, empty: true, docs: [], data: () => ({}) };
+      }),
+      set: jest.fn((target: unknown) => {
+        operationOrder.push(`write:set:${(target as { kind?: string })?.kind || "unknown"}`);
+        if (target === participantRef) participantExists = true;
+      }),
+      update: jest.fn((target: unknown) => {
+        operationOrder.push(`write:update:${(target as { kind?: string })?.kind || "unknown"}`);
+      }),
+    };
+    const db = {
+      collection: jest.fn((name: string) => ({
+        events,
+        eventParticipants: participants,
+        orders,
+        reviews,
+        coupons,
+        user_coupons: userCoupons,
+      }[name] || { doc: jest.fn() })),
+      runTransaction: jest.fn((callback: (tx: typeof transaction) => unknown) => callback(transaction)),
+    };
+    jest.mocked(getFirestore).mockReturnValue(db as never);
+
+    const participate = async () => {
+      const response = createResponse();
+      await (event as unknown as Handler)({
+        method: "POST",
+        headers: { authorization: "Bearer user-token" },
+        body: { eventId: "event-1" },
+      }, response);
+      return response;
+    };
+
+    return { db, eventData, operationOrder, participate, transaction };
+  }
+
   test("creates one participant, increments once, and issues the configured reward coupon", async () => {
     const response = createResponse();
     const eventRef = { id: "event-1" };
@@ -1323,6 +1646,8 @@ describe("event participation", () => {
               participantCount: 0,
               eventType: "coupon",
               couponType: "auto",
+              eligibilityType: "none",
+              rewardType: "coupon",
               rewardCouponId: "coupon-1",
             }),
           };
@@ -1398,6 +1723,182 @@ describe("event participation", () => {
       success: true,
       data: expect.objectContaining({ alreadyParticipated: true }),
     }));
+  });
+
+  test.each([
+    ["missing eligibilityType", { eligibilityType: undefined, rewardType: "none" }],
+    ["invalid eligibilityType", { eligibilityType: "unknown", rewardType: "none" }],
+    ["whitespace eligibilityType", { eligibilityType: " none ", rewardType: "none" }],
+    ["missing evidence targets", { eligibilityType: "purchase", rewardType: "none" }],
+    ["stale targets for none", {
+      eligibilityType: "none",
+      targetProducts: ["target-1"],
+      rewardType: "none",
+    }],
+    ["empty target field for none", {
+      eligibilityType: "none",
+      targetProducts: [],
+      rewardType: "none",
+    }],
+    ["missing rewardType", { eligibilityType: "none", rewardType: undefined }],
+    ["invalid rewardType", { eligibilityType: "none", rewardType: "points" }],
+    ["whitespace rewardType", { eligibilityType: "none", rewardType: " none " }],
+    ["coupon reward without coupon id", { eligibilityType: "none", rewardType: "coupon" }],
+    ["stale coupon id for no reward", {
+      eligibilityType: "none",
+      rewardType: "none",
+      rewardCouponId: "coupon-1",
+    }],
+    ["empty coupon field for no reward", {
+      eligibilityType: "none",
+      rewardType: "none",
+      rewardCouponId: "",
+    }],
+  ])("fails closed without writes for %s", async (_caseName, eventData) => {
+    const harness = createEventParticipationHarness({ eventData });
+
+    const response = await harness.participate();
+
+    expect(response.status).toHaveBeenCalledWith(409);
+    expect(response.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: false,
+      code: "event_misconfigured",
+    }));
+    expect(harness.transaction.set).not.toHaveBeenCalled();
+    expect(harness.transaction.update).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ["inactive event", { isActive: false }, 403, "event_inactive"],
+    ["event before start", { startDate: new Date(Date.now() + 60_000) }, 409, "event_not_started"],
+    ["event after end", { endDate: new Date(Date.now() - 60_000) }, 409, "event_ended"],
+    ["full event", {
+      participantCount: 2,
+      hasMaxParticipants: true,
+      maxParticipants: 2,
+    }, 409, "max_participants"],
+    ["manual coupon event", {
+      eventType: "coupon",
+      couponType: "manual",
+    }, 403, "manual_coupon"],
+  ])(
+    "rejects %s before eligibility or reward writes",
+    async (_caseName, eventData, statusCode, code) => {
+      const harness = createEventParticipationHarness({ eventData });
+
+      const response = await harness.participate();
+
+      expect(response.status).toHaveBeenCalledWith(statusCode);
+      expect(response.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        code,
+      }));
+      expect(harness.transaction.set).not.toHaveBeenCalled();
+      expect(harness.transaction.update).not.toHaveBeenCalled();
+    },
+  );
+
+  test("rejects a wrong target product without writing participant or count", async () => {
+    const harness = createEventParticipationHarness({
+      eventData: {
+        eligibilityType: "purchase",
+        targetProducts: ["target-1"],
+        rewardType: "none",
+      },
+      orders: [{
+        id: "order-1",
+        data: {
+          userId: "user-1",
+          status: "pending",
+          products: [{ productId: "other-1", size: "M", color: "black", quantity: 1 }],
+        },
+      }],
+    });
+
+    const response = await harness.participate();
+
+    expect(response.status).toHaveBeenCalledWith(403);
+    expect(response.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: false,
+      code: "ineligible_purchase",
+    }));
+    expect(harness.transaction.set).not.toHaveBeenCalled();
+    expect(harness.transaction.update).not.toHaveBeenCalled();
+  });
+
+  test("finishes all eligibility and coupon reads before any transaction write", async () => {
+    const harness = createEventParticipationHarness({
+      eventData: {
+        eligibilityType: "purchase",
+        targetProducts: ["target-1"],
+        rewardType: "coupon",
+        rewardCouponId: "coupon-1",
+      },
+      orders: [{
+        id: "order-1",
+        data: {
+          userId: "user-1",
+          status: "pending",
+          products: [{ productId: "target-1", size: "M", color: "black", quantity: 1 }],
+        },
+      }],
+    });
+
+    const response = await harness.participate();
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(harness.operationOrder).toEqual(expect.arrayContaining([
+      "read:event",
+      "read:participant",
+      "read:orders-query",
+      "read:coupon",
+      "read:query",
+    ]));
+    const lastRead = Math.max(...harness.operationOrder
+      .map((operation, index) => operation.startsWith("read:") ? index : -1));
+    const firstWrite = harness.operationOrder.findIndex((operation) => operation.startsWith("write:"));
+    expect(firstWrite).toBeGreaterThan(lastRead);
+  });
+
+  test("writes no participant or count when coupon issuance fails", async () => {
+    const harness = createEventParticipationHarness({
+      eventData: {
+        eligibilityType: "none",
+        rewardType: "coupon",
+        rewardCouponId: "coupon-1",
+      },
+      couponData: {
+        name: "소진 쿠폰",
+        isActive: true,
+        isDirectAssign: true,
+        expiryDate: "2099-01-01",
+        usedCount: 10,
+        usageLimit: 10,
+      },
+    });
+
+    const response = await harness.participate();
+
+    expect(response.status).toHaveBeenCalledWith(409);
+    expect(harness.transaction.set).not.toHaveBeenCalled();
+    expect(harness.transaction.update).not.toHaveBeenCalled();
+  });
+
+  test("keeps an existing participant idempotent before validating legacy configuration", async () => {
+    const harness = createEventParticipationHarness({
+      participantExists: true,
+      eventData: { eligibilityType: undefined, rewardType: undefined },
+    });
+
+    const response = await harness.participate();
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: true,
+      data: expect.objectContaining({ alreadyParticipated: true }),
+    }));
+    expect(harness.transaction.set).not.toHaveBeenCalled();
+    expect(harness.transaction.update).not.toHaveBeenCalled();
   });
 });
 

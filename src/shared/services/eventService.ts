@@ -6,6 +6,7 @@ import {
   addDoc, 
   updateDoc, 
   deleteDoc, 
+  deleteField,
   query, 
   where, 
   orderBy, 
@@ -35,6 +36,10 @@ export type EventParticipationErrorCode =
   | 'event_inactive'
   | 'manual_coupon'
   | 'max_participants'
+  | 'event_misconfigured'
+  | 'ineligible_purchase'
+  | 'ineligible_delivered'
+  | 'ineligible_review'
   | 'unknown';
 
 export interface EventParticipationResult {
@@ -55,7 +60,18 @@ const EVENT_PARTICIPATION_ERROR_MESSAGES: Record<
   event_inactive: '비활성화된 이벤트입니다.',
   manual_coupon: '수동 쿠폰 이벤트는 직접 참여할 수 없습니다.',
   max_participants: '참여 인원이 마감되었습니다.',
+  event_misconfigured: '이벤트 참여 조건이 올바르게 설정되지 않았습니다. 잠시 후 다시 확인해주세요.',
+  ineligible_purchase: '대상 상품을 다시 선택하거나 구매 내역을 확인해주세요.',
+  ineligible_delivered: '대상 상품을 다시 선택하거나 배송 완료 후 참여해주세요.',
+  ineligible_review: '대상 상품과 옵션을 다시 선택해 구매 인증 리뷰를 작성해주세요.',
 };
+
+function isKnownEventParticipationErrorCode(
+  code: unknown
+): code is Exclude<EventParticipationErrorCode, 'unknown'> {
+  return typeof code === 'string'
+    && Object.prototype.hasOwnProperty.call(EVENT_PARTICIPATION_ERROR_MESSAGES, code);
+}
 
 export class EventParticipationError extends Error {
   code: EventParticipationErrorCode;
@@ -96,6 +112,14 @@ export function getEventParticipationErrorCode(
       return 'manual_coupon';
     case EVENT_PARTICIPATION_ERROR_MESSAGES.max_participants:
       return 'max_participants';
+    case EVENT_PARTICIPATION_ERROR_MESSAGES.event_misconfigured:
+      return 'event_misconfigured';
+    case EVENT_PARTICIPATION_ERROR_MESSAGES.ineligible_purchase:
+      return 'ineligible_purchase';
+    case EVENT_PARTICIPATION_ERROR_MESSAGES.ineligible_delivered:
+      return 'ineligible_delivered';
+    case EVENT_PARTICIPATION_ERROR_MESSAGES.ineligible_review:
+      return 'ineligible_review';
     default:
       return 'unknown';
   }
@@ -304,6 +328,14 @@ export class EventService {
         updateData.endDate = Timestamp.fromDate(eventData.endDate);
       }
 
+      if (eventData.eligibilityType === 'none') {
+        updateData.targetProducts = deleteField();
+      }
+
+      if (eventData.rewardType === 'none') {
+        updateData.rewardCouponId = deleteField();
+      }
+
       await updateDoc(docRef, updateData);
     } catch (error) {
       console.error('Error updating event:', error);
@@ -453,6 +485,9 @@ export class EventService {
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok || !body.success) {
+        if (isKnownEventParticipationErrorCode(body.code)) {
+          throw new EventParticipationError(body.code);
+        }
         throw new Error(body.error || '이벤트 참여 처리에 실패했습니다.');
       }
 

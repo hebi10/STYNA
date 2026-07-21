@@ -350,6 +350,7 @@ export default function AdminInquiriesPage() {
                 <label htmlFor="answer">답변 내용</label>
                 <textarea
                   id="answer"
+                  maxLength={2000}
                   value={answerContent}
                   onChange={(e) => setAnswerContent(e.target.value)}
                   placeholder="고객에게 전달할 답변을 작성해주세요..."

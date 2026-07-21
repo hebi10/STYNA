@@ -21,6 +21,7 @@ import {
   hasActiveAccount,
   hasStrictAdminAccess,
 } from "../shared/utils/authAccess";
+import { getAuthGuardRedirect } from "../shared/utils/authRouteGuard";
 
 interface AuthContextType {
   user: User | null;
@@ -215,13 +216,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   } = useUserData(user?.uid || "");
 
   useEffect(() => {
-    const loginRedirect = !loading && !user && pathname !== "/auth/login" && !pathname.startsWith("/admin") && pathname.includes("/mypage");
-    const userRedirect = !loading && user && !pathname.startsWith("/admin") && pathname === "/auth/login";
+    const guardRedirect = getAuthGuardRedirect({
+      loading,
+      hasUser: Boolean(user),
+      pathname,
+    });
 
-    if (loginRedirect) {
-      router.replace("/auth/login");
-    } else if (userRedirect) {
-      router.replace("/mypage");
+    if (guardRedirect) {
+      router.replace(guardRedirect);
     }
   }, [user, loading, pathname, router]);
 

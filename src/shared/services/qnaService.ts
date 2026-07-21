@@ -63,6 +63,10 @@ export class QnAService {
     page: number = 1,
     limitCount: number = 10
   ): Promise<{ qnas: PublicQnA[]; pagination: QnAPagination }> {
+    if (page !== 1) {
+      throw new Error('Public QnA queries only support page 1.');
+    }
+
     const rawFilters = filters as Record<string, unknown>;
     if ('isSecret' in rawFilters || 'userId' in rawFilters) {
       throw new Error('Public QnA queries do not accept private filters.');

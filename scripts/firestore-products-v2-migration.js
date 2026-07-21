@@ -1,4 +1,6 @@
-const { admin, db, projectId } = require("./util-firestore-admin");
+const {
+  loadFirestoreMigrationRuntime,
+} = require("./firestore-migration-runtime");
 
 const DEFAULT_OPTIONS = {
   sourceCollection: "categories",
@@ -52,13 +54,23 @@ function parseArgs(argv) {
   return { command, options };
 }
 
-async function getCategories() {
-  const snapshot = await db.collection("categories").get();
+function requireRuntime(runtime) {
+  if (!runtime || !runtime.db || !runtime.projectId) {
+    throw new Error("A Firestore migration runtime must be explicitly provided.");
+  }
+
+  return runtime;
+}
+
+async function getCategories(options, runtime) {
+  const { db } = requireRuntime(runtime);
+  const snapshot = await db.collection(options.sourceCollection).get();
   return snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data(), ref: doc.ref }));
 }
 
-async function analyzeStructure(options) {
-  const categories = await getCategories();
+async function analyzeStructure(options, runtime) {
+  const { db, projectId } = requireRuntime(runtime);
+  const categories = await getCategories(options, runtime);
   const sourceByCategory = {};
   const seenProductIds = new Map();
   const duplicateProductIds = [];
@@ -163,7 +175,8 @@ function ensureMigrationPreconditions(report, options) {
   }
 }
 
-async function createRunDocument(options, report) {
+async function createRunDocument(options, report, runtime) {
+  const { admin, db } = requireRuntime(runtime);
   const runId = `products_v2_${Date.now()}`;
   const runRef = db.collection("migrationRuns").doc(runId);
 
@@ -184,8 +197,10 @@ async function createRunDocument(options, report) {
   return { runId, runRef };
 }
 
-async function migrateProducts(options) {
-  const report = await analyzeStructure(options);
+async function migrateProducts(options, runtime) {
+  const migrationRuntime = requireRuntime(runtime);
+  const { admin, db } = migrationRuntime;
+  const report = await analyzeStructure(options, migrationRuntime);
   printAnalyzeReport(report);
   ensureMigrationPreconditions(report, options);
 
@@ -195,9 +210,9 @@ async function migrateProducts(options) {
     return { dryRun: true, report };
   }
 
-  const { runId, runRef } = await createRunDocument(options, report);
+  const { runId, runRef } = await createRunDocument(options, report, migrationRuntime);
   const writer = db.bulkWriter();
-  const categories = await getCategories();
+  const categories = await getCategories(options, migrationRuntime);
   let copiedProducts = 0;
   let normalizedOrders = 0;
 
@@ -307,8 +322,9 @@ async function migrateProducts(options) {
   }
 }
 
-async function validateMigration(options) {
-  const categories = await getCategories();
+async function validateMigration(options, runtime) {
+  const { db } = requireRuntime(runtime);
+  const categories = await getCategories(options, runtime);
   const missingProducts = [];
   const mismatchedCategories = [];
   const mismatchedFields = [];
@@ -423,18 +439,18 @@ async function validateMigration(options) {
   return summary;
 }
 
-async function main() {
-  const { command, options } = parseArgs(process.argv.slice(2));
+async function main(argv, runtime) {
+  const { command, options } = parseArgs(argv);
 
   switch (command) {
     case "analyze":
-      printAnalyzeReport(await analyzeStructure(options));
+      printAnalyzeReport(await analyzeStructure(options, runtime));
       break;
     case "migrate":
-      await migrateProducts(options);
+      await migrateProducts(options, runtime);
       break;
     case "validate":
-      await validateMigration(options);
+      await validateMigration(options, runtime);
       break;
     default:
       console.log("Usage:");
@@ -448,13 +464,16 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch((error) => {
+  const runtime = loadFirestoreMigrationRuntime();
+
+  main(process.argv.slice(2), runtime).catch((error) => {
     console.error(error);
     process.exit(1);
   });
 }
 
 module.exports = {
+  parseArgs,
   analyzeStructure,
   migrateProducts,
   validateMigration,

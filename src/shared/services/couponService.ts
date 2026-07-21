@@ -8,9 +8,7 @@ import {
   query, 
   where, 
   documentId,
-  orderBy, 
-  updateDoc,
-  serverTimestamp
+  orderBy
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '@/shared/libs/firebase/firebase';
@@ -22,6 +20,7 @@ import {
   CouponFilter,
   CouponStats
 } from '@/shared/types/coupon';
+import { isExpiredOnKstDay, parseCouponExpiryDay, toKstDayKey } from '@/shared/utils/kstDate';
 
 /** Firebase Auth ID 토큰을 가져오는 헬퍼 */
 async function getIdToken(): Promise<string> {
@@ -427,10 +426,7 @@ export class CouponService {
         }
         
         // 만료일 확인
-        const expiryDate = new Date(coupon.expiryDate);
-        if (expiryDate < today) {
-          // 만료된 쿠폰은 상태 업데이트 (백그라운드에서)
-          this.expireUserCoupon(userCouponView.id);
+        if (isExpiredOnKstDay(coupon.expiryDate, today)) {
           return false;
         }
         
@@ -482,29 +478,19 @@ export class CouponService {
   // ============ 유틸리티 메서드 ============
   
   /**
-   * 쿠폰 만료 처리 (내부 사용)
-   */
-  private static async expireUserCoupon(userCouponId: string): Promise<void> {
-    try {
-      const docRef = doc(db, 'user_coupons', userCouponId);
-      await updateDoc(docRef, {
-        status: '기간만료',
-        expiredDate: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-        updatedAt: serverTimestamp()
-      });
-    } catch (error) {
- console.error('쿠폰 만료 처리 실패:', error);
-    }
-  }
-
-  /**
    * 만료일까지 남은 일수 계산
    */
   static getDaysUntilExpiry(expiryDate: string): number {
-    const expiry = new Date(expiryDate);
-    const today = new Date();
-    const diffTime = expiry.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const expiryDay = parseCouponExpiryDay(expiryDate);
+    if (!expiryDay) {
+      return 0;
+    }
+
+    const dayToUtcTime = (day: string) => {
+      const [year, month, date] = day.split('-').map(Number);
+      return Date.UTC(year, month - 1, date);
+    };
+    return (dayToUtcTime(expiryDay) - dayToUtcTime(toKstDayKey(new Date()))) / (1000 * 60 * 60 * 24);
   }
 
   /**

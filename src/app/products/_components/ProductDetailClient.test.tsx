@@ -1,14 +1,22 @@
+import { StrictMode } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ProductDetailClient from './ProductDetailClient';
 import { Product } from '@/shared/types/product';
 import { useUserActivity } from '@/context/userActivityProvider';
 import { QnAService } from '@/shared/services/qnaService';
+import {
+  PRODUCT_INTENT_STORAGE_KEY,
+  saveProductIntent,
+} from '@/shared/utils/productIntent';
 
 const push = jest.fn();
 const addRecentProduct = jest.fn();
 const addToWishlist = jest.fn();
 const removeFromWishlist = jest.fn();
 const loadRelatedProducts = jest.fn();
+const mutateAsync = jest.fn();
+
+let mockUser: { uid: string } | null = { uid: 'user-1' };
 
 let mockWishlistItems: Array<{ id: string; productId: string; userId: string; addedAt: Date }> = [];
 
@@ -17,7 +25,7 @@ jest.mock('next/navigation', () => ({
 }));
 
 jest.mock('@/context/authProvider', () => ({
-  useAuth: () => ({ user: { uid: 'user-1' } }),
+  useAuth: () => ({ user: mockUser }),
 }));
 
 jest.mock('@/context/userActivityProvider', () => ({
@@ -34,7 +42,7 @@ jest.mock('@/context/productProvider', () => ({
 }));
 
 jest.mock('@/shared/hooks/useCart', () => ({
-  useAddToCart: () => ({ mutateAsync: jest.fn() }),
+  useAddToCart: () => ({ mutateAsync }),
 }));
 
 jest.mock('@/shared/services/qnaService', () => ({
@@ -256,5 +264,146 @@ describe('ProductDetailClient policy summary', () => {
     expect(screen.getByText('수령 후 7일 이내, 상품 상태에 따라 반품 신청 가능')).toBeInTheDocument();
     expect(screen.queryByText('무료배송')).not.toBeInTheDocument();
     expect(screen.queryByText('무료반품 (7일)')).not.toBeInTheDocument();
+  });
+});
+
+describe('ProductDetailClient login intent', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    sessionStorage.clear();
+    window.history.pushState({}, '', '/products/product-1');
+    window.confirm = jest.fn(() => false);
+    window.alert = jest.fn();
+    mockUser = { uid: 'user-1' };
+    mutateAsync.mockResolvedValue(undefined);
+    mockWishlistItems = [];
+    (useUserActivity as jest.Mock).mockReturnValue({
+      wishlistItems: mockWishlistItems,
+      addRecentProduct,
+      addToWishlist,
+      removeFromWishlist,
+      isInWishlist: jest.fn().mockResolvedValue(false),
+    });
+    addToWishlist.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    mockUser = { uid: 'user-1' };
+  });
+
+  test.each([
+    ['cart', '장바구니'],
+    ['buy', '바로구매'],
+    ['wishlist', '찜하기'],
+  ] as const)('stores the %s action before sending an anonymous user to login', (action, buttonName) => {
+    mockUser = null;
+    render(<ProductDetailClient product={product} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '13호' }));
+    fireEvent.click(screen.getByRole('button', { name: 'white gold 색상 선택' }));
+    fireEvent.click(screen.getByRole('button', { name: buttonName }));
+
+    expect(JSON.parse(sessionStorage.getItem(PRODUCT_INTENT_STORAGE_KEY) || '{}')).toMatchObject({
+      action,
+      productId: 'product-1',
+      pathname: '/products/product-1',
+      size: '13호',
+      color: 'white gold',
+      quantity: 1,
+    });
+    expect(push).toHaveBeenCalledWith(
+      `/auth/login?redirect=${encodeURIComponent('/products/product-1?resumeIntent=1')}`,
+    );
+  });
+
+  test('restores a cart action once, including under StrictMode', async () => {
+    window.history.pushState({}, '', '/products/product-1?resumeIntent=1');
+    saveProductIntent(sessionStorage, {
+      action: 'cart',
+      productId: 'product-1',
+      pathname: '/products/product-1',
+      size: '13호',
+      color: 'white gold',
+      quantity: 2,
+    }, Date.now());
+
+    render(
+      <StrictMode>
+        <ProductDetailClient product={product} />
+      </StrictMode>,
+    );
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+    expect(mutateAsync).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 'user-1',
+      request: expect.objectContaining({
+        productId: 'product-1',
+        size: '13호',
+        color: 'white gold',
+        quantity: 2,
+      }),
+    }));
+    expect(sessionStorage.getItem(PRODUCT_INTENT_STORAGE_KEY)).toBeNull();
+    expect(window.location.search).not.toContain('resumeIntent');
+  });
+
+  test('restores a buy action with the original options and quantity', async () => {
+    window.history.pushState({}, '', '/products/product-1?resumeIntent=1');
+    saveProductIntent(sessionStorage, {
+      action: 'buy',
+      productId: 'product-1',
+      pathname: '/products/product-1',
+      size: '13호',
+      color: 'white gold',
+      quantity: 3,
+    }, Date.now());
+
+    render(<ProductDetailClient product={product} />);
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/orders/checkout'));
+    expect(JSON.parse(sessionStorage.getItem('orderData') || '{}')).toMatchObject({
+      items: [expect.objectContaining({
+        productId: 'product-1',
+        size: '13호',
+        color: 'white gold',
+        quantity: 3,
+      })],
+    });
+  });
+
+  test('restores a wishlist action as an add exactly once', async () => {
+    window.history.pushState({}, '', '/products/product-1?resumeIntent=1');
+    saveProductIntent(sessionStorage, {
+      action: 'wishlist',
+      productId: 'product-1',
+      pathname: '/products/product-1',
+      size: '',
+      color: '',
+      quantity: 1,
+    }, Date.now());
+
+    render(<ProductDetailClient product={product} />);
+
+    await waitFor(() => expect(addToWishlist).toHaveBeenCalledTimes(1));
+    expect(addToWishlist).toHaveBeenCalledWith('product-1');
+    expect(removeFromWishlist).not.toHaveBeenCalled();
+  });
+
+  test('consumes an invalid option without executing the stored action', async () => {
+    window.history.pushState({}, '', '/products/product-1?resumeIntent=1');
+    saveProductIntent(sessionStorage, {
+      action: 'cart',
+      productId: 'product-1',
+      pathname: '/products/product-1',
+      size: '99호',
+      color: 'white gold',
+      quantity: 1,
+    }, Date.now());
+
+    render(<ProductDetailClient product={product} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('옵션을 다시 선택해 주세요.');
+    expect(mutateAsync).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(PRODUCT_INTENT_STORAGE_KEY)).toBeNull();
   });
 });

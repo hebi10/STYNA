@@ -3,6 +3,12 @@
 import React from 'react';
 import styles from './SiteGuidePopup.module.css';
 import Link from 'next/link';
+import {
+  buildDemoDataNotice,
+  formatShippingPolicy,
+  formatSignupBenefit,
+  formatSupportHours,
+} from '@/shared/constants/commercePolicy';
 
 interface SiteGuidePopupProps {
   isOpen: boolean;
@@ -39,19 +45,19 @@ const SiteGuidePopup: React.FC<SiteGuidePopupProps> = ({
           <ul className={styles.guideList}>
             <li>
               <strong>배송</strong>
-              평일 오후 2시 이전 주문은 당일 출고되며, 5만원 이상 구매 시 무료배송입니다.
+              {formatShippingPolicy()}
             </li>
             <li>
-              <strong>교환/반품</strong>
-              상품 수령 후 7일 이내 신청할 수 있고, 태그와 포장 상태가 유지되어야 합니다.
+              <strong>회원 혜택</strong>
+              {formatSignupBenefit()}
             </li>
             <li>
-              <strong>쿠폰/혜택</strong>
-              신규 회원 쿠폰, 생일 쿠폰, 구매 적립금은 마이페이지에서 확인할 수 있습니다.
+              <strong>데모 안내</strong>
+              {buildDemoDataNotice()}
             </li>
             <li>
               <strong>고객센터</strong>
-              평일 10:00~18:00 운영하며 주문/상품 문의는 하단 바로가기를 이용해 주세요.
+              {formatSupportHours()} 운영하며 주문/상품 문의는 하단 바로가기를 이용해 주세요.
             </li>
           </ul>
 

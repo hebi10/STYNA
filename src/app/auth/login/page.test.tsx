@@ -112,6 +112,49 @@ describe('LoginPage transition feedback', () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/orders/checkout'));
   });
 
+  test('owns the redirect for an already authenticated session', async () => {
+    window.history.pushState({}, '', '/auth/login?redirect=/products/product-1%3FresumeIntent%3D1');
+    (useAuth as jest.Mock).mockReturnValue({
+      login,
+      error: null,
+      clearError,
+      user: { uid: 'user-1' },
+      loading: false,
+    });
+
+    render(<LoginPage />);
+
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith('/products/product-1?resumeIntent=1');
+    });
+  });
+
+  test.each([
+    'https://evil.example/path',
+    '//evil.example/path',
+    '/\\evil.example/path',
+    'javascript:alert(1)',
+  ])('falls back to mypage for an unsafe redirect: %s', async (redirect) => {
+    window.history.pushState(
+      {},
+      '',
+      `/auth/login?redirect=${encodeURIComponent(redirect)}`,
+    );
+    login.mockResolvedValue(undefined);
+
+    render(<LoginPage />);
+
+    fireEvent.change(screen.getByLabelText('이메일'), {
+      target: { value: 'buyer@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText('비밀번호'), {
+      target: { value: 'password1234' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '로그인' }));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/mypage'));
+  });
+
   test('does not show hard-coded demo account login buttons outside development', () => {
     render(<LoginPage />);
 

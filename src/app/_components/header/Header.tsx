@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/authProvider";
 import { useCartItemCount } from "@/shared/hooks/useCart";
+import {
+  formatShippingPolicy,
+  formatSignupBenefit,
+} from "@/shared/constants/commercePolicy";
 import { CategoryOrderService } from "@/shared/services/categoryOrderService";
 import { DEFAULT_CATEGORY_IDS, getDefaultCategoryNames } from "@/shared/utils/categoryUtils";
 import styles from "./Header.module.css";
@@ -35,9 +39,9 @@ const SUPPORT_LINKS: HeaderNavItem[] = [
 ];
 
 const ANNOUNCEMENTS = [
-  "신규 회원 10% 쿠폰",
-  "5만원 이상 무료배송",
-  "오늘 출고 마감 14:00",
+  formatSignupBenefit(),
+  formatShippingPolicy(),
+  "출고 일정은 주문별 배송 상태에서 확인할 수 있습니다.",
 ];
 
 function toNavLabel(category: HeaderCategory) {

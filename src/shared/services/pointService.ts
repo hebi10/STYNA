@@ -167,39 +167,6 @@ export class PointService {
     const result = await callPointsAPI('signupBonus');
     return { success: true, newBalance: result.newBalance };
   }
-
-  /**
-   * 주문 완료 포인트 적립 (주문 금액의 1%)
-   */
-  static async addOrderPoint(orderAmount: number, orderId: string): Promise<PointResponse> {
-    const pointAmount = Math.floor(orderAmount * 0.01);
-    return this.addPoint({
-      amount: pointAmount,
-      description: `주문 완료 적립 (주문 금액: ${orderAmount.toLocaleString()}원)`,
-      orderId
-    });
-  }
-
-  /**
-   * 리뷰 작성 포인트 적립 (500포인트)
-   */
-  static async addReviewPoint(productName: string, orderId: string): Promise<PointResponse> {
-    return this.addPoint({
-      amount: 500,
-      description: `리뷰 작성 적립 (상품: ${productName})`,
-      orderId
-    });
-  }
-
-  /**
-   * 생일 축하 포인트 적립 (3,000포인트)
-   */
-  static async addBirthdayPoint(): Promise<PointResponse> {
-    return this.addPoint({
-      amount: 3000,
-      description: '생일 축하 포인트'
-    });
-  }
 }
 
 export default PointService;

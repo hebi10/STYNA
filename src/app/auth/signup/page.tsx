@@ -8,6 +8,7 @@ import useInputs from "@/shared/hooks/useInput";
 import { setDoc, doc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/shared/libs/firebase/firebase";
 import { useAuth } from "@/context/authProvider";
+import { buildDemoDataNotice } from "@/shared/constants/commercePolicy";
 import { buildSignupUserDocument } from "./signupUserDocument";
 
 export default function SignupPage() {
@@ -375,6 +376,8 @@ export default function SignupPage() {
             {errors.terms && <div className={styles.errorMessage}>{errors.terms}</div>}
             {errors.privacy && <div className={styles.errorMessage}>{errors.privacy}</div>}
           </div>
+
+          <p className={styles.subtitle}>{buildDemoDataNotice()}</p>
 
           {/* 회원가입 버튼 */}
           <button

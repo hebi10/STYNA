@@ -1,3 +1,8 @@
+import { FieldValue } from "firebase-admin/firestore";
+import type { Firestore } from "firebase-admin/firestore";
+import { isAvailableUserCouponStatus } from "./couponDomain";
+import { isExpiredOnKstDay, toKstDayKey } from "./kstDate";
+
 export type DeliveryOption = "standard" | "express";
 
 export interface RawOrderItem {
@@ -51,6 +56,51 @@ const VALID_PAYMENT_METHODS = new Set([
 const COUPON_PERCENT_TYPES = ["퍼센트", "percent", "할인율"];
 const COUPON_AMOUNT_TYPES = ["금액", "amount", "할인금액"];
 const COUPON_FREE_SHIPPING_TYPES = ["무료배송", "free_shipping"];
+
+export class ExpiredOrderCouponError extends Error {
+  constructor(public readonly userCouponId: string) {
+    super("Coupon has expired.");
+    this.name = "ExpiredOrderCouponError";
+  }
+}
+
+export async function markExpiredUserCoupon(
+  db: Firestore,
+  input: { userCouponId: string; userId: string; now: Date },
+): Promise<void> {
+  await db.runTransaction(async (transaction) => {
+    const userCouponRef = db.collection("user_coupons").doc(input.userCouponId);
+    const userCouponSnap = await transaction.get(userCouponRef);
+    if (!userCouponSnap.exists) {
+      return;
+    }
+
+    const userCouponData = userCouponSnap.data() || {};
+    if (
+      toStringValue(userCouponData.uid) !== input.userId
+      || !isAvailableUserCouponStatus(userCouponData.status)
+    ) {
+      return;
+    }
+
+    const couponId = toStringValue(userCouponData.couponId);
+    if (!couponId) {
+      return;
+    }
+
+    const couponRef = db.collection("coupons").doc(couponId);
+    const couponSnap = await transaction.get(couponRef);
+    if (!couponSnap.exists || !isExpiredOnKstDay(couponSnap.data()?.expiryDate, input.now)) {
+      return;
+    }
+
+    transaction.update(userCouponRef, {
+      status: "기간만료",
+      expiredDate: toKstDayKey(input.now),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  });
+}
 
 export function toStringValue(value: unknown): string {
   if (typeof value === "string") {
@@ -214,7 +264,7 @@ export function parseDate(value: unknown): Date | null {
 }
 
 export function toTodayString(value: Date): string {
-  return value.toISOString().split("T")[0];
+  return toKstDayKey(value);
 }
 
 export function calculateDiscountedUnitPrice(productData: Record<string, unknown>): number {

@@ -16,6 +16,12 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 # OpenAI (AI 챗봇 상담용)
 OPENAI_API_KEY=your_openai_api_key
 CHAT_RATE_LIMIT_SALT=your_random_rate_limit_salt
+OPENAI_CHAT_MODEL=gpt-4o-mini
+
+# Next /api/chat -> Firebase chat Function
+CHAT_API_URL=https://us-central1-your_project_id.cloudfunctions.net/chat
+# 레거시 호환 전용. 신규 설정은 CHAT_API_URL을 사용합니다.
+# NEXT_PUBLIC_CHAT_API_URL=https://us-central1-your_project_id.cloudfunctions.net/chat
 
 # 개발 환경
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
@@ -23,7 +29,7 @@ NODE_ENV=development
 NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true
 ```
 
-`OPENAI_API_KEY` 또는 `CHAT_RATE_LIMIT_SALT`가 없으면 provider를 호출하지 않고 키워드 기반 응답 시스템으로 동작합니다.
+`OPENAI_API_KEY` 또는 `CHAT_RATE_LIMIT_SALT`가 없으면 provider를 호출하지 않고 키워드 기반 응답 시스템으로 동작합니다. `OPENAI_CHAT_MODEL`을 생략하면 `gpt-4o-mini`를 사용합니다.
 
 ## Firebase Functions Secrets
 
@@ -79,7 +85,9 @@ const firebaseConfig = await getFirebaseConfig();
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | 필수 | Firebase 앱 ID |
 | `OPENAI_API_KEY` | 선택 | OpenAI API 키 (없으면 키워드 응답 모드) |
 | `CHAT_RATE_LIMIT_SALT` | AI 사용 시 필수 | UID·익명 세션·네트워크 식별자를 HMAC-SHA256으로 해시하는 별도 고엔트로피 secret |
-| `CHAT_API_URL` | 선택 | 로컬 Next `/api/chat`이 호출할 절대 Function/에뮬레이터 URL |
+| `OPENAI_CHAT_MODEL` | 선택 | Firebase `chat` Function이 사용할 모델명 (기본값: `gpt-4o-mini`) |
+| `CHAT_API_URL` | Next 프록시 사용 시 필수 | Next `/api/chat`이 호출할 배포된 Firebase `chat` Function 또는 로컬 Functions Emulator의 절대 URL |
+| `NEXT_PUBLIC_CHAT_API_URL` | 레거시 호환 | 과거 Next 서버 upstream 변수. 브라우저 직접 호출에는 사용하지 않으며 신규 설정은 `CHAT_API_URL`을 사용 |
 | `NEXT_PUBLIC_API_URL` | 선택 | API 기본 URL (기본값: `/api`) |
 | `NEXT_PUBLIC_USE_FIREBASE_EMULATOR` | 선택 | Firebase 에뮬레이터 사용 여부 |
 
@@ -90,6 +98,9 @@ const firebaseConfig = await getFirebaseConfig();
 - `.env.local`은 `.gitignore`에 포함되어 있으며 Git에 커밋하지 않습니다.
 - `OPENAI_API_KEY`와 `CHAT_RATE_LIMIT_SALT`는 `chat` Function에서만 사용합니다. `NEXT_PUBLIC_` 접두사를 붙이지 않습니다.
 - `CHAT_RATE_LIMIT_SALT`는 OpenAI API 키와 다른 임의 값을 사용하며 로그·응답·문서에 실제 값을 남기지 않습니다.
+- 원본 UID, 익명 session ID, IP는 rate-limit 문서나 로그에 남기지 않고 HMAC 결과만 저장합니다.
+- 운영 `CHAT_API_URL`은 자체 `/api/chat`이 아니라 배포된 Firebase `chat` Function을 가리켜야 합니다. Hosting rewrite가 Function으로 직접 연결되는 배포에서는 이 변수 없이도 same-origin `/api/chat`이 Function에 도달합니다.
+- `NEXT_PUBLIC_CHAT_API_URL`은 URL 자체가 클라이언트에 노출되는 레거시 호환 변수다. 비밀값을 넣지 않고 가능하면 서버 전용 `CHAT_API_URL`을 사용합니다.
 - 프로덕션에서는 Firebase Functions Secrets를 사용합니다.
 
 ## 문제 해결

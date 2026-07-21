@@ -9,8 +9,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit --pretty false --incremental false -p tsconfig.json",
-    "ci": "npm run typecheck && npm run lint && npm run test && npm run functions:build",
-    "verify": "npm run typecheck && npm run lint -- --max-warnings=0 && npm run test && npm run functions:build && npm run build",
+    "ci": "npm run typecheck && npm run lint && npm run test && npm run test:rules && npm run functions:build",
+    "verify": "npm run typecheck && npm run lint -- --max-warnings=0 && npm run test && npm run test:rules && npm run functions:build && npm run build",
     "seed": "npm run seed:all",
     "seed:all": "node scripts/seed-all.js",
     "seed:categories": "node scripts/seed-categories-fixed.js",
@@ -24,12 +24,14 @@
     "deploy:hosting": "firebase deploy --only hosting",
     "setup:env": "node scripts/setup-firebase-secrets.js",
     "functions:build": "npm run sync:chat-responses && cd functions && npm run build",
-    "sync:chat-responses": "node scripts/sync-chat-responses.js",
+    "sync:chat-responses": "node scripts/sync-chat-responses.js --check",
+    "sync:chat-responses:write": "node scripts/sync-chat-responses.js --write",
     "functions:deploy": "firebase deploy --only functions",
     "migrate:firestore:analyze": "node scripts/firestore-products-v2-migration.js analyze",
     "migrate:firestore:products:dry-run": "node scripts/firestore-products-v2-migration.js migrate",
     "migrate:firestore:products:execute": "node scripts/firestore-products-v2-migration.js migrate --execute",
     "migrate:firestore:validate": "node scripts/firestore-products-v2-migration.js validate",
+    "migrate:events:eligibility:dry-run": "node scripts/event-eligibility-migration.js analyze",
     "firestore:ai-summary": "node scripts/firestore-ai-summary.js",
     "migrate:product-images:analyze": "node scripts/product-image-webp-migration.js analyze",
     "migrate:product-images:dry-run": "node scripts/product-image-webp-migration.js migrate",
@@ -66,8 +68,8 @@
   "dependencies": {
     "@tanstack/react-query": "^5.84.1",
     "dotenv": "^17.2.1",
-    "firebase": "^12.0.0",
-    "next": "^15.5.16",
+    "firebase": "12.16.0",
+    "next": "15.5.20",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "sharp": "^0.34.5"
@@ -82,11 +84,14 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^15.5.16",
-    "firebase-admin": "^13.6.0",
+    "eslint-config-next": "15.5.20",
+    "firebase-admin": "13.10.0",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
     "ts-jest": "^29.4.6",
     "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "8.5.20"
   }
 }

@@ -123,6 +123,13 @@ describe('orderPricing', () => {
     expect(getCouponAvailability(minimumCoupon, 20000, now).usable).toBe(false);
   });
 
+  test('keeps a coupon valid until the end of its KST expiry day', () => {
+    const expiry = '2026-07-21';
+
+    expect(isCouponExpired(expiry, new Date('2026-07-21T14:59:59.999Z'))).toBe(false);
+    expect(isCouponExpired(expiry, new Date('2026-07-21T15:00:00.000Z'))).toBe(true);
+  });
+
   test('caps points by current balance and payable amount', () => {
     const preview = calculateOrderPreview({
       items: [{ productId: 'p1', price: 12000, discountAmount: 0, quantity: 1, isAvailable: true }],

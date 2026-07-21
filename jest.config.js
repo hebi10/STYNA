@@ -26,4 +26,6 @@ module.exports = {
     "functions[\\\\/]__tests__[\\\\/]firestoreRules\\.test\\.ts$",
     "functions[\\\\/]__tests__[\\\\/]storageRules\\.test\\.ts$",
   ],
+
+  modulePathIgnorePatterns: ["<rootDir>/.worktrees/"],
 };

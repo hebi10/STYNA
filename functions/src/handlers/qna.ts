@@ -72,15 +72,11 @@ export const qna = onRequest(
           publicQuery = publicQuery.where("productId", "==", filters.productId);
         }
 
-        const [listSnapshot, countSnapshot] = await Promise.all([
-          publicQuery
-            .orderBy("createdAt", "desc")
-            .offset((page - 1) * limit)
-            .limit(limit)
-            .get(),
-          publicQuery.count().get(),
-        ]);
-        const totalCount = countSnapshot.data().count;
+        const listSnapshot = await publicQuery
+          .orderBy("createdAt", "desc")
+          .limit(limit)
+          .get();
+        const totalCount = listSnapshot.docs.length;
 
         res.status(200).json({
           success: true,
@@ -160,9 +156,6 @@ export const qna = onRequest(
           return;
         }
 
-        await qnaRef.update({
-          views: admin.firestore.FieldValue.increment(1),
-        });
         res.status(200).json({
           success: true,
           qna: toSafeQnA(qnaId, qnaData),
@@ -170,9 +163,6 @@ export const qna = onRequest(
         return;
       }
 
-      await qnaRef.update({
-        views: admin.firestore.FieldValue.increment(1),
-      });
       res.status(200).json({
         success: true,
         qna: toSafeQnA(qnaId, qnaData),

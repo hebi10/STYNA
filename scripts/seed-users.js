@@ -21,7 +21,7 @@ const mockUsers = [
       city: '서울',
       zipCode: '12345',
     },
-    pointBalance: 10000, // 초기 포인트 잔액
+    pointBalance: 5000, // 가입 적립 후 사용·환불을 반영한 잔액
     status: 'active',
     role: 'user',
     createdAt: new Date(),
@@ -61,41 +61,21 @@ const mockPointHistory = [
       },
       {
         id: 'point-2',
-        type: 'earn',
-        amount: 3000,
-        description: '주문 완료 적립 (주문 금액: 300,000원)',
-        orderId: 'order-123',
-        date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5일 전
-        balanceAfter: 8000,
-        expired: false,
-      },
-      {
-        id: 'point-3',
         type: 'use',
         amount: 2000,
         description: '포인트 사용 (주문: order-456)',
         orderId: 'order-456',
         date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3일 전
-        balanceAfter: 6000,
+        balanceAfter: 3000,
       },
       {
-        id: 'point-4',
-        type: 'earn',
-        amount: 500,
-        description: '리뷰 작성 적립 (상품: 나이키 에어맥스)',
-        orderId: 'order-789',
+        id: 'point-3',
+        type: 'refund',
+        amount: 2000,
+        description: '주문 취소 포인트 환불',
+        orderId: 'order-456',
         date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1일 전
-        balanceAfter: 6500,
-        expired: false,
-      },
-      {
-        id: 'point-5',
-        type: 'earn',
-        amount: 3500,
-        description: '생일 축하 포인트',
-        date: new Date(), // 오늘
-        balanceAfter: 10000,
-        expired: false,
+        balanceAfter: 5000,
       }
     ]
   },
@@ -114,6 +94,10 @@ const mockPointHistory = [
     ]
   }
 ];
+
+const RETIRED_POINT_HISTORY_IDS = {
+  'test-user-1': ['point-4', 'point-5'],
+};
 
 const seedUsers = async () => {
   try {
@@ -135,9 +119,17 @@ const seedPointHistory = async () => {
   try {
     for (const userPointData of mockPointHistory) {
       const batch = db.batch();
+      const pointHistoryRef = db
+        .collection('users')
+        .doc(userPointData.userId)
+        .collection('pointHistory');
+
+      (RETIRED_POINT_HISTORY_IDS[userPointData.userId] || []).forEach((retiredPointId) => {
+        batch.delete(pointHistoryRef.doc(retiredPointId));
+      });
 
       userPointData.history.forEach((point) => {
-        const pointRef = db.collection('users').doc(userPointData.userId).collection('pointHistory').doc(point.id);
+        const pointRef = pointHistoryRef.doc(point.id);
         batch.set(pointRef, point);
       });
 

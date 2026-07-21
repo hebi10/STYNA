@@ -1,14 +1,12 @@
 import { onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
+import {
+  buildReviewDocumentId,
+  getOrderProducts,
+  isDeliveredOrderStatus,
+} from "../domain/purchaseEvidence";
 import { AuthError, AuthContext, verifyAuthContext } from "../utils/auth";
 import { applyNoStoreHeaders } from "../utils/http";
-
-const REVIEWABLE_ORDER_STATUSES = new Set([
-  "delivered",
-  "배송완료",
-  "purchase_confirmed",
-  "구매확정",
-]);
 
 class ReviewRequestError extends Error {
   constructor(
@@ -88,14 +86,8 @@ function parseReviewSubmission(body: Record<string, unknown> | undefined): Revie
   };
 }
 
-function getOrderItems(orderData: admin.firestore.DocumentData): Array<Record<string, unknown>> {
-  return Array.isArray(orderData.products)
-    ? orderData.products.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
-    : [];
-}
-
 function hasPurchasedOption(orderData: admin.firestore.DocumentData, submission: ReviewSubmission): boolean {
-  return getOrderItems(orderData).some((item) => (
+  return getOrderProducts(orderData).some((item) => (
     toTrimmedString(item.productId) === submission.productId &&
     toTrimmedString(item.size) === submission.size &&
     toTrimmedString(item.color) === submission.color &&
@@ -103,20 +95,9 @@ function hasPurchasedOption(orderData: admin.firestore.DocumentData, submission:
   ));
 }
 
-function getReviewDocumentId(submission: Pick<ReviewSubmission, "orderId" | "productId" | "size" | "color">): string {
-  return Buffer.from(
-    JSON.stringify([submission.orderId, submission.productId, submission.size, submission.color]),
-    "utf8"
-  ).toString("base64url");
-}
-
 function getVerifiedUserName(authContext: AuthContext): string {
   const tokenName = toTrimmedString(authContext.token.name);
   return tokenName.slice(0, 80) || "익명";
-}
-
-function isReviewableOrderStatus(value: unknown): boolean {
-  return REVIEWABLE_ORDER_STATUSES.has(toTrimmedString(value));
 }
 
 async function listEligibleOptions(authContext: AuthContext, productId: string) {
@@ -124,9 +105,9 @@ async function listEligibleOptions(authContext: AuthContext, productId: string) 
   const orderSnapshot = await db.collection("orders").where("userId", "==", authContext.uid).get();
   const candidates = orderSnapshot.docs.flatMap((orderDoc) => {
     const orderData = orderDoc.data() || {};
-    if (!isReviewableOrderStatus(orderData.status)) return [];
+    if (!isDeliveredOrderStatus(orderData.status)) return [];
 
-    return getOrderItems(orderData)
+    return getOrderProducts(orderData)
       .filter((item) => toTrimmedString(item.productId) === productId && typeof item.quantity === "number" && item.quantity > 0)
       .map((item) => ({
         orderId: orderDoc.id,
@@ -138,7 +119,7 @@ async function listEligibleOptions(authContext: AuthContext, productId: string) 
   });
 
   const options = await Promise.all(candidates.map(async (candidate) => {
-    const reviewRef = db.collection("reviews").doc(getReviewDocumentId(candidate));
+    const reviewRef = db.collection("reviews").doc(buildReviewDocumentId(candidate));
     const reviewDoc = await reviewRef.get();
     return reviewDoc.exists ? null : candidate;
   }));
@@ -181,7 +162,7 @@ export const review = onRequest(
       const db = admin.firestore();
       const result = await db.runTransaction(async (transaction) => {
         const orderRef = db.collection("orders").doc(submission.orderId);
-        const reviewRef = db.collection("reviews").doc(getReviewDocumentId(submission));
+        const reviewRef = db.collection("reviews").doc(buildReviewDocumentId(submission));
         const [orderDoc, existingReview] = await Promise.all([
           transaction.get(orderRef),
           transaction.get(reviewRef),
@@ -195,7 +176,7 @@ export const review = onRequest(
         if (toTrimmedString(orderData.userId) !== authContext.uid) {
           throw new ReviewRequestError(403, "이 주문의 리뷰를 작성할 권한이 없습니다.");
         }
-        if (!isReviewableOrderStatus(orderData.status)) {
+        if (!isDeliveredOrderStatus(orderData.status)) {
           throw new ReviewRequestError(400, "배송 완료 또는 구매 확정 후에만 리뷰를 작성할 수 있습니다.");
         }
         if (!hasPurchasedOption(orderData, submission)) {

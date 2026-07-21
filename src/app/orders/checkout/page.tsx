@@ -12,6 +12,7 @@ import { OrderService } from "@/shared/services/orderService";
 import { db } from "@/shared/libs/firebase/firebase";
 import { cartKeys } from "@/shared/hooks/useCart";
 import { usePointBalance } from "@/shared/hooks/usePoint";
+import { buildDemoDataNotice } from "@/shared/constants/commercePolicy";
 import { calculateOrderPreview } from "@/shared/utils/orderPricing";
 import { CheckoutDraft, parseCheckoutDraft } from "./checkoutDraft";
 import {
@@ -418,7 +419,7 @@ export default function CheckoutPage() {
             <section className={styles.section}>
               <h3 className={styles.sectionTitle}>결제 방식</h3>
               <p className={styles.paymentNotice}>
-                포트폴리오 데모에서는 실제 결제가 진행되지 않으며 주문 접수만 기록됩니다.
+                {buildDemoDataNotice()}
               </p>
               <div className={styles.paymentMethods}>
                 {paymentMethods.map((method) => (

@@ -335,7 +335,7 @@ npm --prefix functions audit --omit=dev
 ```
 
 - 같은 major 업데이트로 남는 취약점은 실제 의존 경로와 노출 범위를 기록한다. major downgrade/upgrade를 audit 숫자만 줄이기 위해 적용하지 않는다.
-- 예상 기준은 root production audit 0건, Functions production audit moderate 9건이다. Functions 잔존 항목은 Admin 13의 Google Cloud 전이 의존성이며 audit이 제시하는 Admin 10/Functions 4 다운그레이드는 적용하지 않는다.
+- 실제 결과는 root production audit 0건, Functions high/critical 0건이다. Functions moderate 집계는 동일 lockfile에서도 npm audit 서비스가 `firebase-functions` downstream synthetic effect를 포함하는지에 따라 8~9개로 변동했으며, 기반 리스크는 Admin 13의 Google Cloud 전이 경로에 남은 `uuid@9.0.1` advisory 한 건이다. audit가 제시한 Admin 14 major upgrade 또는 Admin 10/Functions 4 계열 downgrade는 이 계획 범위를 벗어나 적용하지 않았다.
 - peer dependency 충돌, 빌드 회귀 또는 audit 악화가 있으면 해당 direct dependency만 이전 값으로 되돌리고 근거를 문서화한다.
 
 ## Task 8: 문서·단계 전체 검증·독립 리뷰

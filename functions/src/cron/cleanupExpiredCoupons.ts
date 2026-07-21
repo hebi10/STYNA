@@ -1,5 +1,6 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { isExpiredOnKstDay, toKstDayKey } from "../domain/kstDate";
 
 /**
  * 만료 쿠폰 자동 정리 (매일 자정 KST)
@@ -17,7 +18,7 @@ export const cleanupExpiredCoupons = onSchedule(
     try {
       const db = getFirestore();
       const today = new Date();
-      const todayStr = today.toISOString().split("T")[0];
+      const todayStr = toKstDayKey(today);
 
       const expiredUserCoupons = await db
         .collection("user_coupons")
@@ -34,9 +35,7 @@ export const cleanupExpiredCoupons = onSchedule(
         if (!couponDoc.exists) continue;
 
         const couponData = couponDoc.data();
-        const expiryDate = new Date(couponData?.expiryDate);
-
-        if (expiryDate < today) {
+        if (isExpiredOnKstDay(couponData?.expiryDate, today)) {
           batch.update(userCouponDoc.ref, {
             status: "기간만료",
             expiredDate: todayStr,

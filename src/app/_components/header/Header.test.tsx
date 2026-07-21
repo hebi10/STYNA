@@ -3,6 +3,10 @@ import Header from './Header';
 import { useAuth } from '@/context/authProvider';
 import { useCartItemCount } from '@/shared/hooks/useCart';
 import { CategoryOrderService } from '@/shared/services/categoryOrderService';
+import {
+  formatShippingPolicy,
+  formatSignupBenefit,
+} from '@/shared/constants/commercePolicy';
 
 jest.mock('./Header.module.css', () => ({
   __esModule: true,
@@ -62,13 +66,13 @@ describe('Header', () => {
     jest.mocked(CategoryOrderService.getSortedCategories).mockResolvedValue([]);
   });
 
-  test('renders a sticky header with rotating operating announcements', () => {
+  test('renders only implemented commerce announcements', () => {
     const markup = renderToStaticMarkup(<Header />);
 
     expect(markup).toContain('class="header');
-    expect(markup).toContain('신규 회원 10% 쿠폰');
-    expect(markup).toContain('5만원 이상 무료배송');
-    expect(markup).toContain('오늘 출고 마감 14:00');
+    expect(markup).toContain(formatSignupBenefit());
+    expect(markup).toContain(formatShippingPolicy());
+    expect(markup).not.toMatch(/10% 쿠폰|오늘 출고|당일 출고|구매.*1%/);
   });
 
   test('includes an all-products entry point in the primary navigation', () => {

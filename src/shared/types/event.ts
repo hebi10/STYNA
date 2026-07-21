@@ -2,6 +2,8 @@ export type EventContent = string;
 export type EventType = 'sale' | 'coupon' | 'special' | 'new';
 export type EventUiVariant = EventType | 'review';
 export type EventCouponType = 'manual' | 'auto';
+export type EventEligibilityType = 'none' | 'purchase' | 'delivered' | 'review';
+export type EventRewardType = 'none' | 'coupon';
 
 export interface EventEditorialImages {
   benefit?: string;
@@ -19,6 +21,8 @@ export interface Event {
   detailImage?: string;
   editorialImages?: EventEditorialImages;
   eventType: EventType;
+  eligibilityType?: EventEligibilityType;
+  rewardType?: EventRewardType;
   couponType?: EventCouponType;
   startDate: Date;
   endDate: Date;

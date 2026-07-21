@@ -8,14 +8,7 @@ import useInput from "@/shared/hooks/useInput";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/authProvider";
-
-function getSafeRedirectTarget(redirect: string | null): string {
-  if (!redirect || !redirect.startsWith("/") || redirect.startsWith("//")) {
-    return "/mypage";
-  }
-
-  return redirect;
-}
+import { getSafeRedirectTarget } from "@/shared/utils/safeRedirect";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,7 +18,10 @@ export default function LoginPage() {
       return "/mypage";
     }
 
-    return getSafeRedirectTarget(new URLSearchParams(window.location.search).get("redirect"));
+    return getSafeRedirectTarget(
+      new URLSearchParams(window.location.search).get("redirect"),
+      window.location.origin,
+    );
   });
   const [values, onChange] = useInput({
     id: '',
@@ -38,7 +34,10 @@ export default function LoginPage() {
   const isTransitioning = isSubmitting || (!loading && Boolean(user));
 
   useEffect(() => {
-    setRedirectTarget(getSafeRedirectTarget(new URLSearchParams(window.location.search).get("redirect")));
+    setRedirectTarget(getSafeRedirectTarget(
+      new URLSearchParams(window.location.search).get("redirect"),
+      window.location.origin,
+    ));
   }, []);
 
   const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {

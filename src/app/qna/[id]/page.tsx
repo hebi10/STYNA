@@ -141,7 +141,6 @@ export default function QnADetailPage() {
               <span className={styles.date}>작성일 {formatDate(qna.createdAt)}</span>
             </div>
             <div className={styles.statsInfo}>
-              <span className={styles.views}>조회수 {qna.views}</span>
               {qna.productName && <span className={styles.product}>상품 {qna.productName}</span>}
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { UserCouponView } from '@/shared/types/coupon';
+import { isExpiredOnKstDay } from './kstDate';
 
 export type OrderPricingDeliveryOption = 'standard' | 'express';
 
@@ -50,23 +51,8 @@ function toNonNegativeInteger(value: unknown): number {
   return Math.max(0, Math.floor(parsed));
 }
 
-function normalizeDay(value: Date): Date {
-  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
-}
-
-function parseExpiryDate(value: string): Date | null {
-  const normalized = value.replace(/\./g, '-').replace(/\//g, '-').trim();
-  const parsed = new Date(`${normalized}T00:00:00.000Z`);
-  return Number.isFinite(parsed.getTime()) ? parsed : null;
-}
-
 export function isCouponExpired(expiryDate: string, now: Date = new Date()): boolean {
-  const expiry = parseExpiryDate(expiryDate);
-  if (!expiry) {
-    return true;
-  }
-
-  return normalizeDay(expiry).getTime() < normalizeDay(now).getTime();
+  return isExpiredOnKstDay(expiryDate, now);
 }
 
 export function getCouponAvailability(

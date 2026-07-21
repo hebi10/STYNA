@@ -1,12 +1,25 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { issueUserCouponInTransaction, CouponIssuanceError } from "../domain/couponIssuance";
+import {
+  assertEventEligibility,
+  EventEligibilityError,
+} from "../domain/eventEligibility";
 import { verifyAuth, AuthError } from "../utils/auth";
 import { applyNoStoreHeaders } from "../utils/http";
+
+type EventParticipationErrorCode =
+  | "event_not_found"
+  | "event_inactive"
+  | "event_not_started"
+  | "event_ended"
+  | "manual_coupon"
+  | "max_participants";
 
 class EventParticipationError extends Error {
   constructor(
     public statusCode: number,
+    public code: EventParticipationErrorCode,
     message: string
   ) {
     super(message);
@@ -31,6 +44,24 @@ function toDate(value: unknown): Date | null {
 function toCount(value: unknown): number {
   const count = typeof value === "number" ? value : Number(value);
   return Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+}
+
+function getRewardCouponId(eventData: Record<string, unknown>): string | null {
+  const rewardType = ensureString(eventData.rewardType);
+  const rewardCouponId = ensureString(eventData.rewardCouponId);
+  const hasRewardCouponId = Object.prototype.hasOwnProperty.call(eventData, "rewardCouponId");
+
+  if (rewardType !== "none" && rewardType !== "coupon") {
+    throw new EventEligibilityError("event_misconfigured");
+  }
+  if (rewardType === "coupon" && !rewardCouponId) {
+    throw new EventEligibilityError("event_misconfigured");
+  }
+  if (rewardType === "none" && hasRewardCouponId) {
+    throw new EventEligibilityError("event_misconfigured");
+  }
+
+  return rewardType === "coupon" ? rewardCouponId : null;
 }
 
 export const event = onRequest(
@@ -70,7 +101,7 @@ export const event = onRequest(
         ]);
 
         if (!eventDoc.exists) {
-          throw new EventParticipationError(404, "존재하지 않는 이벤트입니다.");
+          throw new EventParticipationError(404, "event_not_found", "존재하지 않는 이벤트입니다.");
         }
 
         const eventData = eventDoc.data() || {};
@@ -85,20 +116,31 @@ export const event = onRequest(
         const now = new Date();
         const startDate = toDate(eventData.startDate);
         const endDate = toDate(eventData.endDate);
-        if (!eventData.isActive) throw new EventParticipationError(403, "비활성화된 이벤트입니다.");
-        if (!startDate || now < startDate) throw new EventParticipationError(409, "아직 시작되지 않은 이벤트입니다.");
-        if (!endDate || now > endDate) throw new EventParticipationError(409, "종료된 이벤트입니다.");
+        if (!eventData.isActive) {
+          throw new EventParticipationError(403, "event_inactive", "비활성화된 이벤트입니다.");
+        }
+        if (!startDate || now < startDate) {
+          throw new EventParticipationError(409, "event_not_started", "아직 시작되지 않은 이벤트입니다.");
+        }
+        if (!endDate || now > endDate) {
+          throw new EventParticipationError(409, "event_ended", "종료된 이벤트입니다.");
+        }
         if (eventData.eventType === "coupon" && eventData.couponType === "manual") {
-          throw new EventParticipationError(403, "수동 쿠폰 이벤트는 직접 참여할 수 없습니다.");
+          throw new EventParticipationError(403, "manual_coupon", "수동 쿠폰 이벤트는 직접 참여할 수 없습니다.");
         }
 
         const participantCount = toCount(eventData.participantCount);
         const maxParticipants = toCount(eventData.maxParticipants);
         if (eventData.hasMaxParticipants === true && maxParticipants > 0 && participantCount >= maxParticipants) {
-          throw new EventParticipationError(409, "참여 인원이 마감되었습니다.");
+          throw new EventParticipationError(409, "max_participants", "참여 인원이 마감되었습니다.");
         }
 
-        const rewardCouponId = ensureString(eventData.rewardCouponId);
+        const rewardCouponId = getRewardCouponId(eventData);
+        await assertEventEligibility(transaction, db, {
+          userId,
+          eligibilityType: eventData.eligibilityType,
+          targetProducts: eventData.targetProducts,
+        });
         const reward = rewardCouponId
           ? await issueUserCouponInTransaction(transaction, db, { userId, couponId: rewardCouponId })
           : null;
@@ -107,7 +149,7 @@ export const event = onRequest(
           eventId,
           userId,
           participatedAt: FieldValue.serverTimestamp(),
-          rewardCouponId: rewardCouponId || null,
+          rewardCouponId,
           userCouponId: reward?.userCouponId || null,
           couponUsed: false,
         });
@@ -126,7 +168,11 @@ export const event = onRequest(
 
       res.status(200).json({ success: true, data: result });
     } catch (error) {
-      if (error instanceof AuthError || error instanceof EventParticipationError || error instanceof CouponIssuanceError) {
+      if (error instanceof EventEligibilityError || error instanceof EventParticipationError) {
+        res.status(error.statusCode).json({ success: false, code: error.code, error: error.message });
+        return;
+      }
+      if (error instanceof AuthError || error instanceof CouponIssuanceError) {
         res.status(error.statusCode).json({ success: false, error: error.message });
         return;
       }

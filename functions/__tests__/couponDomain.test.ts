@@ -19,6 +19,11 @@ describe('coupon domain logic', () => {
     expect(couponHasExpired('2026-05-12', today)).toBe(false);
   });
 
+  test('uses the KST calendar boundary for coupon expiry', () => {
+    expect(couponHasExpired('2026-07-21', new Date('2026-07-21T14:59:59.999Z'))).toBe(false);
+    expect(couponHasExpired('2026.07.21', new Date('2026-07-21T15:00:00.000Z'))).toBe(true);
+  });
+
   test('accepts known available user coupon statuses', () => {
     expect(isAvailableUserCouponStatus('사용가능')).toBe(true);
     expect(isAvailableUserCouponStatus('available')).toBe(true);

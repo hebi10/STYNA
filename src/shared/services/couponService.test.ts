@@ -2,6 +2,7 @@ import {
   documentId,
   getDoc,
   getDocs,
+  updateDoc,
   where,
 } from 'firebase/firestore';
 import { CouponService } from './couponService';
@@ -109,5 +110,44 @@ describe('CouponService.getUserCoupons', () => {
     expect(documentId).toHaveBeenCalled();
     expect(where).toHaveBeenCalledWith('__name__', 'in', ['coupon-2', 'coupon-1']);
     expect(getDoc).not.toHaveBeenCalled();
+  });
+});
+
+describe('CouponService order availability', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  test('filters by the KST expiry day without writing coupon status from the client', async () => {
+    const coupon = {
+      id: 'user-coupon-1',
+      status: '사용가능',
+      coupon: {
+        minOrderAmount: 0,
+        expiryDate: '2026-07-21',
+      },
+    };
+    jest.spyOn(CouponService, 'getUserCoupons').mockResolvedValue([coupon] as never);
+
+    jest.setSystemTime(new Date('2026-07-21T14:59:59.999Z'));
+    await expect(CouponService.getAvailableCouponsForOrder('user-1', 10000)).resolves.toHaveLength(1);
+
+    jest.setSystemTime(new Date('2026-07-21T15:00:00.000Z'));
+    await expect(CouponService.getAvailableCouponsForOrder('user-1', 10000)).resolves.toHaveLength(0);
+    expect(updateDoc).not.toHaveBeenCalled();
+  });
+
+  test('calculates remaining days from KST day keys', () => {
+    jest.setSystemTime(new Date('2026-07-21T14:59:59.999Z'));
+    expect(CouponService.getDaysUntilExpiry('2026-07-21')).toBe(0);
+
+    jest.setSystemTime(new Date('2026-07-21T15:00:00.000Z'));
+    expect(CouponService.getDaysUntilExpiry('2026-07-21')).toBe(-1);
   });
 });

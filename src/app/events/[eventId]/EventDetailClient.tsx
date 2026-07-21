@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/authProvider';
 import {
+  getEventEligibilityUiMeta,
   getEventUiMeta,
   getEventUiVariant,
 } from '@/shared/constants/eventUiMeta';
@@ -68,25 +69,11 @@ const getContentParagraphs = (content?: string | null) =>
     .map(paragraph => paragraph.trim())
     .filter(Boolean);
 
-const getParticipationMethod = (event: Event, uiVariant: EventUiVariant) => {
-  switch (uiVariant) {
-    case 'coupon':
-      return event.couponType === 'manual'
-        ? '고객센터 또는 별도 안내를 통해 받은 쿠폰 코드를 직접 입력해 참여합니다.'
-        : '로그인 후 조건을 충족하면 쿠폰이 자동으로 지급되는 방식입니다.';
-    case 'sale':
-      return '대상 상품 또는 카테고리에서 혜택이 적용된 상태로 바로 구매하는 방식입니다.';
-    case 'review':
-      return '구매 완료 후 리뷰를 작성하고 참여 조건을 충족하면 보상이 지급되는 방식입니다.';
-    case 'new':
-      return '신상품 공개 일정에 맞춰 컬렉션을 확인하고 대상 상품에 참여하는 방식입니다.';
-    case 'special':
-    default:
-      return '이벤트 조건을 확인한 뒤 참여 절차를 완료하면 혜택이 반영되는 방식입니다.';
-  }
-};
+const getParticipationMethod = (event: Event) => (
+  getEventEligibilityUiMeta(event.eligibilityType).participationMethod
+);
 
-const getBenefitItems = (event: Event, uiVariant: EventUiVariant, typeLabel: string) => {
+const getBenefitItems = (event: Event) => {
   const items: string[] = [];
 
   if (event.discountRate && event.discountRate > 0) {
@@ -94,15 +81,14 @@ const getBenefitItems = (event: Event, uiVariant: EventUiVariant, typeLabel: str
   }
 
   if (event.discountAmount && event.discountAmount > 0) {
-    items.push(`${event.discountAmount.toLocaleString()}원 적립 또는 보상 혜택이 제공됩니다.`);
+    items.push(`할인 표시 금액은 ${event.discountAmount.toLocaleString()}원입니다.`);
   }
 
-  if (event.couponCode) {
-    items.push(`쿠폰 코드 ${event.couponCode}를 사용할 수 있습니다.`);
-  }
-
-  if (uiVariant === 'review' && items.length === 0) {
-    items.push('리뷰 작성 완료 시 후기 보상 또는 적립 혜택이 제공됩니다.');
+  if (event.rewardType === 'coupon') {
+    items.push('참여 조건을 충족하면 이벤트 쿠폰이 지급됩니다.');
+    if (event.couponCode) {
+      items.push(`쿠폰 코드 ${event.couponCode} 사용이 가능합니다.`);
+    }
   }
 
   if (event.targetCategories && event.targetCategories.length > 0) {
@@ -110,7 +96,7 @@ const getBenefitItems = (event: Event, uiVariant: EventUiVariant, typeLabel: str
   }
 
   if (items.length === 0) {
-    items.push(`${typeLabel} 이벤트 전용 혜택이 적용됩니다.`);
+    items.push('이벤트 상세 안내와 참여 조건을 확인해주세요.');
   }
 
   return items;
@@ -143,7 +129,7 @@ const getParticipationSteps = (
   }
 
   if (status === 'ended') {
-    steps.push('종료된 이벤트는 신규 참여가 불가하며 지급 결과 또는 후속 안내만 확인할 수 있습니다.');
+    steps.push('종료된 이벤트는 신규 참여가 불가하며 기존 참여 내역 또는 후속 안내만 확인할 수 있습니다.');
   }
 
   return steps;
@@ -151,10 +137,9 @@ const getParticipationSteps = (
 
 const getNoticeItems = (
   event: Event,
-  status: ReturnType<typeof getEventStatus>,
-  uiVariant: EventUiVariant
+  status: ReturnType<typeof getEventStatus>
 ) => {
-  const notices = ['이벤트 상세 본문과 지급 시점을 함께 확인한 뒤 참여 여부를 결정해주세요.'];
+  const notices = ['이벤트 상세 본문과 참여 조건을 함께 확인한 뒤 참여 여부를 결정해주세요.'];
 
   if (event.hasMaxParticipants && event.maxParticipants && event.maxParticipants > 0) {
     notices.push(`참여 인원은 최대 ${event.maxParticipants.toLocaleString()}명으로 제한됩니다.`);
@@ -166,24 +151,28 @@ const getNoticeItems = (
     notices.push('수동 쿠폰 이벤트는 고객센터 또는 별도 공지로 받은 코드 입력이 필요합니다.');
   }
 
-  if (uiVariant === 'sale') {
+  if (event.eventType === 'sale') {
     notices.push('세일 대상 상품과 할인율은 재고 상황에 따라 일부 조정될 수 있습니다.');
   }
 
-  if (uiVariant === 'review') {
-    notices.push('리뷰 삭제 또는 운영 정책에 맞지 않는 내용은 보상 지급 대상에서 제외될 수 있습니다.');
+  if (event.eligibilityType === 'review') {
+    notices.push('구매 인증 리뷰를 삭제하거나 운영 정책에 맞지 않으면 참여 조건으로 인정되지 않을 수 있습니다.');
   }
 
-  if (uiVariant === 'new') {
+  if (event.rewardType === 'coupon') {
+    notices.push('쿠폰 지급 시점과 사용 조건은 이벤트 상세 안내에서 확인해주세요.');
+  }
+
+  if (event.eventType === 'new') {
     notices.push('신상품 공개 일정에 따라 일부 상품은 순차적으로 노출될 수 있습니다.');
   }
 
   if (status === 'upcoming') {
-    notices.push('예정 상태에서는 혜택이 아직 적용되지 않으므로 시작일 이후 다시 확인해야 합니다.');
+    notices.push('예정 상태에서는 참여가 아직 열리지 않으므로 시작일 이후 다시 확인해야 합니다.');
   }
 
   if (status === 'ended') {
-    notices.push('종료된 이벤트는 신규 참여 대신 혜택 지급 여부와 안내 내용을 확인해야 합니다.');
+    notices.push('종료된 이벤트는 신규 참여 대신 기존 참여 내역과 안내 내용을 확인해야 합니다.');
   }
 
   notices.push(`참여 기간은 ${formatDate(event.startDate)}부터 ${formatDate(event.endDate)}까지입니다.`);
@@ -198,7 +187,7 @@ const getPrimaryCtaConfig = (
   isDirectParticipationAvailable: boolean,
   uiVariant: EventUiVariant
 ): PrimaryCtaConfig => {
-  const uiMeta = getEventUiMeta(uiVariant);
+  const eligibilityMeta = getEventEligibilityUiMeta(event.eligibilityType);
 
   if (status === 'upcoming') {
     return {
@@ -241,46 +230,43 @@ const getPrimaryCtaConfig = (
     return {
       eyebrow: '쿠폰 코드 안내',
       label: '쿠폰 코드 문의하기',
-      description: '수동 쿠폰 이벤트이므로 고객센터에서 코드와 지급 조건을 먼저 확인해주세요.',
+      description: '수동 쿠폰 이벤트이므로 고객센터에서 코드와 사용 조건을 먼저 확인해주세요.',
       action: 'support',
     };
   }
 
   const config: PrimaryCtaConfig = {
     eyebrow: '핵심 행동',
-    label: isLoggedIn ? uiMeta.primaryActionLabel : uiMeta.primaryActionLoggedOutLabel,
-    description: uiMeta.primaryActionDescription,
+    label: isLoggedIn
+      ? eligibilityMeta.primaryActionLabel
+      : eligibilityMeta.primaryActionLoggedOutLabel,
+    description: eligibilityMeta.primaryActionDescription,
     action: 'participate',
-    pendingLabel: uiMeta.primaryPendingLabel,
-    completedLabel: uiMeta.primaryCompletedLabel,
-    postParticipationLabel: uiMeta.primaryPostParticipationLabel,
+    pendingLabel: eligibilityMeta.primaryPendingLabel,
+    completedLabel: eligibilityMeta.primaryCompletedLabel,
+    postParticipationLabel: eligibilityMeta.primaryPostParticipationLabel,
+    followUpAction: eligibilityMeta.followUpAction,
   };
-
-  if (uiVariant === 'sale' || uiVariant === 'new') {
-    config.followUpAction = 'recommend';
-  }
-
-  if (uiVariant === 'review') {
-    config.followUpAction = 'reviews';
-  }
 
   return config;
 };
 
-const getScopeSummary = (event: Event, uiVariant: EventUiVariant) => {
-  if (event.targetCategories && event.targetCategories.length > 0) {
-    return event.targetCategories.join(', ');
+const getScopeSummary = (event: Event) => {
+  if (event.targetProducts && event.targetProducts.length > 0) {
+    return `대상 상품 ${event.targetProducts.length.toLocaleString()}개`;
   }
 
-  switch (uiVariant) {
-    case 'coupon':
-      return '쿠폰 지급 대상 전체';
+  switch (event.eligibilityType) {
+    case 'none':
+      return '별도 참여 자격 조건 없음';
+    case 'purchase':
+      return '대상 상품 구매 고객';
+    case 'delivered':
+      return '대상 상품 배송 완료 고객';
     case 'review':
-      return '구매 완료 상품 리뷰';
-    case 'new':
-      return '신규 공개 상품 전체';
+      return '대상 상품 구매 인증 리뷰';
     default:
-      return '전체 이벤트 대상';
+      return '참여 조건 확인 필요';
   }
 };
 
@@ -291,6 +277,10 @@ export default function EventDetailClient({ event }: EventDetailClientProps) {
   const status = getEventStatus(event);
   const uiVariant = useMemo(() => getEventUiVariant(event), [event]);
   const uiMeta = useMemo(() => getEventUiMeta(event), [event]);
+  const eligibilityMeta = useMemo(
+    () => getEventEligibilityUiMeta(event.eligibilityType),
+    [event.eligibilityType]
+  );
   const displayImages = useMemo(() => getEventDisplayImages(event), [event]);
   const [participantCount, setParticipantCount] = useState(event.participantCount);
   const [hasParticipated, setHasParticipated] = useState(false);
@@ -301,20 +291,20 @@ export default function EventDetailClient({ event }: EventDetailClientProps) {
   const rawContent = event.content?.trim() ?? '';
   const isHtmlContent = hasHtmlContent(rawContent);
   const participationMethod = useMemo(
-    () => getParticipationMethod(event, uiVariant),
-    [event, uiVariant]
+    () => getParticipationMethod(event),
+    [event]
   );
   const benefitItems = useMemo(
-    () => getBenefitItems(event, uiVariant, uiMeta.typeLabel),
-    [event, uiMeta.typeLabel, uiVariant]
+    () => getBenefitItems(event),
+    [event]
   );
   const participationSteps = useMemo(
     () => getParticipationSteps(event, status, participationMethod),
     [event, participationMethod, status]
   );
   const noticeItems = useMemo(
-    () => getNoticeItems(event, status, uiVariant),
-    [event, status, uiVariant]
+    () => getNoticeItems(event, status),
+    [event, status]
   );
   const isDirectParticipationAvailable =
     status === 'ongoing' && !(event.eventType === 'coupon' && event.couponType === 'manual');
@@ -336,13 +326,18 @@ export default function EventDetailClient({ event }: EventDetailClientProps) {
         ? getContentParagraphs(rawContent)
         : [
           `${uiMeta.typeLabel} 이벤트의 상세 본문이 아직 등록되지 않았습니다.`,
-          `${event.description} 참여 전 기간과 혜택, 지급 방식을 아래 정보에서 먼저 확인해주세요.`,
+          `${event.description} 참여 전 기간과 참여 조건을 아래 정보에서 먼저 확인해주세요.`,
         ];
   const statusLabel = status === 'ongoing' ? '진행중' : status === 'upcoming' ? '예정' : '종료';
   const productSectionMeta = getEventProductSectionMeta(uiVariant);
+  const hasBenefitSummary = Boolean(
+    (event.discountRate && event.discountRate > 0)
+    || (event.discountAmount && event.discountAmount > 0)
+    || event.rewardType === 'coupon'
+  );
   const actionItems: EventActionSummaryItem[] = [
-    { label: '핵심 혜택', value: benefitItems[0] },
-    { label: '대상', value: getScopeSummary(event, uiVariant) },
+    { label: hasBenefitSummary ? '핵심 혜택' : '핵심 안내', value: benefitItems[0] },
+    { label: '대상', value: getScopeSummary(event) },
     {
       label: '기간',
       value: `${formatDate(event.startDate)} ~ ${formatDate(event.endDate)}`,
@@ -360,7 +355,7 @@ export default function EventDetailClient({ event }: EventDetailClientProps) {
   useEffect(() => {
     let isActive = true;
 
-    if (authLoading || !user || !isDirectParticipationAvailable) {
+    if (authLoading || !user || !isDirectParticipationAvailable || !eligibilityMeta.isConfigured) {
       setIsParticipationChecking(false);
       setHasParticipated(false);
       setCtaFeedback(null);
@@ -386,7 +381,7 @@ export default function EventDetailClient({ event }: EventDetailClientProps) {
             tone: 'info',
             message: primaryCta.followUpAction
               ? '이미 참여가 완료된 이벤트입니다. 상단 CTA로 다음 화면을 바로 이어갈 수 있습니다.'
-              : '이미 참여가 완료된 이벤트입니다. 지급 방식은 아래 안내를 확인해주세요.',
+              : '이미 참여가 완료된 이벤트입니다. 아래 상세 안내를 확인해주세요.',
           });
         }
       } catch {
@@ -410,7 +405,14 @@ export default function EventDetailClient({ event }: EventDetailClientProps) {
     return () => {
       isActive = false;
     };
-  }, [authLoading, event.id, isDirectParticipationAvailable, primaryCta.followUpAction, user]);
+  }, [
+    authLoading,
+    eligibilityMeta.isConfigured,
+    event.id,
+    isDirectParticipationAvailable,
+    primaryCta.followUpAction,
+    user,
+  ]);
 
   const primaryCtaLabel = (() => {
     if (isParticipationChecking) {
@@ -435,6 +437,7 @@ export default function EventDetailClient({ event }: EventDetailClientProps) {
     primaryCta.action === 'participate'
       ? isParticipationChecking
         || isParticipating
+        || !eligibilityMeta.isConfigured
         || (hasParticipated && !primaryCta.followUpAction)
       : false;
 
@@ -470,7 +473,8 @@ export default function EventDetailClient({ event }: EventDetailClientProps) {
     }
 
     if (!user) {
-      router.push('/auth/login');
+      const returnTarget = `/events/${encodeURIComponent(event.id)}`;
+      router.push(`/auth/login?redirect=${encodeURIComponent(returnTarget)}`);
       return;
     }
 
@@ -498,10 +502,10 @@ export default function EventDetailClient({ event }: EventDetailClientProps) {
         tone: result.alreadyParticipated ? 'info' : 'success',
         message:
           result.alreadyParticipated
-            ? '이미 참여가 완료된 이벤트입니다. 지급 방식은 아래 안내를 확인해주세요.'
+            ? '이미 참여가 완료된 이벤트입니다. 아래 상세 안내를 확인해주세요.'
             : result.rewardIssued
             ? '이벤트 참여와 쿠폰 지급이 완료되었습니다. 하단 보조 행동에서 쿠폰함 또는 사용 조건을 바로 확인할 수 있습니다.'
-            : uiVariant === 'review'
+            : event.eligibilityType === 'review'
             ? '리뷰 이벤트 참여가 완료되었습니다. 상단 CTA 또는 리뷰 화면에서 다음 단계를 이어가세요.'
             : '이벤트 참여가 완료되었습니다. 아래 보조 행동과 상세 안내로 다음 단계를 이어가세요.',
       });

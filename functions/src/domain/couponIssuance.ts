@@ -1,6 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import type { Firestore, Transaction } from "firebase-admin/firestore";
 import { isCouponIssuableByAction } from "./couponDomain";
+import { toKstDayKey } from "./kstDate";
 
 export class CouponIssuanceError extends Error {
   constructor(
@@ -56,7 +57,7 @@ export async function issueUserCouponInTransaction(
     throw new CouponIssuanceError(409, "Coupon already issued for this user.");
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = toKstDayKey(new Date());
   const userCouponRef = db.collection("user_coupons").doc();
   transaction.set(userCouponRef, {
     uid: input.userId,

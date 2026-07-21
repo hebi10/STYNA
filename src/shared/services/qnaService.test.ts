@@ -55,13 +55,13 @@ describe('QnAService public access', () => {
           createdAt: '2026-07-20T00:00:00.000Z',
           updatedAt: '2026-07-20T00:00:00.000Z',
         }],
-        pagination: { page: 2, limit: 10, totalCount: 11, totalPages: 2 },
+        pagination: { page: 1, limit: 10, totalCount: 1, totalPages: 1 },
       }),
     }) as jest.Mock;
 
     const result = await QnAService.getQnAList(
       { status: 'waiting' },
-      2,
+      1,
       10
     );
 
@@ -71,7 +71,7 @@ describe('QnAService public access', () => {
       body: JSON.stringify({
         action: 'publicList',
         filters: { status: 'waiting' },
-        page: 2,
+        page: 1,
         limit: 10,
       }),
     }));
@@ -80,7 +80,16 @@ describe('QnAService public access', () => {
     expect(result.qnas[0]).not.toHaveProperty('userEmail');
     expect(result.qnas[0]).not.toHaveProperty('isNotified');
     expect(result.qnas[0]).not.toHaveProperty('internalNote');
-    expect(result.pagination.totalCount).toBe(11);
+    expect(result.pagination.totalCount).toBe(1);
+  });
+
+  test('rejects pages after the first public batch before fetching', async () => {
+    global.fetch = jest.fn();
+
+    await expect(QnAService.getQnAList({}, 2, 10)).rejects.toThrow(
+      'Public QnA queries only support page 1.'
+    );
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   test.each([

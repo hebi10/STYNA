@@ -1,4 +1,9 @@
-import { Event, EventType, EventUiVariant } from '../types/event';
+import {
+  Event,
+  EventEligibilityType,
+  EventType,
+  EventUiVariant,
+} from '../types/event';
 
 export const REVIEW_EVENT_KEYWORDS = ['리뷰', '후기'];
 
@@ -17,6 +22,18 @@ interface EventDetailHighlightMeta {
   key: EventDetailHighlightKey;
   icon: string;
   title: string;
+}
+
+export interface EventEligibilityUiMeta {
+  isConfigured: boolean;
+  participationMethod: string;
+  primaryActionLabel: string;
+  primaryActionLoggedOutLabel: string;
+  primaryActionDescription: string;
+  primaryPendingLabel: string;
+  primaryCompletedLabel: string;
+  primaryPostParticipationLabel?: string;
+  followUpAction?: 'recommend' | 'reviews';
 }
 
 export interface EventUiMeta {
@@ -112,10 +129,10 @@ const EVENT_UI_META: Record<EventUiVariant, EventUiMeta> = {
     typeLabel: '리뷰',
     badgeLabel: '리뷰 미션',
     featuredEyebrow: '리뷰 미션',
-    featuredAccentText: '후기를 남기면 보상이 쌓이는 참여형 이벤트',
+    featuredAccentText: '구매 인증 후기를 확인하는 참여형 이벤트',
     featuredCtaLabel: '리뷰 미션 보기',
     cardEyebrow: '참여형 리뷰 이벤트',
-    cardAccentLabel: '후기 작성 보상',
+    cardAccentLabel: '구매 인증 후기',
     cardCtaLabel: '리뷰 조건 보기',
     heroEyebrow: '리뷰 이벤트',
     detailSectionTitle: '리뷰 이벤트 안내',
@@ -129,15 +146,15 @@ const EVENT_UI_META: Record<EventUiVariant, EventUiMeta> = {
       detail: '리뷰 이벤트 안내',
       content: '리뷰 미션 소개',
       method: '리뷰 참여 방법',
-      benefits: '리뷰 보상',
+      benefits: '리뷰 이벤트 안내',
       notice: '리뷰 작성 유의사항',
-      summary: '적립 및 지급 방식',
+      summary: '참여 자격 및 진행 방식',
     },
     highlightCards: [
-      { key: 'benefit', icon: '보상', title: '리뷰 보상' },
+      { key: 'benefit', icon: '안내', title: '이벤트 안내' },
       { key: 'scope', icon: '기준', title: '참여 기준' },
       { key: 'action', icon: '작성', title: '작성 방식' },
-      { key: 'reward', icon: '적립', title: '적립 방식' },
+      { key: 'reward', icon: '확인', title: '진행 방식' },
     ],
   },
   new: {
@@ -206,6 +223,70 @@ const EVENT_UI_META: Record<EventUiVariant, EventUiMeta> = {
     ],
   },
 };
+
+const EVENT_ELIGIBILITY_UI_META: Record<EventEligibilityType, EventEligibilityUiMeta> = {
+  none: {
+    isConfigured: true,
+    participationMethod: '별도 구매 조건 없이 이벤트 기간과 안내를 확인한 뒤 참여할 수 있습니다.',
+    primaryActionLabel: '이벤트 참여하기',
+    primaryActionLoggedOutLabel: '로그인 후 이벤트 참여하기',
+    primaryActionDescription: '로그인 후 별도 구매 증거 없이 이벤트 참여를 완료할 수 있습니다.',
+    primaryPendingLabel: '이벤트 참여 처리 중...',
+    primaryCompletedLabel: '참여 완료',
+  },
+  purchase: {
+    isConfigured: true,
+    participationMethod: '대상 상품의 본인 구매 내역이 있어야 참여할 수 있습니다.',
+    primaryActionLabel: '구매 후 참여하기',
+    primaryActionLoggedOutLabel: '로그인 후 구매 내역으로 참여하기',
+    primaryActionDescription: '로그인한 계정의 대상 상품 구매 내역을 확인해 참여를 완료합니다.',
+    primaryPendingLabel: '구매 내역 확인 중...',
+    primaryCompletedLabel: '구매 자격 확인 완료',
+    primaryPostParticipationLabel: '대상 상품 계속 보기',
+    followUpAction: 'recommend',
+  },
+  delivered: {
+    isConfigured: true,
+    participationMethod: '대상 상품이 배송 완료 또는 구매 확정된 뒤 참여할 수 있습니다.',
+    primaryActionLabel: '배송 완료 후 참여하기',
+    primaryActionLoggedOutLabel: '로그인 후 배송 내역으로 참여하기',
+    primaryActionDescription: '로그인한 계정의 대상 상품 배송 완료 또는 구매 확정 내역을 확인합니다.',
+    primaryPendingLabel: '배송 완료 내역 확인 중...',
+    primaryCompletedLabel: '배송 자격 확인 완료',
+    primaryPostParticipationLabel: '대상 상품 계속 보기',
+    followUpAction: 'recommend',
+  },
+  review: {
+    isConfigured: true,
+    participationMethod: '배송 완료된 대상 상품 옵션의 구매 인증 리뷰를 작성해야 참여할 수 있습니다.',
+    primaryActionLabel: '리뷰 쓰고 참여하기',
+    primaryActionLoggedOutLabel: '로그인 후 리뷰 쓰고 참여하기',
+    primaryActionDescription: '배송 완료된 대상 상품 옵션의 구매 인증 리뷰를 확인해 참여를 완료합니다.',
+    primaryPendingLabel: '구매 인증 리뷰 확인 중...',
+    primaryCompletedLabel: '리뷰 자격 확인 완료',
+    primaryPostParticipationLabel: '리뷰 화면 보기',
+    followUpAction: 'reviews',
+  },
+};
+
+const MISCONFIGURED_ELIGIBILITY_UI_META: EventEligibilityUiMeta = {
+  isConfigured: false,
+  participationMethod: '이벤트 참여 조건을 확인할 수 없습니다. 운영자에게 문의해주세요.',
+  primaryActionLabel: '참여 조건 확인 필요',
+  primaryActionLoggedOutLabel: '참여 조건 확인 필요',
+  primaryActionDescription: '이벤트 참여 조건이 올바르게 설정된 뒤 참여할 수 있습니다.',
+  primaryPendingLabel: '참여 조건 확인 중...',
+  primaryCompletedLabel: '참여 조건 확인 필요',
+};
+
+export const getEventEligibilityUiMeta = (eligibilityType: unknown): EventEligibilityUiMeta => (
+  eligibilityType === 'none'
+  || eligibilityType === 'purchase'
+  || eligibilityType === 'delivered'
+  || eligibilityType === 'review'
+    ? EVENT_ELIGIBILITY_UI_META[eligibilityType]
+    : MISCONFIGURED_ELIGIBILITY_UI_META
+);
 
 export const isReviewFocusedEvent = (
   event: Pick<Event, 'eventType' | 'title' | 'description' | 'content'>

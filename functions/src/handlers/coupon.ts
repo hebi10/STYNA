@@ -7,6 +7,7 @@ import {
   normalizeCouponCode,
 } from "../domain/couponDomain";
 import { CouponIssuanceError, issueUserCouponInTransaction } from "../domain/couponIssuance";
+import { parseCouponExpiryDay, toKstDayKey } from "../domain/kstDate";
 import { verifyAuth, requireAdmin, AuthError } from "../utils/auth";
 import { applyNoStoreHeaders } from "../utils/http";
 
@@ -135,10 +136,11 @@ function buildCouponAdminData(data: Record<string, unknown>, partial = false): R
 
   const expiryDate = ensureString(data.expiryDate);
   if (expiryDate || !partial) {
-    if (!expiryDate || Number.isNaN(new Date(expiryDate).getTime())) {
+    const expiryDay = parseCouponExpiryDay(expiryDate);
+    if (!expiryDay) {
       throw new Error("valid expiryDate is required.");
     }
-    nextData.expiryDate = expiryDate;
+    nextData.expiryDate = expiryDay;
   }
 
   if (data.description !== undefined || !partial) {
@@ -276,7 +278,7 @@ async function handleRegister(
         throw new CouponIssuanceError(409, "Coupon already registered for this user.");
       }
 
-      const today = new Date().toISOString().split("T")[0];
+      const today = toKstDayKey(new Date());
       const userCouponRef = db.collection("user_coupons").doc();
       transaction.set(userCouponRef, {
         uid: userId,
@@ -393,14 +395,14 @@ async function handleUse(
   if (couponHasExpired(couponData?.expiryDate, today)) {
     await db.collection("user_coupons").doc(userCouponId).update({
       status: "기간만료",
-      expiredDate: today.toISOString().split("T")[0],
+      expiredDate: toKstDayKey(today),
       updatedAt: FieldValue.serverTimestamp(),
     });
     res.status(410).json({ success: false, error: "Coupon has expired." });
     return;
   }
 
-  const usedDate = today.toISOString().split("T")[0];
+  const usedDate = toKstDayKey(today);
   await db.collection("user_coupons").doc(userCouponId).update({
     status: "사용완료",
     usedDate,
@@ -423,7 +425,7 @@ async function handleUse(
 async function handleCleanup(res: Response): Promise<void> {
   const db = getDb();
   const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
+  const todayStr = toKstDayKey(today);
   const expiredUserCoupons = await db.collection("user_coupons").where("status", "==", "사용가능").get();
   const batch = db.batch();
   let updateCount = 0;

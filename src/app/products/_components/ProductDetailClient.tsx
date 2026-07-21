@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/shared/types/product';
@@ -10,6 +10,12 @@ import { useUserActivity } from '@/context/userActivityProvider';
 import { useAddToCart } from '@/shared/hooks/useCart';
 import { getProductColorValue } from '@/shared/utils/productColor';
 import { getProductPricing } from '@/shared/utils/productPricing';
+import {
+  ProductIntentAction,
+  ProductIntentDraft,
+  consumeProductIntent,
+  saveProductIntent,
+} from '@/shared/utils/productIntent';
 import Button from '@/app/_components/Button';
 import ProductCard from './ProductCard';
 import ProductReviews from './ProductReviews';
@@ -80,6 +86,8 @@ export default function ProductDetailClient({ product }: Props) {
   const [productQnAs, setProductQnAs] = useState<PublicQnA[]>([]);
   const [isProductQnAsLoading, setIsProductQnAsLoading] = useState(false);
   const [productQnAsError, setProductQnAsError] = useState<string | null>(null);
+  const [resumeIntentFeedback, setResumeIntentFeedback] = useState<string | null>(null);
+  const hasResumedIntentRef = useRef(false);
 
   // 찜 상태 확인
   const storedWishlisted = user?.uid
@@ -145,31 +153,26 @@ export default function ProductDetailClient({ product }: Props) {
     }
   }, [product.id, loadRelatedProducts, addRecentProduct, user?.uid]);
 
-  const handleAddToCart = async () => {
-    // 로그인 확인
+  const redirectToLoginWithIntent = (action: ProductIntentAction) => {
+    const currentUrl = new URL(window.location.href);
+    const returnUrl = new URL(currentUrl.href);
+    returnUrl.searchParams.set('resumeIntent', '1');
+
+    saveProductIntent(sessionStorage, {
+      action,
+      productId: product.id,
+      pathname: currentUrl.pathname,
+      size: selectedSize,
+      color: selectedColor,
+      quantity,
+    }, Date.now());
+
+    const returnTarget = `${returnUrl.pathname}${returnUrl.search}${returnUrl.hash}`;
+    router.push(`/auth/login?redirect=${encodeURIComponent(returnTarget)}`);
+  };
+
+  const executeAddToCart = useCallback(async (intent: ProductIntentDraft) => {
     if (!user) {
-      alert('로그인이 필요합니다.');
-      router.push('/auth/login');
-      return;
-    }
-
-    // 옵션 선택 확인 (사이즈나 색상이 있는 경우에만)
-    const hasSizes = product.sizes && product.sizes.length > 0;
-    const hasColors = product.colors && product.colors.length > 0;
-    
-    if (hasSizes && !selectedSize) {
-      alert('사이즈를 선택해주세요.');
-      return;
-    }
-    
-    if (hasColors && !selectedColor) {
-      alert('색상을 선택해주세요.');
-      return;
-    }
-
-    // 재고 확인
-    if (!inStock || quantity > product.stock) {
-      alert('재고가 부족합니다.');
       return;
     }
 
@@ -181,17 +184,15 @@ export default function ProductDetailClient({ product }: Props) {
         product,
         request: {
           productId: product.id,
-          size: selectedSize || '', // 사이즈가 없으면 빈 문자열
-          color: selectedColor || '', // 색상이 없으면 빈 문자열
-          quantity
-        }
+          size: intent.size,
+          color: intent.color,
+          quantity: intent.quantity,
+        },
       });
 
       alert('장바구니에 추가되었습니다.');
-      
-      // 장바구니 페이지로 이동할지 물어보기
-      const goToCart = confirm('장바구니로 이동하시겠습니까?');
-      if (goToCart) {
+
+      if (confirm('장바구니로 이동하시겠습니까?')) {
         router.push('/orders/cart');
       }
     } catch (error) {
@@ -200,13 +201,62 @@ export default function ProductDetailClient({ product }: Props) {
     } finally {
       setIsAddingToCart(false);
     }
-  };
+  }, [addToCartMutation, product, router, user]);
 
-  const handleBuyNow = () => {
+  const executeBuyNow = useCallback((intent: ProductIntentDraft) => {
+    const productPricing = getProductPricing(product);
+    const subtotal = productPricing.salePrice * intent.quantity;
+    const deliveryFee = subtotal >= 50000 ? 0 : 3000;
+
+    const orderData = {
+      items: [{
+        productId: product.id,
+        id: `${product.id}-${intent.size}-${intent.color}`,
+        productName: product.name,
+        productImage: product.images[0],
+        brand: product.brand,
+        size: intent.size,
+        color: intent.color,
+        quantity: intent.quantity,
+        price: productPricing.salePrice,
+        discountAmount: productPricing.discountAmount,
+      }],
+      subtotal,
+      couponDiscount: 0,
+      deliveryFee,
+      finalAmount: subtotal + deliveryFee,
+      selectedCoupon: '',
+      deliveryOption: 'standard',
+    };
+
+    sessionStorage.setItem('orderData', JSON.stringify(orderData));
+    router.push('/orders/checkout');
+  }, [product, router]);
+
+  const executeWishlistAdd = useCallback(async () => {
+    if (!user || isWishlisted) {
+      return;
+    }
+
+    setIsWishlistLoading(true);
+    setOptimisticWishlisted(true);
+
+    try {
+      await addToWishlist(product.id);
+    } catch (error) {
+      setOptimisticWishlisted(false);
+      console.error('찜하기 추가 실패:', error);
+      alert(error instanceof Error ? error.message : '찜하기 처리에 실패했습니다.');
+    } finally {
+      setIsWishlistLoading(false);
+    }
+  }, [addToWishlist, isWishlisted, product.id, user]);
+
+  const handleAddToCart = async () => {
     // 로그인 확인
     if (!user) {
       alert('로그인이 필요합니다.');
-      router.push('/auth/login');
+      redirectToLoginWithIntent('cart');
       return;
     }
 
@@ -230,42 +280,59 @@ export default function ProductDetailClient({ product }: Props) {
       return;
     }
 
-    const productPricing = getProductPricing(product);
+    await executeAddToCart({
+      action: 'cart',
+      productId: product.id,
+      pathname: window.location.pathname,
+      size: selectedSize || '',
+      color: selectedColor || '',
+      quantity,
+    });
+  };
 
-    // 주문 데이터 생성
-    const orderData = {
-      items: [{
-        productId: product.id,
-        id: `${product.id}-${selectedSize || ''}-${selectedColor || ''}`,
-        productName: product.name,
-        productImage: product.images[0],
-        brand: product.brand,
-        size: selectedSize || '', // 사이즈가 없으면 빈 문자열
-        color: selectedColor || '', // 색상이 없으면 빈 문자열
-        quantity,
-        price: productPricing.salePrice,
-        discountAmount: productPricing.discountAmount,
-      }],
-      subtotal: productPricing.salePrice * quantity,
-      couponDiscount: 0,
-      deliveryFee: productPricing.salePrice * quantity >= 50000 ? 0 : 3000,
-      finalAmount: (productPricing.salePrice * quantity) + (productPricing.salePrice * quantity >= 50000 ? 0 : 3000),
-      selectedCoupon: '',
-      deliveryOption: 'standard'
-    };
+  const handleBuyNow = () => {
+    // 로그인 확인
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      redirectToLoginWithIntent('buy');
+      return;
+    }
 
-    // 세션 스토리지에 주문 데이터 저장
-    sessionStorage.setItem('orderData', JSON.stringify(orderData));
+    // 옵션 선택 확인 (사이즈나 색상이 있는 경우에만)
+    const hasSizes = product.sizes && product.sizes.length > 0;
+    const hasColors = product.colors && product.colors.length > 0;
     
-    // 주문서 작성 페이지로 이동
-    router.push('/orders/checkout');
+    if (hasSizes && !selectedSize) {
+      alert('사이즈를 선택해주세요.');
+      return;
+    }
+    
+    if (hasColors && !selectedColor) {
+      alert('색상을 선택해주세요.');
+      return;
+    }
+
+    // 재고 확인
+    if (!inStock || quantity > product.stock) {
+      alert('재고가 부족합니다.');
+      return;
+    }
+
+    executeBuyNow({
+      action: 'buy',
+      productId: product.id,
+      pathname: window.location.pathname,
+      size: selectedSize || '',
+      color: selectedColor || '',
+      quantity,
+    });
   };
 
   // 찜하기 토글
   const handleWishlistToggle = async () => {
     if (!user) {
       alert('로그인이 필요합니다.');
-      router.push('/auth/login');
+      redirectToLoginWithIntent('wishlist');
       return;
     }
 
@@ -299,6 +366,72 @@ export default function ProductDetailClient({ product }: Props) {
 
   const displayRating = product.rating || 0;
   const displayReviewCount = product.reviewCount ?? 0;
+
+  useEffect(() => {
+    if (
+      hasResumedIntentRef.current
+      || !user
+      || new URLSearchParams(window.location.search).get('resumeIntent') !== '1'
+    ) {
+      return;
+    }
+
+    hasResumedIntentRef.current = true;
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete('resumeIntent');
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`,
+    );
+    const result = consumeProductIntent(sessionStorage, Date.now());
+
+    if (!result.ok) {
+      setResumeIntentFeedback('옵션을 다시 선택해 주세요.');
+      return;
+    }
+
+    const { intent } = result;
+    const matchesProduct = intent.productId === product.id
+      && intent.pathname === window.location.pathname;
+
+    if (!matchesProduct) {
+      setResumeIntentFeedback('옵션을 다시 선택해 주세요.');
+      return;
+    }
+
+    if (intent.action === 'wishlist') {
+      void executeWishlistAdd();
+      return;
+    }
+
+    const hasSizes = Boolean(product.sizes?.length);
+    const hasColors = Boolean(product.colors?.length);
+    const hasValidSize = hasSizes
+      ? Boolean(product.sizes?.includes(intent.size))
+      : intent.size === '';
+    const hasValidColor = hasColors
+      ? Boolean(product.colors?.includes(intent.color))
+      : intent.color === '';
+    const hasValidStock = inStock && intent.quantity <= product.stock;
+
+    if (!hasValidSize || !hasValidColor || !hasValidStock) {
+      setResumeIntentFeedback('옵션을 다시 선택해 주세요.');
+      return;
+    }
+
+    setSelectedSize(intent.size);
+    setSelectedColor(intent.color);
+    setQuantity(intent.quantity);
+    setResumeIntentFeedback(null);
+
+    if (intent.action === 'cart') {
+      void executeAddToCart(intent);
+      return;
+    }
+
+    executeBuyNow(intent);
+  }, [executeAddToCart, executeBuyNow, executeWishlistAdd, inStock, product, user]);
 
   return (
     <div className={styles.container}>
@@ -454,6 +587,9 @@ export default function ProductDetailClient({ product }: Props) {
           </div>
 
           {/* 구매 버튼 */}
+          {resumeIntentFeedback && (
+            <p role="alert">{resumeIntentFeedback}</p>
+          )}
           <div className={styles.actions}>
             <button
               className={`${styles.wishlistButton} ${isWishlisted ? styles.wishlisted : ''}`}

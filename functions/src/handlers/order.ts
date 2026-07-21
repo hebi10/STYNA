@@ -7,11 +7,12 @@ import {
   calculateCouponDiscount,
   calculateDeliveryFee,
   calculateDiscountedUnitPrice,
+  ExpiredOrderCouponError,
   mapCartTotal,
+  markExpiredUserCoupon,
   normalizeDeliveryOption,
   normalizeItems,
   normalizePaymentMethod,
-  parseDate,
   parseDeliveryAddress,
   parseItems,
   toNonNegativeInteger,
@@ -19,6 +20,7 @@ import {
   toStringValue,
   toTodayString,
 } from "../domain/orderDomain";
+import { isExpiredOnKstDay } from "../domain/kstDate";
 import { AuthContext, AuthError, verifyAuthContext } from "../utils/auth";
 
 interface RawCreateOrderRequest {
@@ -80,7 +82,6 @@ const NO_STORE_HEADERS = {
 
 const USER_COUPON_AVAILABLE_STATUSES = ["사용가능", "available", "ACTIVE"];
 const USER_COUPON_USED_STATUSES = ["사용완료", "used"];
-const USER_COUPON_EXPIRED_STATUSES = ["기간만료", "expired", "만료됨"];
 
 const VALID_ORDER_STATUSES = new Set([
   "pending",
@@ -339,6 +340,8 @@ export const order = onRequest(
       return;
     }
 
+    let authContext: AuthContext | null = null;
+
     try {
       const action = toStringValue((req.body as RawCreateOrderRequest).action);
 
@@ -352,7 +355,8 @@ export const order = onRequest(
         return;
       }
 
-      const authContext = await verifyAuthContext(req.headers.authorization);
+      const currentAuthContext = await verifyAuthContext(req.headers.authorization);
+      authContext = currentAuthContext;
       const payload = req.body as RawCreateOrderRequest;
 
       const items = normalizeItems(parseItems(payload.items));
@@ -373,7 +377,7 @@ export const order = onRequest(
         const now = admin.firestore.FieldValue.serverTimestamp();
         const nowDate = new Date();
 
-        const userRef = usersRef.doc(authContext.uid);
+        const userRef = usersRef.doc(currentAuthContext.uid);
         const userSnap = await transaction.get(userRef);
         if (!userSnap.exists) {
           throw new Error("User document was not found.");
@@ -451,7 +455,7 @@ export const order = onRequest(
           }
 
           const userCoupon = userCouponSnap.data() || {};
-          if (userCoupon.uid !== authContext.uid) {
+          if (userCoupon.uid !== currentAuthContext.uid) {
             throw new Error("Cannot use coupon of another user.");
           }
           appliedUserCouponId = selectedCoupon;
@@ -476,14 +480,8 @@ export const order = onRequest(
             throw new Error("Coupon is inactive.");
           }
 
-          const expiryDate = parseDate(couponData.expiryDate);
-          if (!expiryDate || expiryDate < nowDate) {
-            transaction.update(userCouponRef, {
-              status: USER_COUPON_EXPIRED_STATUSES[0],
-              expiredDate: toTodayString(nowDate),
-              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            });
-            throw new Error("Coupon has expired.");
+          if (isExpiredOnKstDay(couponData.expiryDate, nowDate)) {
+            throw new ExpiredOrderCouponError(selectedCoupon);
           }
 
           const minimumOrderAmount = Math.max(0, toNumber(couponData.minOrderAmount, 0));
@@ -510,13 +508,13 @@ export const order = onRequest(
           throw new Error("Requested point amount is too high.");
         }
 
-        const cartRef = admin.firestore().collection("carts").doc(authContext.uid);
+        const cartRef = admin.firestore().collection("carts").doc(currentAuthContext.uid);
         const cartSnap = cartItemIdsToRemove.size > 0 ? await transaction.get(cartRef) : null;
 
         const orderRef = ordersRef.doc();
         const orderId = orderRef.id;
         const orderData = {
-          userId: authContext.uid,
+          userId: currentAuthContext.uid,
           orderNumber: `ORD-${toTodayString(nowDate).replace(/-/g, "")}-${orderId.slice(0, 6).toUpperCase()}`,
           products: resolvedItems,
           totalAmount: subtotal,
@@ -608,6 +606,23 @@ export const order = onRequest(
     } catch (error) {
       if (error instanceof AuthError) {
         res.status(error.statusCode).json({ success: false, error: error.message });
+        return;
+      }
+
+      if (error instanceof ExpiredOrderCouponError && authContext) {
+        try {
+          await markExpiredUserCoupon(admin.firestore(), {
+            userCouponId: error.userCouponId,
+            userId: authContext.uid,
+            now: new Date(),
+          });
+        } catch (markingError) {
+          console.error("Expired order coupon marking failed:", markingError);
+          res.status(500).json({ success: false, error: "Failed to persist expired coupon status." });
+          return;
+        }
+
+        res.status(410).json({ success: false, error: error.message });
         return;
       }
 

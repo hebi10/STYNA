@@ -101,7 +101,7 @@ export function parsePublicQnAListRequest(input: unknown): PublicQnAListRequest 
 
   const page = request.page === undefined ? 1 : request.page;
   const limit = request.limit === undefined ? 10 : request.limit;
-  if (typeof page !== "number" || !Number.isInteger(page) || page < 1 || page > 100) {
+  if (typeof page !== "number" || !Number.isInteger(page) || page !== 1) {
     return null;
   }
   if (typeof limit !== "number" || !Number.isInteger(limit) || limit < 1 || limit > 50) {

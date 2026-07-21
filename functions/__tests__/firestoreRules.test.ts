@@ -444,6 +444,30 @@ describe('QnA rules', () => {
   });
 
   test.each([
+    ['empty title', { title: '' }],
+    ['oversized title', { title: '제'.repeat(101) }],
+    ['empty content', { content: '' }],
+    ['oversized content', { content: '내'.repeat(2001) }],
+    ['six images', { images: Array.from({ length: 6 }, (_, index) => `https://example.com/${index}.png`) }],
+    ['non-string image', { images: ['https://example.com/valid.png', 1] }],
+    ['empty image URL', { images: [''] }],
+    ['oversized image URL', { images: [`https://example.com/${'a'.repeat(2049)}`] }],
+    ['empty productId', { productId: '' }],
+    ['oversized productId', { productId: 'p'.repeat(129) }],
+    ['empty productName', { productName: '' }],
+    ['oversized productName', { productName: '상'.repeat(201) }],
+  ])('denies QnA creation with %s', async (_caseName, override) => {
+    const ownerDb = testEnv.authenticatedContext('owner-1', {
+      email: 'owner-1@example.com',
+    }).firestore();
+
+    await assertFails(addDoc(collection(ownerDb, 'qna'), {
+      ...validQnACreate(),
+      ...override,
+    }));
+  });
+
+  test.each([
     ['userId', { userId: 'other-1' }],
     ['userEmail', { userEmail: 'forged@example.com' }],
     ['userName', { userName: '위조 작성자' }],
@@ -496,6 +520,7 @@ describe('QnA rules', () => {
     ['userId', { userId: 'other-user', updatedAt: serverTimestamp() }],
     ['userEmail', { userEmail: 'other@example.com', updatedAt: serverTimestamp() }],
     ['createdAt', { createdAt: serverTimestamp(), updatedAt: serverTimestamp() }],
+    ['missing updatedAt', { title: 'updated without timestamp' }],
     ['arbitrary updatedAt', { content: '변경', updatedAt: fixedTime }],
   ])('denies an owner changing QnA %s', async (_field, change) => {
     const ownerDb = testEnv.authenticatedContext('owner-1').firestore();
@@ -505,9 +530,15 @@ describe('QnA rules', () => {
 
   test.each([
     ['title type', { title: 123 }],
+    ['empty title', { title: '' }],
+    ['oversized title', { title: '제'.repeat(101) }],
     ['content type', { content: { text: 'invalid' } }],
+    ['empty content', { content: '' }],
+    ['oversized content', { content: '내'.repeat(2001) }],
     ['category enum', { category: 'privileged' }],
     ['images type', { images: { url: '/invalid.png' } }],
+    ['six images', { images: Array.from({ length: 6 }, (_, index) => `https://example.com/${index}.png`) }],
+    ['non-string image', { images: ['https://example.com/valid.png', 1] }],
     ['secret type', { isSecret: 'false' }],
     ['notification type', { isNotified: 'true' }],
   ])('denies an owner update with an invalid QnA %s', async (_field, change) => {
@@ -515,6 +546,26 @@ describe('QnA rules', () => {
 
     await assertFails(updateDoc(doc(ownerDb, 'qna', 'secret-qna'), {
       ...change,
+      updatedAt: serverTimestamp(),
+    }));
+  });
+
+  test.each([
+    ['empty productId', { productId: '' }],
+    ['oversized productId', { productId: 'p'.repeat(129) }],
+    ['empty productName', { productName: '' }],
+    ['oversized productName', { productName: '상'.repeat(201) }],
+  ])('denies an owner update when the stored QnA has %s', async (_caseName, invalidOptionalField) => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'qna', 'invalid-optional-qna'), {
+        ...qnaData(),
+        ...invalidOptionalField,
+      });
+    });
+    const ownerDb = testEnv.authenticatedContext('owner-1').firestore();
+
+    await assertFails(updateDoc(doc(ownerDb, 'qna', 'invalid-optional-qna'), {
+      title: '수정 시도',
       updatedAt: serverTimestamp(),
     }));
   });
@@ -568,6 +619,38 @@ describe('QnA rules', () => {
         answeredAt: serverTimestamp(),
         isAdmin: true,
         internal: true,
+      },
+    }],
+    ['empty answer content', {
+      answer: {
+        content: '',
+        answeredBy: 'admin-1',
+        answeredAt: serverTimestamp(),
+        isAdmin: true,
+      },
+    }],
+    ['oversized answer content', {
+      answer: {
+        content: '답'.repeat(2001),
+        answeredBy: 'admin-1',
+        answeredAt: serverTimestamp(),
+        isAdmin: true,
+      },
+    }],
+    ['empty answer author', {
+      answer: {
+        content: '답변',
+        answeredBy: '',
+        answeredAt: serverTimestamp(),
+        isAdmin: true,
+      },
+    }],
+    ['oversized answer author', {
+      answer: {
+        content: '답변',
+        answeredBy: '관'.repeat(201),
+        answeredAt: serverTimestamp(),
+        isAdmin: true,
       },
     }],
   ])('denies an invalid admin QnA %s', async (_caseName, change) => {
@@ -639,6 +722,22 @@ describe('inquiry rules', () => {
   });
 
   test.each([
+    ['empty title', { title: '' }],
+    ['oversized title', { title: '제'.repeat(101) }],
+    ['empty content', { content: '' }],
+    ['oversized content', { content: '내'.repeat(2001) }],
+  ])('denies inquiry creation with %s', async (_caseName, override) => {
+    const ownerDb = testEnv.authenticatedContext('owner-1', {
+      email: 'owner-1@example.com',
+    }).firestore();
+
+    await assertFails(addDoc(collection(ownerDb, 'inquiries'), {
+      ...validInquiryCreate(),
+      ...override,
+    }));
+  });
+
+  test.each([
     ['userId', { userId: 'other-1' }],
     ['userEmail', { userEmail: 'forged@example.com' }],
     ['userName', { userName: '위조 작성자' }],
@@ -705,6 +804,34 @@ describe('inquiry rules', () => {
         answeredBy: 'admin-1',
         answeredAt: serverTimestamp(),
         internal: true,
+      },
+    }],
+    ['empty answer content', {
+      answer: {
+        content: '',
+        answeredBy: 'admin-1',
+        answeredAt: serverTimestamp(),
+      },
+    }],
+    ['oversized answer content', {
+      answer: {
+        content: '답'.repeat(2001),
+        answeredBy: 'admin-1',
+        answeredAt: serverTimestamp(),
+      },
+    }],
+    ['empty answer author', {
+      answer: {
+        content: '답변',
+        answeredBy: '',
+        answeredAt: serverTimestamp(),
+      },
+    }],
+    ['oversized answer author', {
+      answer: {
+        content: '답변',
+        answeredBy: '관'.repeat(201),
+        answeredAt: serverTimestamp(),
       },
     }],
   ])('denies an invalid admin inquiry %s', async (_caseName, change) => {

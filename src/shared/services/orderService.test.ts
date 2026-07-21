@@ -59,4 +59,8 @@ describe('OrderService.cancelOrder', () => {
     });
     expect(updateDoc).not.toHaveBeenCalled();
   });
+
+  it('does not expose an unused direct delivery update helper', () => {
+    expect(OrderService).not.toHaveProperty('updateDeliveryInfo');
+  });
 });

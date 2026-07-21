@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import QnADetailPage from './page';
@@ -59,6 +59,17 @@ describe('QnA detail actions', () => {
     await waitFor(() => expect(QnAService.getQnAWithAccessCheck).toHaveBeenCalled());
     expect(container.querySelector('.editButton')).toBeNull();
     expect(push).not.toHaveBeenCalledWith('/qna/edit/qna-1');
+  });
+
+  test('does not render a stale view count for read-only detail requests', async () => {
+    jest.mocked(QnAService.getQnAWithAccessCheck).mockResolvedValue({
+      success: true,
+      qna: { ...qna(), views: 27 },
+    });
+    render(<QnADetailPage />);
+
+    await waitFor(() => expect(QnAService.getQnAWithAccessCheck).toHaveBeenCalled());
+    expect(screen.queryByText('조회수 27')).toBeNull();
   });
 
   test.each([
