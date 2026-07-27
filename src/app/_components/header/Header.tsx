@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/authProvider";
 import { useCartItemCount } from "@/shared/hooks/useCart";
 import {
@@ -9,32 +10,16 @@ import {
   formatSignupBenefit,
 } from "@/shared/constants/commercePolicy";
 import { CategoryOrderService } from "@/shared/services/categoryOrderService";
+import {
+  buildHeaderNavGroups,
+  getHeaderNavHref,
+  type HeaderCategory,
+  type HeaderNavDisclosure,
+  type HeaderNavGroup,
+} from "./navigation";
 import styles from "./Header.module.css";
 
-interface HeaderCategory {
-  id: string;
-  name: string;
-  href: string;
-}
-
-interface HeaderNavItem {
-  label: string;
-  href: string;
-}
-
-const FALLBACK_CATEGORIES: HeaderCategory[] = [{
-  id: "all",
-  name: "카테고리",
-  href: "/categories",
-}];
-
-const SUPPORT_LINKS: HeaderNavItem[] = [
-  { label: "이벤트", href: "/events" },
-  { label: "리뷰", href: "/reviews" },
-  { label: "1:1문의", href: "/cs/inquiry" },
-  { label: "상품문의", href: "/qna" },
-  { label: "도움말", href: "/cs/faq" },
-];
+const FALLBACK_CATEGORIES: HeaderCategory[] = [];
 
 const ANNOUNCEMENTS = [
   formatSignupBenefit(),
@@ -44,22 +29,39 @@ const ANNOUNCEMENTS = [
 
 const DESKTOP_BREAKPOINT_PX = 960;
 
-function toNavLabel(category: HeaderCategory) {
-  return category.name;
-}
-
 export default function Header() {
+  const pathname = usePathname();
   const { user, isAdmin, logout } = useAuth();
   const { data: cartItemCount = 0 } = useCartItemCount(user?.uid || null);
   const [categories, setCategories] = useState<HeaderCategory[]>(FALLBACK_CATEGORIES);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [openDesktopGroup, setOpenDesktopGroup] = useState<HeaderNavGroup["id"] | null>(null);
+  const [openMobileGroup, setOpenMobileGroup] = useState<HeaderNavGroup["id"] | null>(null);
+  const [openDesktopDisclosure, setOpenDesktopDisclosure] = useState<HeaderNavDisclosure["id"] | null>(null);
+  const [openMobileDisclosure, setOpenMobileDisclosure] = useState<HeaderNavDisclosure["id"] | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const previousPathnameRef = useRef(pathname);
+  const desktopTriggerRefs = useRef<Partial<Record<HeaderNavGroup["id"], HTMLButtonElement | null>>>({});
+  const desktopDisclosureTriggerRefs = useRef<
+    Partial<Record<HeaderNavDisclosure["id"], HTMLButtonElement | null>>
+  >({});
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (previousPathnameRef.current === pathname) return;
+
+    previousPathnameRef.current = pathname;
+    setOpenDesktopGroup(null);
+    setOpenDesktopDisclosure(null);
+    setIsMobileMenuOpen(false);
+    setOpenMobileGroup(null);
+    setOpenMobileDisclosure(null);
+  }, [pathname]);
 
   useEffect(() => {
     let isActive = true;
@@ -67,7 +69,7 @@ export default function Header() {
     const loadCategories = async () => {
       try {
         const sortedCategories = await CategoryOrderService.getSortedCategories();
-        const headerCategories: HeaderCategory[] = sortedCategories.map((category) => ({
+        const headerCategories = sortedCategories.map((category) => ({
           id: category.id,
           name: category.name,
           href: `/categories/${category.id}`,
@@ -78,9 +80,7 @@ export default function Header() {
         }
       } catch (error) {
         console.error("헤더 카테고리 로딩 실패:", error);
-        if (isActive) {
-          setCategories(FALLBACK_CATEGORIES);
-        }
+        if (isActive) setCategories(FALLBACK_CATEGORIES);
       }
     };
 
@@ -92,9 +92,57 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
+    if (!openDesktopGroup) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+
+      event.preventDefault();
+      if (openDesktopDisclosure) {
+        const disclosureTrigger = desktopDisclosureTriggerRefs.current[openDesktopDisclosure];
+        setOpenDesktopDisclosure(null);
+        disclosureTrigger?.focus();
+        return;
+      }
+
+      const trigger = desktopTriggerRefs.current[openDesktopGroup];
+      setOpenDesktopGroup(null);
+      trigger?.focus();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [openDesktopDisclosure, openDesktopGroup]);
+
+  useEffect(() => {
+    const handleResponsiveResize = () => {
+      if (window.innerWidth < DESKTOP_BREAKPOINT_PX) {
+        setOpenDesktopGroup(null);
+        setOpenDesktopDisclosure(null);
+        return;
+      }
+
+      setOpenMobileGroup(null);
+      setOpenMobileDisclosure(null);
+    };
+
+    window.addEventListener("resize", handleResponsiveResize);
+    return () => window.removeEventListener("resize", handleResponsiveResize);
+  }, []);
+
+  useEffect(() => {
     if (!isMobileMenuOpen) return;
 
     const previousOverflow = document.body.style.overflow;
+    const pageSurfaceStates = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        'main, footer, [data-testid="chat-widget"], [data-testid="site-guide-manager"]',
+      ),
+    ).map((element) => ({
+      element,
+      ariaHidden: element.getAttribute("aria-hidden"),
+      inert: element.getAttribute("inert"),
+    }));
     const mobileMenuButton = mobileMenuButtonRef.current;
     const mobileMenu = mobileMenuRef.current;
     let shouldRestoreFocus = true;
@@ -102,6 +150,8 @@ export default function Header() {
       if (event.key === "Escape") {
         event.preventDefault();
         setIsMobileMenuOpen(false);
+        setOpenMobileGroup(null);
+        setOpenMobileDisclosure(null);
         return;
       }
 
@@ -141,10 +191,16 @@ export default function Header() {
         shouldRestoreFocus = false;
         mobileMenuButton?.blur();
         setIsMobileMenuOpen(false);
+        setOpenMobileGroup(null);
+        setOpenMobileDisclosure(null);
       }
     };
 
     document.body.style.overflow = "hidden";
+    pageSurfaceStates.forEach(({ element }) => {
+      element.setAttribute("aria-hidden", "true");
+      element.setAttribute("inert", "");
+    });
     document.addEventListener("keydown", handleKeyDown);
     window.addEventListener("resize", handleResize);
 
@@ -152,36 +208,63 @@ export default function Header() {
       document.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("resize", handleResize);
       document.body.style.overflow = previousOverflow;
+      pageSurfaceStates.forEach(({ element, ariaHidden, inert }) => {
+        if (ariaHidden === null) {
+          element.removeAttribute("aria-hidden");
+        } else {
+          element.setAttribute("aria-hidden", ariaHidden);
+        }
+
+        if (inert === null) {
+          element.removeAttribute("inert");
+        } else {
+          element.setAttribute("inert", inert);
+        }
+      });
       if (shouldRestoreFocus) {
         mobileMenuButton?.focus();
       }
     };
   }, [isMobileMenuOpen]);
 
+  const navGroups = buildHeaderNavGroups(categories);
   const safeCartItemCount = isMounted ? cartItemCount : 0;
-  const featuredCategories = categories.slice(0, 1);
-  const primaryNavItems: HeaderNavItem[] = [
-    { label: "전체 상품", href: "/products" },
-    { label: "신상", href: "/recommend?filter=new" },
-    { label: "베스트", href: "/recommend?filter=review" },
-    ...featuredCategories.map((category) => ({
-      label: toNavLabel(category),
-      href: category.href,
-    })),
-    { label: "세일", href: "/main/sale" },
-    { label: "브랜드", href: "/brand" },
-  ].slice(0, 6);
-  const secondaryNavItems: HeaderNavItem[] = [
-    { label: "추천", href: "/recommend" },
-    ...SUPPORT_LINKS.filter((item) => item.href !== "/cs/faq"),
-  ];
 
   const toggleMobileMenu = () => {
-    setIsMobileMenuOpen((prev) => !prev);
+    setIsMobileMenuOpen((isOpen) => !isOpen);
+    setOpenDesktopGroup(null);
+    setOpenMobileGroup(null);
+    setOpenDesktopDisclosure(null);
+    setOpenMobileDisclosure(null);
   };
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
+    setOpenMobileGroup(null);
+    setOpenMobileDisclosure(null);
+  };
+
+  const closeDesktopNavigation = () => {
+    setOpenDesktopGroup(null);
+    setOpenDesktopDisclosure(null);
+  };
+
+  const toggleDesktopGroup = (groupId: HeaderNavGroup["id"]) => {
+    setOpenDesktopDisclosure(null);
+    setOpenDesktopGroup((current) => current === groupId ? null : groupId);
+  };
+
+  const toggleMobileGroup = (groupId: HeaderNavGroup["id"]) => {
+    setOpenMobileDisclosure(null);
+    setOpenMobileGroup((current) => current === groupId ? null : groupId);
+  };
+
+  const toggleDesktopDisclosure = (disclosureId: HeaderNavDisclosure["id"]) => {
+    setOpenDesktopDisclosure((current) => current === disclosureId ? null : disclosureId);
+  };
+
+  const toggleMobileDisclosure = (disclosureId: HeaderNavDisclosure["id"]) => {
+    setOpenMobileDisclosure((current) => current === disclosureId ? null : disclosureId);
   };
 
   return (
@@ -216,7 +299,12 @@ export default function Header() {
             aria-hidden={isMobileMenuOpen || undefined}
             inert={isMobileMenuOpen}
           >
-            <Link href="/" className={styles.logoLink} aria-label="STYNA home">
+            <Link
+              href="/"
+              className={styles.logoLink}
+              aria-label="STYNA home"
+              onClick={closeDesktopNavigation}
+            >
               <span className={styles.logoTopRow}>
                 <span className={styles.logoWordmark}>STYNA</span>
               </span>
@@ -232,15 +320,9 @@ export default function Header() {
             aria-expanded={isMobileMenuOpen}
             aria-controls="mobile-navigation"
           >
-            <span
-              className={`${styles.hamburgerLine} ${isMobileMenuOpen ? styles.line1Active : ""}`}
-            ></span>
-            <span
-              className={`${styles.hamburgerLine} ${isMobileMenuOpen ? styles.line2Active : ""}`}
-            ></span>
-            <span
-              className={`${styles.hamburgerLine} ${isMobileMenuOpen ? styles.line3Active : ""}`}
-            ></span>
+            <span className={`${styles.hamburgerLine} ${isMobileMenuOpen ? styles.line1Active : ""}`}></span>
+            <span className={`${styles.hamburgerLine} ${isMobileMenuOpen ? styles.line2Active : ""}`}></span>
+            <span className={`${styles.hamburgerLine} ${isMobileMenuOpen ? styles.line3Active : ""}`}></span>
           </button>
 
           <nav
@@ -250,21 +332,96 @@ export default function Header() {
             inert={isMobileMenuOpen}
           >
             <div className={styles.navList}>
-              {primaryNavItems.map((item) => (
-                <Link key={item.label} href={item.href} className={styles.navLink}>
-                  {item.label}
-                </Link>
-              ))}
-            </div>
+              {navGroups.map((group) => {
+                if (group.items.length > 0) {
+                  return (
+                    <div className={styles.desktopNavGroup} key={group.id}>
+                  <button
+                    ref={(element) => { desktopTriggerRefs.current[group.id] = element; }}
+                    type="button"
+                    className={`${styles.navTrigger} ${openDesktopGroup === group.id ? styles.navTriggerOpen : ""}`}
+                    aria-label={`${group.label} 메뉴 ${openDesktopGroup === group.id ? "닫기" : "열기"}`}
+                    aria-expanded={openDesktopGroup === group.id}
+                    aria-controls={`desktop-nav-${group.id}`}
+                    onClick={() => toggleDesktopGroup(group.id)}
+                  >
+                    {group.label}
+                  </button>
+                  {openDesktopGroup === group.id && (
+                    <div id={`desktop-nav-${group.id}`} className={styles.desktopDropdown}>
+                      {group.items.map((item) => {
+                        if ("items" in item) {
+                          return (
+                            <div className={styles.dropdownDisclosure} key={item.id}>
+                              <button
+                                ref={(element) => {
+                                  desktopDisclosureTriggerRefs.current[item.id] = element;
+                                }}
+                                type="button"
+                                className={`${styles.dropdownTrigger} ${
+                                  openDesktopDisclosure === item.id
+                                    ? styles.dropdownTriggerOpen
+                                    : ""
+                                }`}
+                                aria-label={`${item.label} 하위 메뉴 ${
+                                  openDesktopDisclosure === item.id ? "닫기" : "열기"
+                                }`}
+                                aria-expanded={openDesktopDisclosure === item.id}
+                                aria-controls={`desktop-nav-${group.id}-${item.id}`}
+                                onClick={() => toggleDesktopDisclosure(item.id)}
+                              >
+                                {item.label}
+                              </button>
+                              {openDesktopDisclosure === item.id && (
+                                <div
+                                  id={`desktop-nav-${group.id}-${item.id}`}
+                                  className={styles.desktopNestedDisclosure}
+                                >
+                                  {item.items.map((nestedItem) => (
+                                    <Link
+                                      key={nestedItem.href}
+                                      href={nestedItem.href}
+                                      className={styles.dropdownLink}
+                                      onClick={closeDesktopNavigation}
+                                    >
+                                      {nestedItem.label}
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
 
-            <div className={styles.secondaryNav} aria-label="Quick links">
-              <div className={styles.secondaryNavList}>
-                {secondaryNavItems.map((item) => (
-                  <Link key={item.label} href={item.href} className={styles.secondaryLink}>
-                    {item.label}
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className={styles.dropdownLink}
+                            onClick={closeDesktopNavigation}
+                          >
+                            {item.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                    </div>
+                  );
+                }
+
+                const href = getHeaderNavHref(group);
+                return href ? (
+                  <Link
+                    key={group.id}
+                    href={href}
+                    className={styles.navLink}
+                    onClick={closeDesktopNavigation}
+                  >
+                    {group.label}
                   </Link>
-                ))}
-              </div>
+                ) : null;
+              })}
             </div>
           </nav>
 
@@ -273,26 +430,18 @@ export default function Header() {
             aria-hidden={isMobileMenuOpen || undefined}
             inert={isMobileMenuOpen}
           >
-            <Link href="/search" className={styles.userLink}>
-              검색
-            </Link>
-            <Link href="/orders/cart" className={styles.userLink}>
+            <Link href="/search" className={styles.userLink} onClick={closeDesktopNavigation}>검색</Link>
+            <Link href="/orders/cart" className={styles.userLink} onClick={closeDesktopNavigation}>
               장바구니
-              {safeCartItemCount > 0 && (
-                <span className={styles.cartBadge}>{safeCartItemCount}</span>
-              )}
+              {safeCartItemCount > 0 && <span className={styles.cartBadge}>{safeCartItemCount}</span>}
             </Link>
             {user ? (
-              <Link href="/mypage" className={styles.userLink}>
-                마이페이지
-              </Link>
+              <Link href="/mypage" className={styles.userLink} onClick={closeDesktopNavigation}>마이페이지</Link>
             ) : (
-              <Link href="/auth/login" className={styles.userLink}>
-                로그인
-              </Link>
+              <Link href="/auth/login" className={styles.userLink} onClick={closeDesktopNavigation}>로그인</Link>
             )}
             {isAdmin && (
-              <Link href="/admin" className={styles.userLink}>
+              <Link href="/admin" className={styles.userLink} onClick={closeDesktopNavigation}>
                 관리자
               </Link>
             )}
@@ -307,113 +456,104 @@ export default function Header() {
           inert={!isMobileMenuOpen}
         >
           <div className={styles.mobileMenuContent}>
-            <div className={styles.mobileBrandBlock}>
-              <span className={styles.mobileBrandWordmark}>STYNA</span>
-              <p className={styles.mobileBrandText}>
-                의류, 가방, 액세서리를 한곳에서 둘러보는 포트폴리오 쇼핑몰입니다.
-              </p>
-            </div>
-
-            <div className={styles.mobileNavGroup}>
-              <h3 className={styles.mobileGroupTitle}>메인 메뉴</h3>
-              <div className={styles.mobileNavList}>
-                {primaryNavItems.map((item) => (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className={styles.mobileNavLink}
-                    onClick={closeMobileMenu}
+            <nav className={styles.mobileNavList} aria-label="모바일 주요 메뉴">
+              {navGroups.map((group) => {
+                if (group.items.length > 0) {
+                  return (
+                    <div className={styles.mobileNavGroup} key={group.id}>
+                  <button
+                    type="button"
+                    className={`${styles.mobileNavTrigger} ${openMobileGroup === group.id ? styles.mobileNavTriggerOpen : ""}`}
+                    aria-label={`${group.label} 메뉴 ${openMobileGroup === group.id ? "닫기" : "열기"}`}
+                    aria-expanded={openMobileGroup === group.id}
+                    aria-controls={`mobile-nav-${group.id}`}
+                    onClick={() => toggleMobileGroup(group.id)}
                   >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
+                    {group.label}
+                  </button>
+                  {openMobileGroup === group.id && (
+                    <div id={`mobile-nav-${group.id}`} className={styles.mobileDisclosureList}>
+                      {group.items.map((item) => {
+                        if ("items" in item) {
+                          return (
+                            <div className={styles.mobileNestedGroup} key={item.id}>
+                              <button
+                                type="button"
+                                className={`${styles.mobileNavTrigger} ${
+                                  openMobileDisclosure === item.id
+                                    ? styles.mobileNavTriggerOpen
+                                    : ""
+                                }`}
+                                aria-label={`${item.label} 하위 메뉴 ${
+                                  openMobileDisclosure === item.id ? "닫기" : "열기"
+                                }`}
+                                aria-expanded={openMobileDisclosure === item.id}
+                                aria-controls={`mobile-nav-${group.id}-${item.id}`}
+                                onClick={() => toggleMobileDisclosure(item.id)}
+                              >
+                                {item.label}
+                              </button>
+                              {openMobileDisclosure === item.id && (
+                                <div
+                                  id={`mobile-nav-${group.id}-${item.id}`}
+                                  className={styles.mobileNestedDisclosure}
+                                >
+                                  {item.items.map((nestedItem) => (
+                                    <Link
+                                      key={nestedItem.href}
+                                      href={nestedItem.href}
+                                      className={styles.mobileNavLink}
+                                      onClick={closeMobileMenu}
+                                    >
+                                      {nestedItem.label}
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
 
-            <div className={styles.mobileCategory}>
-              <h3 className={styles.mobileGroupTitle}>카테고리</h3>
-              <div className={styles.mobileCategoryList}>
-                {categories.map((category) => (
-                  <Link
-                    key={category.id}
-                    href={category.href}
-                    className={styles.mobileCategoryItem}
-                    onClick={closeMobileMenu}
-                  >
-                    {toNavLabel(category)}
-                  </Link>
-                ))}
-              </div>
-            </div>
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className={styles.mobileNavLink}
+                            onClick={closeMobileMenu}
+                          >
+                            {item.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                    </div>
+                  );
+                }
 
-            <div className={styles.mobileSupport}>
-              <h3 className={styles.mobileGroupTitle}>고객지원</h3>
-              <div className={styles.mobileSupportList}>
-                {SUPPORT_LINKS.map((item) => (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className={styles.mobileSupportLink}
-                    onClick={closeMobileMenu}
-                  >
-                    {item.label}
+                const href = getHeaderNavHref(group);
+                return href ? (
+                  <Link key={group.id} href={href} className={styles.mobileNavLink} onClick={closeMobileMenu}>
+                    {group.label}
                   </Link>
-                ))}
-              </div>
-            </div>
+                ) : null;
+              })}
+            </nav>
 
             <div className={styles.mobileUserMenu}>
-              <Link
-                href="/search"
-                className={styles.mobileUserLink}
-                onClick={closeMobileMenu}
-              >
-                검색
-              </Link>
-              <Link
-                href="/orders/cart"
-                className={styles.mobileUserLink}
-                onClick={closeMobileMenu}
-              >
+              <Link href="/search" className={styles.mobileUserLink} onClick={closeMobileMenu}>검색</Link>
+              <Link href="/orders/cart" className={styles.mobileUserLink} onClick={closeMobileMenu}>
                 장바구니
-                {safeCartItemCount > 0 && (
-                  <span className={styles.cartBadge}>{safeCartItemCount}</span>
-                )}
+                {safeCartItemCount > 0 && <span className={styles.cartBadge}>{safeCartItemCount}</span>}
               </Link>
               {user ? (
-                <Link
-                  href="/mypage"
-                  className={styles.mobileUserLink}
-                  onClick={closeMobileMenu}
-                >
-                  마이페이지
-                </Link>
+                <Link href="/mypage" className={styles.mobileUserLink} onClick={closeMobileMenu}>마이페이지</Link>
               ) : (
-                <Link
-                  href="/auth/login"
-                  className={styles.mobileUserLink}
-                  onClick={closeMobileMenu}
-                >
-                  로그인
-                </Link>
+                <Link href="/auth/login" className={styles.mobileUserLink} onClick={closeMobileMenu}>로그인</Link>
               )}
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className={styles.mobileUserLink}
-                  onClick={closeMobileMenu}
-                >
-                  관리자
-                </Link>
-              )}
+              {isAdmin && <Link href="/admin" className={styles.mobileUserLink} onClick={closeMobileMenu}>관리자</Link>}
               {user && (
-                <button
-                  className={styles.menuItem}
-                  onClick={() => {
-                    logout();
-                    closeMobileMenu();
-                  }}
-                >
+                <button className={styles.menuItem} onClick={() => { logout(); closeMobileMenu(); }}>
                   로그아웃
                 </button>
               )}
@@ -421,13 +561,7 @@ export default function Header() {
           </div>
         </div>
 
-        {isMobileMenuOpen && (
-          <div
-            className={styles.mobileMenuOverlay}
-            aria-hidden="true"
-            onClick={closeMobileMenu}
-          ></div>
-        )}
+        {isMobileMenuOpen && <div className={styles.mobileMenuOverlay} aria-hidden="true" onClick={closeMobileMenu}></div>}
       </div>
     </header>
   );

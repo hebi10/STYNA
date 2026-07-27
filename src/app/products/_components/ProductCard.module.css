@@ -128,6 +128,16 @@
   background: var(--color-white);
 }
 
+.wishlistFeedback {
+  margin: 0;
+  padding: 0.65rem 0.9rem;
+  border-top: 1px solid var(--line);
+  background: var(--surface-raised);
+  color: var(--error);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
 .info {
   padding: 0.85rem 0.9rem;
   border-top: 1px solid var(--line);

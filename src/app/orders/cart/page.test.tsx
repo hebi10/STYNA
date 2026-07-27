@@ -11,6 +11,8 @@ import OrderCartPage from './page';
 
 const mockPush = jest.fn();
 const mockGetAvailableCouponsForOrder = jest.fn();
+const mockUpdateCartItemMutateAsync = jest.fn();
+const mockRemoveFromCartMutateAsync = jest.fn();
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -55,6 +57,13 @@ jest.mock('./page.module.css', () => ({
   }),
 }));
 
+jest.mock('../../_components/AsyncStatePanel.module.css', () => ({
+  __esModule: true,
+  default: new Proxy({}, {
+    get: (_target, property) => String(property),
+  }),
+}));
+
 describe('OrderCartPage policy copy', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -93,11 +102,80 @@ describe('OrderCartPage policy copy', () => {
       error: null,
     } as unknown as ReturnType<typeof useCart>);
     jest.mocked(useUpdateCartItem).mockReturnValue({
-      mutateAsync: jest.fn(),
+      mutateAsync: mockUpdateCartItemMutateAsync,
     } as unknown as ReturnType<typeof useUpdateCartItem>);
     jest.mocked(useRemoveFromCart).mockReturnValue({
-      mutateAsync: jest.fn(),
+      mutateAsync: mockRemoveFromCartMutateAsync,
     } as unknown as ReturnType<typeof useRemoveFromCart>);
+  });
+
+  test('shows a busy status while authentication is being checked without navigating', () => {
+    jest.mocked(useAuth).mockReturnValue({
+      user: null,
+      userData: {},
+      loading: true,
+    } as unknown as ReturnType<typeof useAuth>);
+
+    render(<OrderCartPage />);
+
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('status')).toHaveTextContent('로그인 상태를 확인하고 있습니다.');
+    expect(screen.getByRole('heading', {
+      level: 1,
+      name: '로그인 상태를 확인하고 있습니다.',
+    })).toBeInTheDocument();
+    expect(screen.queryByText('장바구니를 보려면 로그인이 필요합니다')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /결제하기/ })).not.toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
+    expectSignedOutCartInteractionsToBeUnavailable();
+  });
+
+  test('offers signed-out users login and shopping recovery links without exposing checkout', () => {
+    jest.mocked(useAuth).mockReturnValue({
+      user: null,
+      userData: {},
+      loading: false,
+    } as unknown as ReturnType<typeof useAuth>);
+
+    render(<OrderCartPage />);
+
+    expect(screen.getByRole('heading', {
+      level: 1,
+      name: '장바구니를 보려면 로그인이 필요합니다',
+    }))
+      .toBeInTheDocument();
+    expect(screen.getByText('로그인 후 담아둔 상품과 쿠폰을 이어서 확인할 수 있습니다.'))
+      .toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '로그인하고 계속하기' })).toHaveAttribute(
+      'href',
+      '/auth/login?redirect=/orders/cart',
+    );
+    expect(screen.getByRole('link', { name: '쇼핑 계속하기' })).toHaveAttribute('href', '/products');
+    expect(screen.queryByRole('button', { name: /결제하기/ })).not.toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
+    expectSignedOutCartInteractionsToBeUnavailable();
+  });
+
+  test('renders the signed-in empty-cart recovery as one link without a nested button', () => {
+    jest.mocked(useCart).mockReturnValue({
+      data: {
+        id: 'cart-1',
+        userId: 'user-1',
+        items: [],
+        totalAmount: 0,
+        totalItems: 0,
+        updatedAt: new Date(),
+      },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useCart>);
+
+    render(<OrderCartPage />);
+
+    const recoveryLink = screen.getByRole('link', { name: '쇼핑 계속하기' });
+    expect(recoveryLink).toHaveAttribute('href', '/recommend');
+    expect(within(recoveryLink).queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '쇼핑 계속하기' })).not.toBeInTheDocument();
   });
 
   test('uses the post-coupon standard threshold and makes no delivery SLA or point promise', async () => {
@@ -181,6 +259,16 @@ describe('OrderCartPage policy copy', () => {
     expect(mockPush).not.toHaveBeenCalledWith('/orders/checkout');
   });
 });
+
+function expectSignedOutCartInteractionsToBeUnavailable() {
+  expect(useCart).toHaveBeenCalledWith(null);
+  expect(mockGetAvailableCouponsForOrder).not.toHaveBeenCalled();
+  expect(screen.queryByText('테스트 상품')).not.toBeInTheDocument();
+  expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '상품 삭제' })).not.toBeInTheDocument();
+  expect(mockUpdateCartItemMutateAsync).not.toHaveBeenCalled();
+  expect(mockRemoveFromCartMutateAsync).not.toHaveBeenCalled();
+}
 
 function makeUserCoupon(id: string, name: string, value: number) {
   return {

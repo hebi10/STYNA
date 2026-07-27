@@ -5,7 +5,14 @@ import { CategoryOrderService } from '@/shared/services/categoryOrderService';
 jest.mock('../page.module.css', () => ({
   __esModule: true,
   default: new Proxy({}, {
-    get: (_target, prop) => String(prop),
+    get: (_target, prop) => `page-${String(prop)}`,
+  }),
+}));
+
+jest.mock('./DynamicCategorySection.module.css', () => ({
+  __esModule: true,
+  default: new Proxy({}, {
+    get: (_target, prop) => `dynamic-${String(prop)}`,
   }),
 }));
 
@@ -63,7 +70,30 @@ describe('DynamicCategorySection', () => {
     expect(screen.getByText('신발')).toBeInTheDocument();
     expect(screen.getByText('스포츠')).toBeInTheDocument();
     expect(screen.queryByText('로딩 중...')).not.toBeInTheDocument();
-    expect(container.querySelector('.categoryImageWrapper')).not.toBeInTheDocument();
+    expect(container.querySelector('.dynamic-categoryImageWrapper')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /상의/ })).toHaveClass(
+      'dynamic-categoryCard',
+      'dynamic-categoryCardTextOnly',
+    );
+  });
+
+  test('announces the image-mode loading state politely', () => {
+    jest.mocked(CategoryOrderService.getMainPageCategories).mockReturnValue(new Promise(() => {}));
+
+    render(<DynamicCategorySection />);
+
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByRole('status')).toHaveClass('dynamic-categoryGrid');
+  });
+
+  test('merges the component grid class with the caller grid class', () => {
+    jest.mocked(CategoryOrderService.getMainPageCategories).mockReturnValue(new Promise(() => {}));
+
+    const { container } = render(
+      <DynamicCategorySection visualMode="text" className="categoryMoodGrid" />,
+    );
+
+    expect(container.firstChild).toHaveClass('dynamic-categoryGrid', 'categoryMoodGrid');
   });
 
   test('renders category images in default image mode', async () => {
@@ -83,6 +113,7 @@ describe('DynamicCategorySection', () => {
 
     await waitFor(() => expect(screen.getByAltText('상의')).toBeInTheDocument());
     expect(screen.getByAltText('상의')).toHaveAttribute('src', '/category/main_category01.png');
+    expect(screen.getByRole('link', { name: /상의/ })).toHaveClass('dynamic-categoryCard');
   });
 
   test('can render curated category cards without mismatched category images', async () => {

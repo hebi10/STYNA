@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useHomeProducts } from '@/shared/hooks/useProducts';
 import ProductCard from '@/app/products/_components/ProductCard';
+import AsyncStatePanel from './AsyncStatePanel';
 import { Product } from '@/shared/types/product';
 import styles from './ProductSection.module.css';
 
@@ -76,30 +77,6 @@ function isMainCuratedProduct(product: Product) {
   return MAIN_ALLOWED_CATEGORY_IDS.has(categoryId);
 }
 
-function getOperatingMetadata(
-  product: Product,
-  type: ProductSectionProps['type'],
-) {
-  const reviewCount = product.reviewCount ?? 0;
-  const operationLabel =
-    type === 'recommended'
-      ? '추천'
-      : product.isNew
-        ? 'NEW'
-        : product.isSale
-          ? 'SALE'
-          : undefined;
-  const shippingLabel = undefined;
-  const reviewLabel = reviewCount >= 100 ? '리뷰 100+' : undefined;
-  const mdComment = product.isSale
-    ? '현재 상품에 등록된 할인가입니다.'
-    : reviewCount >= 100
-      ? '등록된 리뷰가 많은 상품입니다.'
-      : '현재 등록된 상품 정보와 리뷰를 확인해 보세요.';
-
-  return { operationLabel, shippingLabel, reviewLabel, mdComment };
-}
-
 function getDisplayProducts(
   sourceProducts: Product[],
   maxItems: number,
@@ -157,6 +134,7 @@ export default function ProductSection({
   };
 
   const products = getDisplayProducts(getProducts(), maxItems, variant);
+  const isSuccessfulEmpty = !loading && !isError && products.length === 0;
 
   const sectionClassName = [styles.section, className].filter(Boolean).join(' ');
   const headerClassName = [
@@ -193,7 +171,7 @@ export default function ProductSection({
       {(description || showViewAllButton) && (
         <div className={styles.headerSide}>
           {description && <p className={styles.description}>{description}</p>}
-          {showViewAllButton && (
+          {showViewAllButton && !isSuccessfulEmpty && (
             <Link href={viewAllLink} className={linkClassName}>
               {viewAllLabel}
             </Link>
@@ -207,7 +185,7 @@ export default function ProductSection({
     return (
       <section className={sectionClassName}>
         {headerContent}
-        <div className={styles.loading}>
+        <div className={styles.loading} role="status" aria-live="polite">
           <div className={styles.spinner}></div>
           <p>상품을 불러오는 중입니다...</p>
         </div>
@@ -219,22 +197,28 @@ export default function ProductSection({
     return (
       <section className={sectionClassName}>
         {headerContent}
-        <div className={styles.errorState} role="alert">
-          <p>상품을 불러오지 못했습니다.</p>
-          <button
-            type="button"
-            className={styles.retryButton}
-            onClick={() => void refetch()}
-          >
-            다시 시도
-          </button>
-        </div>
+        <AsyncStatePanel
+          kind="error"
+          title="상품을 불러오지 못했습니다."
+          description="잠시 후 다시 시도해 주세요."
+          primaryAction={{ label: '다시 시도', onClick: () => void refetch() }}
+        />
       </section>
     );
   }
 
   if (products.length === 0) {
-    return null;
+    return (
+      <section className={sectionClassName}>
+        {headerContent}
+        <div className={styles.emptyState}>
+          <p>현재 소개할 상품이 없습니다.</p>
+          <Link href="/products" className={styles.viewAllButton}>
+            전체 상품 보기
+          </Link>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -269,7 +253,6 @@ export default function ProductSection({
               image={product.mainImage || product.images[0]}
               stock={product.stock}
               badgePlacement={variant === 'ranking' ? 'belowRank' : 'default'}
-              {...getOperatingMetadata(product, type)}
             />
           </div>
         ))}

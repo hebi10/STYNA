@@ -29,6 +29,11 @@ describe('EventList responsive gallery CSS', () => {
     );
   });
 
+  test('keeps filter and pagination controls at least 44px tall', () => {
+    expect(css).toMatch(/\.filterButton\s*{[\s\S]*?min-height:\s*44px/);
+    expect(css).toMatch(/\.pageButton\s*{[\s\S]*?min-height:\s*44px/);
+  });
+
   test('ships a 2700 by 900 event hub asset', async () => {
     const metadata = await sharp(
       path.join(process.cwd(), 'public/events/event-hub-hero.webp')

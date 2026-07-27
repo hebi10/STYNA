@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useId, useState } from 'react';
 import { useWishlistActivity } from '@/shared/hooks/useUserActivityQueries';
 import { useAuth } from '@/context/authProvider';
 import { getProductPricing } from '@/shared/utils/productPricing';
@@ -48,6 +49,9 @@ export default function ProductCard({
 }: ProductCardProps) {
   const { wishlistItems, addToWishlist, removeFromWishlist } = useWishlistActivity();
   const { user } = useAuth();
+  const [isWishlistPending, setIsWishlistPending] = useState(false);
+  const [wishlistError, setWishlistError] = useState<string | null>(null);
+  const wishlistFeedbackId = useId();
 
   // 찜하기 상태는 실제 데이터에서 가져오기
   const isWishlisted = wishlistItems.some(item => item.productId === id);
@@ -63,21 +67,31 @@ export default function ProductCard({
 
   const displayRating = rating || 0;
   const displayReviewCount = reviewCount ?? 0;
+  const wishlistActionLabel = `${name} ${
+    isWishlisted ? '위시리스트에서 제거' : '위시리스트에 추가'
+  }`;
 
   const handleWishlistClick = async () => {
     if(!user) {
       alert('로그인이 필요한 서비스입니다.');
       return;
     }
-    
+
+    if (isWishlistPending) return;
+
+    setIsWishlistPending(true);
+    setWishlistError(null);
+
     try {
       if (isWishlisted) {
         await removeFromWishlist(id);
       } else {
         await addToWishlist(id);
       }
-    } catch (error) {
-      console.error('찜하기 처리 실패:', error);
+    } catch {
+      setWishlistError('위시리스트를 변경하지 못했습니다. 다시 시도해 주세요.');
+    } finally {
+      setIsWishlistPending(false);
     }
   };
 
@@ -169,8 +183,11 @@ export default function ProductCard({
         type="button"
         className={`${styles.wishlistButton} ${isWishlisted ? styles.wishlisted : ''}`}
         onClick={handleWishlistClick}
-        aria-label={`${name} ${isWishlisted ? '위시리스트에서 제거' : '위시리스트에 추가'}`}
+        aria-label={`${wishlistActionLabel}${wishlistError ? ' 다시 시도' : ''}`}
         aria-pressed={isWishlisted}
+        aria-busy={isWishlistPending}
+        aria-describedby={wishlistError ? wishlistFeedbackId : undefined}
+        disabled={isWishlistPending}
       >
         <svg
           width="20"
@@ -185,6 +202,15 @@ export default function ProductCard({
           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
         </svg>
       </button>
+      {wishlistError && (
+        <p
+          id={wishlistFeedbackId}
+          className={styles.wishlistFeedback}
+          role="alert"
+        >
+          {wishlistError}
+        </p>
+      )}
     </article>
   );
 }

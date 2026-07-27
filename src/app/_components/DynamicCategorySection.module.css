@@ -1,0 +1,188 @@
+.categoryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.categoryCard {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  transition: border-color 0.15s ease;
+}
+
+.categoryCard:hover {
+  border-color: var(--action);
+}
+
+.categoryCard:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 3px;
+}
+
+.categoryCardTextOnly {
+  display: grid;
+  min-height: 118px;
+  align-content: end;
+}
+
+.categoryCardTextOnly .categoryInfo {
+  min-height: 118px;
+  align-content: end;
+  border-top: 0;
+}
+
+.categoryImageWrapper {
+  position: relative;
+  width: 100%;
+  min-height: 145px;
+  overflow: hidden;
+  background: var(--surface-muted);
+}
+
+.categoryImagePlaceholder {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 145px;
+  overflow: hidden;
+}
+
+.categoryImage {
+  object-fit: cover;
+  transition: transform 0.25s ease;
+}
+
+.categoryCard:hover .categoryImage {
+  transform: scale(1.03);
+}
+
+.categoryInfo {
+  display: grid;
+  gap: 0.25rem;
+  min-height: 64px;
+  padding: 0.85rem 0.9rem;
+  background: var(--surface-raised);
+  border-top: 1px solid var(--line);
+}
+
+.categoryLabel {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.categoryCount {
+  color: var(--text-subtle);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.loadingShimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-muted) 25%,
+    var(--line) 50%,
+    var(--surface-muted) 75%
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.errorContainer {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+  background: var(--surface-raised);
+  border: 1px dashed var(--line-strong);
+}
+
+.errorMessage {
+  margin: 0;
+  color: var(--error);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.retryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.65rem 1.1rem;
+  color: var(--surface-raised);
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  background: var(--action);
+  border: 1px solid var(--action);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.retryButton:hover {
+  background: var(--action-hover);
+  border-color: var(--action-hover);
+}
+
+.retryButton:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .categoryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .categoryGrid {
+    gap: 0.75rem;
+  }
+
+  .categoryImageWrapper,
+  .categoryImagePlaceholder {
+    min-height: 180px;
+  }
+
+  .categoryInfo {
+    min-height: 72px;
+    padding: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .categoryCard,
+  .categoryImage,
+  .retryButton {
+    transition: none;
+  }
+
+  .loadingShimmer {
+    animation: none;
+  }
+}

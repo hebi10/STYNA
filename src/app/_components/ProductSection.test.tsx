@@ -1,9 +1,18 @@
 import { renderToStaticMarkup } from 'react-dom/server';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import ProductSection from './ProductSection';
 import { useHomeProducts } from '@/shared/hooks/useProducts';
 
 jest.mock('./ProductSection.module.css', () => ({
+  __esModule: true,
+  default: new Proxy({}, {
+    get: (_target, prop) => String(prop),
+  }),
+}));
+
+jest.mock('./AsyncStatePanel.module.css', () => ({
   __esModule: true,
   default: new Proxy({}, {
     get: (_target, prop) => String(prop),
@@ -31,10 +40,24 @@ jest.mock('@/app/products/_components/ProductCard', () => ({
   __esModule: true,
   default: ({
     name,
+    isNew,
     mdComment,
     operationLabel,
-  }: { name: string; mdComment?: string; operationLabel?: string }) => (
-    <article>{name}{operationLabel && <span>{operationLabel}</span>}{mdComment && <p>{mdComment}</p>}</article>
+    reviewLabel,
+  }: {
+    name: string;
+    isNew?: boolean;
+    mdComment?: string;
+    operationLabel?: string;
+    reviewLabel?: string;
+  }) => (
+    <article>
+      {name}
+      {isNew && <span>NEW</span>}
+      {operationLabel && <span>{operationLabel}</span>}
+      {reviewLabel && <span>{reviewLabel}</span>}
+      {mdComment && <p>{mdComment}</p>}
+    </article>
   ),
 }));
 
@@ -123,23 +146,45 @@ describe('ProductSection curated main exposure', () => {
     expect(markup).not.toContain('ranking product 5');
   });
 
-  test('describes sale metadata without inventing an unsupported deadline', () => {
+  test('does not repeat generated operating metadata on home product cards', () => {
     jest.mocked(useHomeProducts).mockReturnValue({
       data: {
         recommendedProducts: [],
-        newProducts: [],
-        saleProducts: [{ ...product('할인 셔츠', 'clothing'), isSale: true }],
+        newProducts: [
+          product('일반 셔츠', 'clothing'),
+          { ...product('할인 셔츠', 'clothing'), isSale: true },
+        ],
+        saleProducts: [],
         bestSellerProducts: [],
       },
       isLoading: false,
     } as unknown as ReturnType<typeof useHomeProducts>);
 
     const markup = renderToStaticMarkup(
-      <ProductSection title="할인 상품" type="sale" />,
+      <ProductSection title="신상품" type="new" />,
     );
 
-    expect(markup).toContain('현재 상품에 등록된 할인가입니다.');
-    expect(markup).not.toContain('이번 주만');
+    expect(markup).not.toContain('현재 상품에 등록된 할인가입니다.');
+    expect(markup).not.toContain('현재 등록된 상품 정보와 리뷰를 확인해 보세요.');
+    expect(markup).not.toContain('등록된 리뷰가 많은 상품입니다.');
+    expect(markup).not.toContain('리뷰 100+');
+  });
+
+  test('shows only one new status badge for a new product', () => {
+    jest.mocked(useHomeProducts).mockReturnValue({
+      data: {
+        recommendedProducts: [],
+        newProducts: [{ ...product('신규 셔츠', 'clothing'), isNew: true }],
+        saleProducts: [],
+        bestSellerProducts: [],
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useHomeProducts>);
+
+    render(<ProductSection title="신상품" type="new" />);
+
+    expect(screen.getByText('신규 셔츠').parentElement).toHaveTextContent('신규 셔츠NEW');
+    expect(screen.getAllByText('NEW')).toHaveLength(1);
   });
 
   test('shows a retry action when the home product query fails', () => {
@@ -157,4 +202,50 @@ describe('ProductSection curated main exposure', () => {
     fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
+
+  test('announces the home product loading state politely', () => {
+    jest.mocked(useHomeProducts).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+    } as unknown as ReturnType<typeof useHomeProducts>);
+
+    render(<ProductSection title="이번 주 신상" type="new" />);
+
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByRole('status')).toHaveTextContent('상품을 불러오는 중입니다...');
+  });
+
+  test('keeps the section title and offers all-products recovery after a successful empty query', () => {
+    jest.mocked(useHomeProducts).mockReturnValue({
+      data: {
+        recommendedProducts: [],
+        newProducts: [],
+        saleProducts: [],
+        bestSellerProducts: [],
+      },
+      isLoading: false,
+      isError: false,
+    } as unknown as ReturnType<typeof useHomeProducts>);
+
+    render(<ProductSection title="이번 주 신상" type="new" />);
+
+    expect(screen.getByRole('heading', { level: 2, name: '이번 주 신상' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '전체 상품 보기' })).toHaveAttribute(
+      'href',
+      '/products',
+    );
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+  });
+
+  test('keeps view-all controls at least 44 pixels tall for touch input', () => {
+    const css = readFileSync(
+      resolve(process.cwd(), 'src/app/_components/ProductSection.module.css'),
+      'utf8',
+    );
+    const viewAllBlock = css.match(/\.viewAllLink,\s*\.viewAllButton\s*\{[^}]*\}/)?.[0] ?? '';
+
+    expect(viewAllBlock).toContain('min-height: 44px');
+  });
+
 });

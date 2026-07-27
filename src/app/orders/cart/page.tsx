@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PageHeader from "../../_components/PageHeader";
 import Button from "../../_components/Button";
+import AsyncStatePanel from "../../_components/AsyncStatePanel";
 import { useAuth } from "@/context/authProvider";
 import { useCoupon } from "@/context/couponProvider";
 import { useCart, useUpdateCartItem, useRemoveFromCart } from "@/shared/hooks/useCart";
@@ -52,13 +53,6 @@ export default function OrderCartPage() {
       setCartItems(itemsWithSelection);
     }
   }, [cart]);
-
-  // 로그인 체크
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push("/auth/login?redirect=/orders/cart");
-    }
-  }, [authLoading, user, router]);
 
   // 수량 변경
   const updateQuantity = async (id: string, newQuantity: number) => {
@@ -235,8 +229,42 @@ export default function OrderCartPage() {
     router.push("/orders/checkout");
   };
 
-  if (authLoading || !user) {
-    return <div>로그인이 필요합니다...</div>;
+  if (authLoading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.content}>
+          <div className={styles.authGate}>
+            <AsyncStatePanel
+              kind="loading"
+              title="로그인 상태를 확인하고 있습니다."
+              headingLevel="h1"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.content}>
+          <div className={styles.authGate}>
+            <AsyncStatePanel
+              kind="permission"
+              title="장바구니를 보려면 로그인이 필요합니다"
+              description="로그인 후 담아둔 상품과 쿠폰을 이어서 확인할 수 있습니다."
+              headingLevel="h1"
+              primaryAction={{
+                label: "로그인하고 계속하기",
+                href: "/auth/login?redirect=/orders/cart",
+              }}
+              secondaryAction={{ label: "쇼핑 계속하기", href: "/products" }}
+            />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (cartLoading) {
@@ -300,8 +328,8 @@ export default function OrderCartPage() {
             <p className={styles.emptyDescription}>
               장바구니에서 상품을 선택하고 주문을 진행해주세요.
             </p>
-            <Link href="/recommend">
-              <Button size="lg">쇼핑 계속하기</Button>
+            <Link href="/recommend" className={styles.backButton}>
+              쇼핑 계속하기
             </Link>
           </div>
         </div>

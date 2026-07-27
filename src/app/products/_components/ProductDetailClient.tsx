@@ -806,6 +806,7 @@ export default function ProductDetailClient({ product }: Props) {
               )}
               <Button
                 variant="primary"
+                className={styles.inquiryButton}
                 onClick={() => router.push(
                   `/qna/write?productId=${encodeURIComponent(product.id)}&productName=${encodeURIComponent(product.name)}`
                 )}

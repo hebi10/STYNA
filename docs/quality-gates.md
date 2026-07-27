@@ -94,3 +94,32 @@
 
 - 양쪽 `npm ci`와 `npm ls`, root typecheck, lint warning 0, Jest 99 suites/583 tests, Functions build, Firestore·Storage Rules 108 tests를 통과했다.
 - Next 15.5.20 production build는 63개 페이지를 생성했고, `deploy:prep`의 Functions Next 산출물 복사와 직접 OpenAI 참조 경계 검사도 통과했다. 실제 배포는 수행하지 않았다.
+
+## 2026-07-27 UI 변경 최종 품질 게이트
+
+쇼핑 우선 하이브리드 UI는 다음 순서로 검증한다.
+
+1. 변경 범위의 집중 Jest
+2. `npm run typecheck`
+3. `npm run lint -- --max-warnings=0`
+4. `npm test -- --runInBand`
+5. production build
+6. `390×844`, `768×1024`, `1440×900` 브라우저 경로·상태 QA
+7. Impeccable detector `src/app` 1회
+8. detector를 보지 않은 디자인 Assessment A와 detector·브라우저 Assessment B의 독립 재평가
+9. `git diff --check`
+
+- worktree에 `.env.local`이 없을 때는 파일을 복사하지 않는다. 메인 저장소의 로컬 환경 파일을 `DOTENV_CONFIG_PATH`로 production build/start 프로세스에만 읽기 전용 주입하고 비밀값을 출력하지 않는다.
+- `NEXT_PUBLIC_ENABLE_DEMO_LOGIN`은 client build-time 값이므로 `true`와 `false`를 각각 별도 build로 검증한다.
+- 전체 detector는 마지막 Task 11에서 정확히 1회 실행했다. 23개 warning은 기능성 spinner, detector 계약 테스트 문자열, `stroke-width`, 테스트 이미지 mock, 최종 cascade에서 무효화된 FAQ gradient로 분류됐으며 검증된 production UI 기계적 결함은 0건이다.
+- 최종 자동 검증은 집중 13 suites/156 tests, 전체 159 suites/1,305 tests, typecheck, lint warning 0, 65-page production build를 통과했다.
+- 여러 lockfile로 인한 Next workspace-root 추론 warning은 남지만 compile, type, page data, 65개 static page 생성에는 영향을 주지 않았다. lockfile 삭제나 설정 변경은 이번 UI 범위에 포함하지 않았다.
+
+## 2026-07-27 P2 폴리시 최종 검증
+
+- 모바일 상품 상세 44px, SHOP 2단계와 경로 전환 초기화, 반복 메타 축소, 홈 빈 상태 복구, 보조 텍스트 대비, heading, 장바구니·이벤트 회복 CTA를 집중 검증했다.
+- 후속 리뷰에서 확인한 모바일 modal의 `main`·`footer`·플로팅 UI 차단, 동적 카테고리 전용 CSS 연결, FAQ ARIA, ProductSection live region, 위시리스트 요청 실패 피드백까지 보완했다.
+- 최종 자동 검증은 `npm run typecheck`, `npm run lint -- --max-warnings=0`, 전체 Jest **163 suites / 1,360 tests**, `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=false` production build **65 pages**, `git diff --check`, UTF-8 replacement 문자 검사를 통과했다.
+- 실제 브라우저에서는 `390×844`, `768×1024`, `1440×900`에서 주요 쇼핑 경로의 가로 overflow·깨진 이미지 없음, 모바일 주요 조작부 44px, SHOP disclosure와 Escape·focus·scroll 복원, FAQ 단일 H1과 단색 H2를 확인했다.
+- 브라우저 세션 종료 뒤 정적 리뷰에서 추가로 발견한 동적 카테고리 CSS와 floating UI inert 보완은 컴포넌트·CSS 계약 테스트, 타입체크, lint, production build, 두 독립 리뷰로 검증했다.
+- Next의 다중 lockfile workspace-root warning은 기존과 같으며, lockfile 삭제나 설정 변경은 승인 범위 밖이라 수행하지 않았다.

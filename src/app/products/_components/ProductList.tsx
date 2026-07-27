@@ -10,6 +10,7 @@ import {
   ProductService,
 } from '@/shared/services/productService';
 import { useCategoriesWithNames } from '@/shared/hooks/useProducts';
+import AsyncStatePanel from '@/app/_components/AsyncStatePanel';
 import ProductCard from './ProductCard';
 import styles from './ProductList.module.css';
 
@@ -356,32 +357,18 @@ export default function ProductList({ initialCategory = '', lockCategory = false
 
   if (error) {
     return (
-      <div className={styles.error}>
-        <p>상품 목록 로딩 실패: {error}</p>
-        <button onClick={() => void loadPage(1, true)} className={styles.retryButton} type="button">
-          다시 시도
-        </button>
-      </div>
+      <AsyncStatePanel
+        kind="error"
+        title="상품 목록을 불러오지 못했습니다."
+        description="잠시 후 다시 시도하거나 전체 상품으로 돌아가 주세요."
+        primaryAction={{ label: '다시 시도', onClick: () => void loadPage(1, true) }}
+        secondaryAction={{ label: '전체 상품 보기', href: '/products' }}
+      />
     );
   }
 
   return (
     <div className={styles.container} aria-busy={loading}>
-      <div className={styles.stats}>
-        <div className={styles.statItem}>
-          <div className={styles.statNumber}>{items.length}</div>
-          <div className={styles.statLabel}>현재 페이지 상품</div>
-        </div>
-        <div className={styles.statItem}>
-          <div className={styles.statNumber}>{items.filter((product) => product.isNew).length}</div>
-          <div className={styles.statLabel}>신상품</div>
-        </div>
-        <div className={styles.statItem}>
-          <div className={styles.statNumber}>{items.filter((product) => product.isSale).length}</div>
-          <div className={styles.statLabel}>세일</div>
-        </div>
-      </div>
-
       <div className={styles.controls}>
         <div className={styles.searchSection}>
           <input
@@ -484,12 +471,11 @@ export default function ProductList({ initialCategory = '', lockCategory = false
       </div>
 
       {items.length === 0 && (
-        <div className={styles.emptyState}>
-          <p>조건에 맞는 상품이 없습니다.</p>
-          <button onClick={clearFilters} className={styles.clearButton} type="button">
-            조건 초기화
-          </button>
-        </div>
+        <AsyncStatePanel
+          kind="empty"
+          title="조건에 맞는 상품이 없습니다."
+          primaryAction={{ label: '조건 초기화', onClick: clearFilters }}
+        />
       )}
 
       <div className={styles.pagination}>

@@ -44,7 +44,7 @@ export default function FAQPage() {
   return (
     <div className={styles.faqContainer}>
       <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>자주 묻는 질문</h1>
+        <h2 className={styles.pageTitle}>자주 묻는 질문</h2>
         <p className={styles.pageSubtitle}>STYNA 이용 중 궁금한 점을 빠르게 확인해보세요</p>
       </div>
 
@@ -67,6 +67,7 @@ export default function FAQPage() {
         <div className={styles.searchIcon}></div>
         <input
           type="text"
+          aria-label="FAQ 검색"
           placeholder="궁금한 내용을 검색해보세요..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -77,22 +78,44 @@ export default function FAQPage() {
       <div className={styles.faqList}>
         {loading && <div className={styles.noResults}>FAQ를 불러오는 중입니다.</div>}
         {error && <div className={styles.noResults}>{error}</div>}
-        {!loading && !error && filteredFAQs.length > 0 && filteredFAQs.map((faq) => (
-          <div key={faq.id} className={styles.faqItem}>
-            <button className={styles.question} onClick={() => toggleItem(faq.id)}>
-              <div className={styles.questionText}>
-                <div className={styles.category}>{faq.category}</div>
-                {faq.question}
-              </div>
-              <span className={`${styles.icon} ${openItems.includes(faq.id) ? styles.iconRotated : ''}`}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-            </button>
-            {openItems.includes(faq.id) && <div className={styles.answer}>{faq.answer}</div>}
-          </div>
-        ))}
+        {!loading && !error && filteredFAQs.length > 0 && filteredFAQs.map((faq) => {
+          const isOpen = openItems.includes(faq.id);
+          const questionId = `faq-question-${faq.id}`;
+          const answerId = `faq-answer-${faq.id}`;
+
+          return (
+            <div key={faq.id} className={styles.faqItem}>
+              <button
+                id={questionId}
+                type="button"
+                className={styles.question}
+                onClick={() => toggleItem(faq.id)}
+                aria-expanded={isOpen}
+                aria-controls={answerId}
+              >
+                <div className={styles.questionText}>
+                  <div className={styles.category}>{faq.category}</div>
+                  {faq.question}
+                </div>
+                <span className={`${styles.icon} ${isOpen ? styles.iconRotated : ''}`}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </button>
+              {isOpen && (
+                <div
+                  id={answerId}
+                  className={styles.answer}
+                  role="region"
+                  aria-labelledby={questionId}
+                >
+                  {faq.answer}
+                </div>
+              )}
+            </div>
+          );
+        })}
         {!loading && !error && filteredFAQs.length === 0 && (
           <div className={styles.noResults}>
             <div className={styles.noResultsIcon}></div>

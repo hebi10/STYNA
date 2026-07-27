@@ -258,7 +258,7 @@
 .couponCodeInput {
   margin-top: 0.75rem;
   padding-left: 1rem;
-  border-left: 3px solid #3b82f6;
+  border: 1px solid var(--line);
   background-color: #f8fafc;
   padding: 1rem;
   border-radius: 6px;
@@ -318,6 +318,5 @@
 }
 
 .couponCodeInput {
-  border-left-color: var(--black);
   background-color: var(--off-white);
 }

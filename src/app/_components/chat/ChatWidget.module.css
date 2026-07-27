@@ -427,7 +427,7 @@
 
 /* 반응형 디자인 */
 @media (max-width: 640px) {
-  .eventPageWidget {
+  .mobileSuppressed {
     display: none;
   }
 

@@ -70,6 +70,9 @@
   }
 
   .link {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
     font-size: 0.86rem;
     line-height: 1.45;
   }

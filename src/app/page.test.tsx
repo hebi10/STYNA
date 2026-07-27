@@ -1,81 +1,102 @@
-import { renderToStaticMarkup } from 'react-dom/server';
+import { render, screen, within } from '@testing-library/react';
 import Home from './page';
 
 jest.mock('./page.module.css', () => ({
   __esModule: true,
   default: new Proxy({}, {
-    get: (_target, prop) => String(prop),
+    get: (_target, property) => String(property),
   }),
 }));
 
 jest.mock('./_components/MainBanner', () => ({
   __esModule: true,
-  default: () => <section aria-label="mock main banner" />,
+  default: () => <section data-testid="home-banner">배너</section>,
 }));
 
 jest.mock('./_components/DynamicCategorySection', () => ({
   __esModule: true,
-  default: ({ visualMode = 'image' }: { visualMode?: 'image' | 'text' }) => (
-    <div>category visual mode: {visualMode}</div>
+  default: () => <div data-testid="home-categories">카테고리 목록</div>,
+}));
+
+jest.mock('./_components/FeaturedProducts', () => ({
+  __esModule: true,
+  default: ({ eyebrow, description }: { eyebrow?: string; description?: string }) => (
+    <section data-testid="home-featured">
+      {eyebrow && <p>{eyebrow}</p>}
+      <h2>에디터 추천</h2><p>{description}</p>
+    </section>
   ),
 }));
 
 jest.mock('./_components/ProductSection', () => ({
   __esModule: true,
-  default: ({ title, subtitle, description }: {
-    title: string;
-    subtitle?: string;
-    description?: string;
-  }) => (
-    <section>
+  default: ({ eyebrow, title, subtitle, type }: { eyebrow?: string; title: string; subtitle?: string; type: string }) => (
+    <section data-testid={`home-${type}`}>
+      {eyebrow && <p>{eyebrow}</p>}
       <h2>{title}</h2>
       {subtitle && <p>{subtitle}</p>}
-      {description && <p>{description}</p>}
     </section>
   ),
 }));
 
-jest.mock('./_components/FeaturedProducts', () => ({
+jest.mock('./_components/PortfolioDemoSection', () => ({
   __esModule: true,
-  default: () => <section><h2>관리자 추천 상품</h2></section>,
+  default: () => (
+    <section data-testid="home-portfolio">
+      <p>PORTFOLIO DEMO</p><h2>포트폴리오 데모 안내</h2>
+    </section>
+  ),
 }));
 
-describe('Home editorial composition', () => {
-  test('renders operating traces for a curated daily shopping mall', () => {
-    const markup = renderToStaticMarkup(<Home />);
+jest.mock('next/link', () => ({
+  __esModule: true,
+  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
 
-    expect(markup).toContain('<h1 class="visuallyHidden">STYNA 패션 쇼핑몰</h1>');
+describe('Home shopping-first composition', () => {
+  test('renders one shopping-first path and one portfolio disclosure section', () => {
+    const { container } = render(<Home />);
 
-    expect(markup).toContain('스타일 조합 안내');
-    expect(markup).toContain('여름 셋업 조합');
-    expect(markup).toContain('상품 데이터');
-    expect(markup).toContain('편집 추천');
-    expect(markup).toContain('등록된 리뷰 수를 기준으로 정렬한 상위 8개 상품');
-    expect(markup).toContain('PORTFOLIO DEMO');
-    expect(markup).toContain('회원가입 완료 시 5,000P');
-    expect(markup).not.toContain('신규 회원 쿠폰');
-    expect(markup).toContain('아래 문구와 평점은 포트폴리오 데모용 예시이며 실제 고객 리뷰가 아닙니다.');
-    expect(markup).toContain('현재 적용 가능한 혜택은 이벤트 페이지에서 확인하세요.');
-    expect(markup).toContain('검증 완료된 이벤트만 표시됩니다.');
-    expect(markup).toContain('상품별 평점·리뷰 확인');
-    expect(markup).toContain('현재 할인가가 등록된 상품');
-    expect(markup).toContain('신상품');
-    expect(markup).toContain('편집 추천');
-    expect(markup).not.toMatch(/이번 주|MD가.*골랐|구김이 덜한|오래 걸어도 편한/);
-    expect(markup).not.toMatch(/리뷰 4\.7 이상|일주일 특가/);
-    expect(markup).toContain('PORTFOLIO CONTACT');
-    expect(markup).toContain('답변 시점은 보장하지 않습니다');
-    expect(markup).not.toContain('CUSTOMER CENTER');
-    expect(markup).not.toContain('최근 7일간 리뷰 수와 장바구니 저장 수를 기준으로 집계했습니다.');
-    expect(markup).not.toContain('07.14까지');
-    expect(markup).toContain('category visual mode: image');
-    expect(markup).toContain('관리자 추천 상품');
-  });
+    expect(screen.getAllByText('PORTFOLIO DEMO')).toHaveLength(1);
+    expect(screen.queryByText('스타일 코멘트 예시')).not.toBeInTheDocument();
+    expect(screen.queryByText('혜택 안내 예시')).not.toBeInTheDocument();
+    expect(screen.queryByText('isNew로 표시된 상품')).not.toBeInTheDocument();
+    expect(screen.getByText('이번 주 새로 등록된 상품')).toBeInTheDocument();
+    expect(screen.queryByText('SHOP BY USE')).not.toBeInTheDocument();
+    expect(screen.queryByText("EDITOR'S SELECTION")).not.toBeInTheDocument();
+    expect(screen.queryByText('NEW THIS WEEK')).not.toBeInTheDocument();
+    expect(screen.queryByText('BEST RANKING')).not.toBeInTheDocument();
+    expect(screen.queryByText('SEASON OFF')).not.toBeInTheDocument();
+    expect(screen.queryByText('PORTFOLIO CONTACT')).not.toBeInTheDocument();
 
-  test('keeps the main page compact instead of rendering duplicate editorial grids', () => {
-    const markup = renderToStaticMarkup(<Home />);
+    const banner = screen.getByTestId('home-banner');
+    const category = screen.getByTestId('home-categories').closest('section') as HTMLElement | null;
+    const featured = screen.getByTestId('home-featured');
+    const newArrivals = screen.getByTestId('home-new').closest('#new-arrivals') as HTMLElement | null;
+    const ranking = screen.getByTestId('home-bestseller').closest('#best-ranking') as HTMLElement | null;
+    const sale = screen.getByTestId('home-sale').closest('#sale-products') as HTMLElement | null;
+    const portfolio = screen.getByTestId('home-portfolio');
+    const orderedSections = [
+      banner,
+      category,
+      featured,
+      newArrivals,
+      ranking,
+      sale,
+      portfolio,
+    ];
 
-    expect(markup).not.toContain('MINIMAL DAILY SELECT');
-    expect(markup).not.toContain('카테고리별 상품 모의 영역');
+    expect(orderedSections.every((section) => section)).toBe(true);
+    const positions = orderedSections.map((section) =>
+      Array.from(container.querySelectorAll('section')).indexOf(section!),
+    );
+    expect(positions).toEqual([...positions].sort((left, right) => left - right));
+
+    const saleSection = sale!;
+    expect(within(saleSection).getByTestId('home-sale')).toBeInTheDocument();
+    expect(within(saleSection).getByRole('link', { name: '진행 중인 이벤트 보기' }))
+      .toHaveAttribute('href', '/events');
   });
 });

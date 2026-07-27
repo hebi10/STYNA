@@ -5,6 +5,7 @@ import { useAuth } from '@/context/authProvider';
 const replace = jest.fn();
 const login = jest.fn();
 const clearError = jest.fn();
+const initialDemoLoginFlag = process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN;
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ replace }),
@@ -65,6 +66,15 @@ jest.mock('./page.module.css', () => ({
 }));
 
 describe('LoginPage transition feedback', () => {
+  afterEach(() => {
+    if (initialDemoLoginFlag === undefined) {
+      delete process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN;
+      return;
+    }
+
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN = initialDemoLoginFlag;
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     window.scrollTo = jest.fn();
@@ -155,10 +165,44 @@ describe('LoginPage transition feedback', () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/mypage'));
   });
 
-  test('does not show hard-coded demo account login buttons outside development', () => {
+  test('renders portfolio demo login controls only when the public flag is true', () => {
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN = 'true';
+
     render(<LoginPage />);
 
-    expect(screen.queryByText('일반 유저 로그인')).not.toBeInTheDocument();
-    expect(screen.queryByText('관리자 로그인')).not.toBeInTheDocument();
+    expect(screen.getByText('포트폴리오 데모 로그인')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '일반 회원 로그인' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '관리자 로그인' })).toBeInTheDocument();
+  });
+
+  test.each([
+    ['missing', undefined],
+    ['false', 'false'],
+  ])('does not render portfolio demo login controls when the flag is %s', (_case, flag) => {
+    if (flag === undefined) {
+      delete process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN;
+    } else {
+      process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN = flag;
+    }
+
+    render(<LoginPage />);
+
+    expect(screen.queryByText('포트폴리오 데모 로그인')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '일반 회원 로그인' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '관리자 로그인' })).not.toBeInTheDocument();
+  });
+
+  test('announces authentication errors', () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      login,
+      error: '이메일 또는 비밀번호를 확인해 주세요.',
+      clearError,
+      user: null,
+      loading: false,
+    });
+
+    render(<LoginPage />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('이메일 또는 비밀번호를 확인해 주세요.');
   });
 });

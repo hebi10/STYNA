@@ -511,8 +511,8 @@
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #e2e8f0;
-  border-top: 3px solid #3b82f6;
+  border: 3px solid var(--line);
+  border-top-color: var(--black);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 1rem;
@@ -602,8 +602,8 @@
   color: #111;
   text-align: left;
   padding: 1.4rem 0 0.9rem;
-  border-width: 0 0 1px;
-  border-color: #13233a;
+  border: 0;
+  border-bottom: 1px solid var(--line);
 }
 
 .pageTitle,

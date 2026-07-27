@@ -9,19 +9,6 @@
   overflow: hidden;
 }
 
-/* 배경 애니메이션 요소들 */
-.container::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 2px, transparent 2px);
-  background-size: 50px 50px;
-  animation: float 20s ease-in-out infinite;
-}
-
 .floatingShape {
   position: absolute;
   border-radius: 50%;
@@ -115,10 +102,7 @@
 .title {
   font-size: 2.2rem;
   font-weight: 800;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--black);
   margin-bottom: 10px;
 }
 
@@ -450,7 +434,7 @@
 }
 
 .title {
-  color: #111;
+  color: var(--black);
   background: none;
   -webkit-text-fill-color: currentColor;
 }

@@ -51,4 +51,8 @@
 - 프로젝트 정책·구매 흐름 실행 계획 : superpowers/plans/2026-07-20-project-policy-purchase.md
 - 프로젝트 접근성·사용자 경험 개선 실행 계획 : superpowers/plans/2026-07-21-project-accessibility-ux.md
 - 프로젝트 성능·SEO 개선 실행 계획 : superpowers/plans/2026-07-21-project-performance-seo.md
+- 쇼핑 우선 하이브리드 UI 개선 설계 : superpowers/specs/2026-07-27-shopping-first-hybrid-ui-design.md
+- 쇼핑 우선 하이브리드 UI 개선 실행 계획 : superpowers/plans/2026-07-27-shopping-first-hybrid-ui.md
+- 쇼핑 우선 하이브리드 UI P2 폴리시 설계 : superpowers/specs/2026-07-27-shopping-first-hybrid-ui-p2-polish-design.md
+- 쇼핑 우선 하이브리드 UI P2 폴리시 실행 계획 : superpowers/plans/2026-07-27-shopping-first-hybrid-ui-p2-polish.md
 - SEO 경로·색인 정책 : seo-routing.md

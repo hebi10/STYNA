@@ -2,9 +2,9 @@
 .fixedButton {
   position: fixed;
   right: max(0.75rem, env(safe-area-inset-right));
-  bottom: calc(0.75rem + 42px + env(safe-area-inset-bottom));
+  bottom: calc(0.75rem + 44px + 0.5rem + env(safe-area-inset-bottom));
   min-width: 88px;
-  height: 36px;
+  min-height: 44px;
   width: auto;
   padding: 0 0.75rem;
   background: var(--color-white);
@@ -38,8 +38,8 @@
 }
 
 /* 반응형 디자인 */
-@media (max-width: 768px) {
-  .fixedButton {
+@media (max-width: 640px) {
+  .mobileSuppressed {
     display: none;
   }
 }
