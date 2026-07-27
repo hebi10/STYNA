@@ -19,6 +19,13 @@ jest.mock('./ProductList.module.css', () => ({
   }),
 }));
 
+jest.mock('@/app/_components/AsyncStatePanel.module.css', () => ({
+  __esModule: true,
+  default: new Proxy({}, {
+    get: (_target, property) => String(property),
+  }),
+}));
+
 jest.mock('./ProductCard', () => ({
   __esModule: true,
   default: ({ name }: { name: string }) => <article>{name}</article>,
@@ -272,7 +279,9 @@ describe('ProductList loading state', () => {
       fireEvent.click(screen.getByRole('button', { name: '다음' }));
       expect(await screen.findByText('기존 둘째 페이지')).toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: '다음' }));
-      expect(await screen.findByText('상품 목록 로딩 실패: 셋째 페이지 조회 실패')).toBeInTheDocument();
+      expect(await screen.findByRole('alert')).toHaveTextContent('상품 목록을 불러오지 못했습니다.');
+      expect(screen.getByRole('alert')).toHaveTextContent('잠시 후 다시 시도하거나 전체 상품으로 돌아가 주세요.');
+      expect(screen.getByRole('alert')).not.toHaveTextContent('셋째 페이지 조회 실패');
 
       fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
       expect(await screen.findByText('갱신된 첫 페이지')).toBeInTheDocument();
@@ -311,6 +320,38 @@ describe('ProductList loading state', () => {
     expect(screen.getAllByLabelText('상품 목록 로딩 카드')).toHaveLength(6);
   });
 
+  test('renders a retryable alert instead of an empty result when the first query fails', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    (ProductService.queryProducts as jest.Mock).mockRejectedValueOnce(new Error('permission-denied'));
+
+    try {
+      render(<ProductList />);
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('상품 목록을 불러오지 못했습니다.');
+      expect(screen.getByRole('alert')).toHaveTextContent('잠시 후 다시 시도하거나 전체 상품으로 돌아가 주세요.');
+      expect(screen.getByRole('alert')).not.toHaveTextContent('permission-denied');
+      expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: '전체 상품 보기' })).toHaveAttribute('href', '/products');
+      expect(screen.queryByText('조건에 맞는 상품이 없습니다.')).not.toBeInTheDocument();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  test('renders a filter reset only for a successful empty result', async () => {
+    (ProductService.queryProducts as jest.Mock).mockResolvedValueOnce({
+      items: [],
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    render(<ProductList />);
+
+    expect(await screen.findByText('조건에 맞는 상품이 없습니다.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '조건 초기화' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   test('renders known category ids with Korean labels', async () => {
     jest.mocked(useCategoriesWithNames).mockReturnValue({
       data: [{ id: 'bags', name: '가방' }],
@@ -325,7 +366,7 @@ describe('ProductList loading state', () => {
     expect(await screen.findByRole('option', { name: '가방' })).toHaveValue('bags');
   });
 
-  test('labels price controls and describes counts as the current page', async () => {
+  test('keeps the result count while omitting product summary tiles', async () => {
     (ProductService.queryProducts as jest.Mock).mockResolvedValue({
       items: [{
         id: 'product-1',
@@ -342,8 +383,10 @@ describe('ProductList loading state', () => {
 
     expect(await screen.findByLabelText('최소 가격')).toBeInTheDocument();
     expect(screen.getByLabelText('최대 가격')).toBeInTheDocument();
-    expect(screen.getByText('현재 페이지 상품')).toBeInTheDocument();
     expect(screen.getByText('현재 페이지 1개 상품')).toBeInTheDocument();
+    expect(screen.queryByText('현재 페이지 상품')).not.toBeInTheDocument();
+    expect(screen.queryByText('신상품')).not.toBeInTheDocument();
+    expect(screen.queryByText('세일')).not.toBeInTheDocument();
     expect(screen.queryByText('총 1개 상품')).not.toBeInTheDocument();
   });
 

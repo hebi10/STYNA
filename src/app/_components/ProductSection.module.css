@@ -95,7 +95,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
+  min-height: 44px;
   text-decoration: none;
   font-size: 0.8rem;
   font-weight: 500;
@@ -123,6 +123,23 @@
 .viewAllButton:hover {
   border-color: var(--black);
   color: var(--black);
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.emptyState p {
+  margin: 0;
+  color: var(--text-subtle);
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .productGrid,
@@ -211,21 +228,6 @@
 
 .errorState p {
   margin: 0;
-}
-
-.retryButton {
-  min-height: 40px;
-  padding: 0.65rem 1rem;
-  border: 1px solid var(--line-strong);
-  background: var(--color-white);
-  color: var(--black);
-  font: inherit;
-  cursor: pointer;
-}
-
-.retryButton:hover {
-  border-color: var(--black);
-  background: var(--surface);
 }
 
 .spinner {
@@ -366,6 +368,11 @@
   .headerBordered .viewAllLink {
     width: auto;
     justify-content: flex-end;
+  }
+
+  .emptyState {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .rankingItem {

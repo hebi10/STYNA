@@ -59,7 +59,7 @@
 }
 
 .filterButton {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 1rem;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -277,7 +277,7 @@
 
 .pageButton {
   min-width: 2.6rem;
-  min-height: 2.6rem;
+  min-height: 44px;
   padding: 0.55rem 0.85rem;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);

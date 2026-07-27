@@ -1,9 +1,16 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import EventList from './EventList';
 import { Event } from '@/shared/types/event';
 
 jest.mock('./EventList.module.css', () => ({
+  __esModule: true,
+  default: new Proxy({}, {
+    get: (_target, prop) => String(prop),
+  }),
+}));
+
+jest.mock('@/app/_components/AsyncStatePanel.module.css', () => ({
   __esModule: true,
   default: new Proxy({}, {
     get: (_target, prop) => String(prop),
@@ -227,6 +234,109 @@ describe('EventList', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('이벤트를 불러오는 중입니다');
     expect(screen.getAllByLabelText('이벤트 로딩 카드')).toHaveLength(3);
+  });
+
+  test('announces a safe event loading failure and retries the query', () => {
+    const refreshEvents = jest.fn();
+
+    useEvent.mockReturnValue({
+      events: [],
+      filteredEvents: [],
+      filter: {},
+      currentPage: 1,
+      eventsPerPage: 8,
+      loading: false,
+      error: 'permission-denied/internal details',
+      setFilter: jest.fn(),
+      setCurrentPage: jest.fn(),
+      refreshEvents,
+    });
+
+    render(<EventList />);
+
+    const alert = screen.getByRole('alert');
+
+    expect(alert).toHaveTextContent('이벤트 정보를 불러오지 못했습니다.');
+    expect(alert).toHaveTextContent('잠시 후 다시 시도해 주세요.');
+    expect(alert).not.toHaveTextContent('permission-denied/internal details');
+    fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+    expect(refreshEvents).toHaveBeenCalledTimes(1);
+  });
+
+  test('offers new and all product destinations when no events are available', () => {
+    useEvent.mockReturnValue({
+      events: [],
+      filteredEvents: [],
+      filter: {},
+      currentPage: 1,
+      eventsPerPage: 8,
+      loading: false,
+      error: null,
+      setFilter: jest.fn(),
+      setCurrentPage: jest.fn(),
+      refreshEvents: jest.fn(),
+    });
+
+    render(<EventList />);
+
+    expect(screen.getByRole('link', { name: '신상품 보기' })).toHaveAttribute(
+      'href',
+      '/recommend?filter=new',
+    );
+    expect(screen.getByRole('link', { name: '전체 상품 보기' })).toHaveAttribute(
+      'href',
+      '/products',
+    );
+  });
+
+  test('keeps product recovery links when a stale filter remains after all events disappear', () => {
+    useEvent.mockReturnValue({
+      events: [],
+      filteredEvents: [],
+      filter: { eventType: 'coupon' },
+      currentPage: 1,
+      eventsPerPage: 8,
+      loading: false,
+      error: null,
+      setFilter: jest.fn(),
+      setCurrentPage: jest.fn(),
+      refreshEvents: jest.fn(),
+    });
+
+    render(<EventList />);
+
+    expect(screen.getByRole('link', { name: '신상품 보기' })).toHaveAttribute(
+      'href',
+      '/recommend?filter=new',
+    );
+    expect(screen.getByRole('link', { name: '전체 상품 보기' })).toHaveAttribute(
+      'href',
+      '/products',
+    );
+    expect(screen.queryByRole('button', { name: '전체 이벤트 보기' })).not.toBeInTheDocument();
+  });
+
+  test('returns to all events when the active filter has no results', () => {
+    const setFilter = jest.fn();
+    const events = [baseEvent({ eventType: 'sale' })];
+
+    useEvent.mockReturnValue({
+      events,
+      filteredEvents: [],
+      filter: { eventType: 'coupon' },
+      currentPage: 1,
+      eventsPerPage: 8,
+      loading: false,
+      error: null,
+      setFilter,
+      setCurrentPage: jest.fn(),
+      refreshEvents: jest.fn(),
+    });
+
+    render(<EventList />);
+
+    fireEvent.click(screen.getByRole('button', { name: '전체 이벤트 보기' }));
+    expect(setFilter).toHaveBeenCalledWith({});
   });
 
   test('does not expose events whose public policy has not been verified', () => {

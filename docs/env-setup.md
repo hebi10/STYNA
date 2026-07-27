@@ -92,14 +92,14 @@ const firebaseConfig = await getFirebaseConfig();
 | `NEXT_PUBLIC_CHAT_API_URL` | 레거시 호환 | 과거 Next 서버 upstream 변수. 브라우저 직접 호출에는 사용하지 않으며 신규 설정은 `CHAT_API_URL`을 사용 |
 | `NEXT_PUBLIC_API_URL` | 선택 | API 기본 URL (기본값: `/api`) |
 | `NEXT_PUBLIC_USE_FIREBASE_EMULATOR` | 선택 | Firebase 에뮬레이터 사용 여부 |
-| `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | 선택 | `true`일 때 일반 회원·관리자 포트폴리오 데모 로그인을 노출 |
+| `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | 포트폴리오 데모 배포에서만 | 정확히 `true`일 때 로그인 화면의 일반 회원·관리자 빠른 로그인을 노출 |
 
 `NEXT_PUBLIC_` 접두사 변수는 클라이언트에 노출되므로 민감한 키에는 사용하지 않습니다.
 
 ## 보안
 
 - `.env.local`은 `.gitignore`에 포함되어 있으며 Git에 커밋하지 않습니다.
-- `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true`는 포트폴리오 데모 빌드에서만 사용합니다. 일반 운영 배포에서는 생략하거나 `false`로 둡니다.
+- `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true`는 포트폴리오 데모 배포에서만 사용합니다. 일반 개발·운영 배포에서는 생략하거나 `false`로 둡니다.
 - `OPENAI_API_KEY`와 `CHAT_RATE_LIMIT_SALT`는 `chat` Function에서만 사용합니다. `NEXT_PUBLIC_` 접두사를 붙이지 않습니다.
 - `CHAT_RATE_LIMIT_SALT`는 OpenAI API 키와 다른 임의 값을 사용하며 로그·응답·문서에 실제 값을 남기지 않습니다.
 - 원본 UID, 익명 session ID, IP는 rate-limit 문서나 로그에 남기지 않고 HMAC 결과만 저장합니다.

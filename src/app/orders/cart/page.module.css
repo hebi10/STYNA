@@ -9,6 +9,10 @@
   padding: 2rem 1rem;
 }
 
+.authGate {
+  max-width: 48rem;
+}
+
 .loading {
   display: flex;
   justify-content: center;

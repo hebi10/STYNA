@@ -207,7 +207,6 @@
 .progressBar {
   height: 100%;
   background: #007bff;
-  transition: width 0.3s ease;
 }
 
 /* 태그 및 옵션 스타일 */

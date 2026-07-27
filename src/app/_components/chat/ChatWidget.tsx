@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { auth } from '@/shared/libs/firebase/firebase';
 import { getChatSessionId } from '@/shared/utils/chatSession';
+import { getFloatingUiPolicy } from '@/shared/utils/floatingUi';
 import styles from './ChatWidget.module.css';
 
 // ─── 상수 ──────────────────────────────────────────────
@@ -153,6 +154,7 @@ MessageText.displayName = 'MessageText';
 // ─── ChatWidget 컴포넌트 ───────────────────────────────
 const ChatWidget: React.FC = () => {
   const pathname = usePathname();
+  const floatingUiPolicy = getFloatingUiPolicy(pathname);
 
   // UI 상태
   const [isOpen, setIsOpen] = useState(false);
@@ -179,6 +181,12 @@ const ChatWidget: React.FC = () => {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (floatingUiPolicy.hideChat) {
+      setIsOpen(false);
+    }
+  }, [floatingUiPolicy.hideChat]);
 
   // ── 스크롤 제어 ───────────────────────────────────
   const scrollToBottom = useCallback(() => {
@@ -344,7 +352,6 @@ const ChatWidget: React.FC = () => {
   // ── 파생 disabled 상태 ────────────────────────────
   const isInputDisabled = chatMutation.isPending || chatMode === 'idle' || !isDirectQuestionEnabled;
   const isSendDisabled = !inputValue.trim() || isInputDisabled;
-  const isEventPage = pathname?.startsWith('/events');
 
   const toggleChat = useCallback(() => {
     if (!isOpen && chatMode === 'idle') {
@@ -358,13 +365,18 @@ const ChatWidget: React.FC = () => {
     window.requestAnimationFrame(() => chatToggleButtonRef.current?.focus());
   }, []);
 
-  if (pathname?.startsWith('/auth')) {
+  if (floatingUiPolicy.hideChat) {
     return null;
   }
 
   // ── 렌더링 ────────────────────────────────────────
   return (
-    <div className={`${styles.chatWidget} ${isEventPage ? styles.eventPageWidget : ''}`}>
+    <div
+      className={`${styles.chatWidget} ${
+        floatingUiPolicy.suppressChatOnMobile ? styles.mobileSuppressed : ''
+      }`}
+      data-testid="chat-widget"
+    >
       {/* 채팅 창 */}
       <div
         id="help-chat-window"

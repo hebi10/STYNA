@@ -204,7 +204,6 @@
   background: #f0fdf4;
   border-radius: 12px;
   padding: 1.5rem;
-  border-left: 4px solid #10b981;
 }
 
 .pointNote h4 {
@@ -491,10 +490,6 @@
   transform: none;
   box-shadow: none;
   border-color: var(--black);
-}
-
-.pointNote {
-  border-left: 1px solid var(--line);
 }
 
 .pointNote h4,

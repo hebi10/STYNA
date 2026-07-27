@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import AsyncStatePanel from '@/app/_components/AsyncStatePanel';
 import Button from '@/app/_components/Button';
 import { getEventUiMeta } from '@/shared/constants/eventUiMeta';
 import { getEventDisplayImages } from '@/shared/utils/eventImages';
@@ -88,9 +89,9 @@ export default function EventList() {
     return (
       <div className={styles.container}>
         <EventListHeading />
-        <div className={`${styles.statePanel} ${styles.errorState}`}>
+        <div className={`${styles.statePanel} ${styles.errorState}`} role="alert">
           <p className={styles.stateTitle}>이벤트 정보를 불러오지 못했습니다.</p>
-          <p className={styles.stateDescription}>{error}</p>
+          <p className={styles.stateDescription}>잠시 후 다시 시도해 주세요.</p>
           <Button variant="outline" onClick={refreshEvents}>
             다시 시도
           </Button>
@@ -106,6 +107,7 @@ export default function EventList() {
       ? '현재 노출할 이벤트가 없습니다.'
       : `"${FILTER_OPTIONS.find(option => option.type === activeFilterType)?.label}" 조건에 맞는 이벤트가 없습니다.`;
   const showEmptyState = publicEvents.length === 0;
+  const showProductRecoveryActions = events.length === 0 || activeFilterType === 'all';
 
   return (
     <div className={styles.container}>
@@ -142,13 +144,26 @@ export default function EventList() {
       </div>
 
       {showEmptyState ? (
-        <div className={`${styles.statePanel} ${styles.emptyState}`}>
-          <p className={styles.stateTitle}>{emptyStateMessage}</p>
-          <p className={styles.stateDescription}>
-            {events.length === 0
-              ? '등록된 이벤트가 아직 없어 준비되는 대로 바로 노출됩니다.'
-              : '다른 필터를 선택하면 현재 노출 가능한 이벤트를 다시 확인할 수 있습니다.'}
-          </p>
+        <div className={styles.emptyState}>
+          <AsyncStatePanel
+            kind="empty"
+            title={emptyStateMessage}
+            description={
+              events.length === 0
+                ? '등록된 이벤트가 아직 없어 준비되는 대로 바로 노출됩니다.'
+                : '다른 필터를 선택하면 현재 노출 가능한 이벤트를 다시 확인할 수 있습니다.'
+            }
+            primaryAction={
+              showProductRecoveryActions
+                ? { label: '신상품 보기', href: '/recommend?filter=new' }
+                : { label: '전체 이벤트 보기', onClick: () => handleFilterChange('all') }
+            }
+            secondaryAction={
+              showProductRecoveryActions
+                ? { label: '전체 상품 보기', href: '/products' }
+                : undefined
+            }
+          />
         </div>
       ) : (
         <>

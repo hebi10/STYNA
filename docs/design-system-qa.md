@@ -87,3 +87,26 @@
 ## 2026-06-30 React Query Devtools 제거
 
 - 사용하지 않는 React Query Devtools 의존성과 `NEXT_PUBLIC_ENABLE_QUERY_DEVTOOLS` 분기를 제거했다.
+
+## 2026-07-27 쇼핑 우선 하이브리드 최종 QA
+
+- `390×844`, `768×1024`, `1440×900`에서 `/`, `/products`, `/search`, 실제 `/products/light-zip-up-jacket`, `/events`, `/auth/login`, `/orders/cart`, `/mypage`, `/admin`을 production build로 확인했다.
+- 세 뷰포트와 대표 경로에서 문서 가로 overflow, 깨진 이미지, alt 누락은 관찰되지 않았다. 모바일 상품 상세·이벤트에서는 플로팅 UI가 숨겨졌고, 홈의 쇼핑 안내와 챗봇은 8px 간격으로 배치됐다.
+- 데스크톱 SHOP과 모바일 전체 메뉴는 disclosure로 열리고 Escape로 닫히며 트리거로 focus가 돌아왔다. 헤더는 SHOP·추천·이벤트·리뷰·고객지원의 다섯 그룹을 유지한다.
+- 비로그인 장바구니는 인증 확인 뒤 “로그인하고 계속하기”와 “쇼핑 계속하기”를 제공한다. `/mypage`는 로그인으로 이동하고 `/admin`은 signed-out permission gate를 표시한다.
+- `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true` build에서는 일반 회원·관리자 빠른 로그인과 이메일·비밀번호 폼이 함께 보였다. 두 데모 계정은 현재 연결된 Firebase 사용자 프로필이 사용할 수 없는 상태라 실제 로그인 완료와 관리자 내부 화면은 확인하지 못했다. 보안 정책과 원격 데이터는 변경하지 않았다.
+- `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=false` build에서는 두 빠른 로그인 버튼과 divider만 사라지고 이메일·비밀번호 로그인 폼은 유지됐다.
+- 일반 signed-out 경로의 false-flag production 검증에서는 console warning/error가 관찰되지 않았다. 데모 로그인 시도에서는 계정 프로필과 권한 관련 오류가 확인되어 외부 데이터 준비 제한으로 별도 기록했다.
+- 집중 Jest 13 suites/156 tests, 전체 Jest 159 suites/1,305 tests, typecheck, lint warning 0, production build 65 pages, `git diff --check`를 통과했다.
+- Impeccable 재평가는 dual-agent 방식으로 `28/40(Good)`, P0 0건, production UI P1 0건이었다. 기존 `25/40`의 상품 상태·장바구니 gate·모바일 챗봇 P1 3건은 해결됐다.
+- 남은 P2는 모바일 옵션·일부 링크의 44px 미달, SHOP 14개 하위 목적지, `NEW NEW` 중복과 메타데이터 반복, 작은 보조 텍스트 대비·heading 계약, 빈 상태 CTA 위계다.
+
+## 2026-07-27 대비·heading·빈 상태 P2 보정
+
+- 흰 배경 기준 `--text-soft` 대비를 `4.78:1`로 높여 muted/tertiary 파생 텍스트도 일반 텍스트 AA 기준을 충족하도록 했다.
+- 공통 `AsyncStatePanel`은 기본 `h2`를 유지하면서 페이지 상태에서는 `h1`을 선택할 수 있고, primary는 검정 채움, secondary는 흰 표면과 검정 선으로 구분한다.
+- 비로그인 장바구니와 인증 확인 상태는 페이지 `h1`을 사용하며, FAQ는 빈 검색 결과에서도 하나의 `h1`만 유지한다.
+- 이벤트가 없으면 신상품·전체 상품으로 이동하고, 필터 결과가 없으면 전체 이벤트로 돌아갈 수 있도록 복구 액션을 추가했다. 기존 이벤트 오류 문구와 재시도 동작은 유지했다.
+- 초기 Task 4 관련 집중 Jest 5 suites/30 tests를 통과했다.
+- Fix Round 1에서 전체 이벤트가 0건인데 이전 필터가 남은 상태도 신상품·전체 상품 링크를 유지하도록 보정했다. 회귀 테스트 추가 후 관련 집중 Jest는 5 suites/31 tests다.
+- 이벤트 오류 상태는 provider의 raw 오류 문자열을 노출하지 않고 “이벤트 정보를 불러오지 못했습니다.”와 “잠시 후 다시 시도해 주세요.”만 표시한다. 다시 시도 버튼은 기존 `refreshEvents`를 호출하며, 이 계약은 raw fixture 비노출과 callback 1회 호출 테스트로 확인한다.

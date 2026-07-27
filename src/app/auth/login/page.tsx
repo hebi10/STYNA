@@ -117,7 +117,7 @@ export default function LoginPage() {
         <form className={styles.form} onSubmit={handleSubmit}>
 
           {error && (
-            <div className={styles.errorMessage}>
+            <div className={styles.errorMessage} role="alert">
               {error}
             </div>
           )}

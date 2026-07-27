@@ -111,15 +111,17 @@ describe('public project surface', () => {
     expect(read('src/app/404.tsx')).not.toContain('인기 상품 보기');
   });
 
-  test('does not invent weekly or human merchandising provenance', () => {
+  test('keeps the approved new-arrivals label while rejecting invented merchandising provenance', () => {
+    const homeSource = read('src/app/page.tsx');
     const merchandisingSources = [
-      'src/app/page.tsx',
+      homeSource,
       'src/app/_components/ProductSection.tsx',
       'src/shared/services/featuredProductService.ts',
-    ].map(read).join('\n');
+    ].join('\n');
 
+    expect(homeSource).toContain('subtitle="이번 주 새로 등록된 상품"');
     expect(merchandisingSources).not.toMatch(
-      /이번 주 추천|이번 주 신상|이번 주 새로|MD가.*선별|전문 MD|MD추천|기준으로 골랐/,
+      /이번 주 추천|이번 주 신상|MD가.*선별|전문 MD|MD추천|기준으로 골랐/,
     );
   });
 

@@ -1,0 +1,96 @@
+.panel {
+  display: grid;
+  justify-items: start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xl) 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
+}
+
+.spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--line);
+  border-top-color: var(--black);
+  animation: spin 0.8s linear infinite;
+}
+
+.content {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  color: var(--black);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.description {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--text-subtle);
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primaryAction {
+  border: 1px solid var(--black);
+  background: var(--black);
+  color: var(--color-white);
+}
+
+.secondaryAction {
+  border: 1px solid var(--black);
+  background: var(--color-bg-primary);
+  color: var(--black);
+}
+
+.primaryAction:hover {
+  background: var(--action-hover);
+}
+
+.secondaryAction:hover {
+  background: var(--color-bg-secondary);
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

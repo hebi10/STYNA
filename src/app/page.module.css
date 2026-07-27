@@ -15,511 +15,114 @@
   border: 0;
 }
 
-.sectionContainer,
-.saleNoticeInner,
-.serviceGrid {
+.sectionContainer {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1rem;
 }
 
-.sectionEyebrow {
-  margin: 0 0 0.45rem;
-  color: #697386;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
+.sectionTitle {
+  margin: 0;
+  color: #0a1628;
+  font-size: 1.08rem;
+  font-weight: 700;
   line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .sectionDescription {
   max-width: 45rem;
   margin: 0.6rem 0 0;
-  color: #697386;
+  color: var(--text-subtle);
   font-size: 0.9rem;
   line-height: 1.75;
 }
 
-.curationStrip {
-  padding: 1.25rem 0;
-  background: #fff;
-  border-top: 1px solid #e2e2e2;
-  border-bottom: 1px solid #e2e2e2;
-}
-
-.curationGrid {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
-  gap: 1rem;
-}
-
-.curationItem {
-  min-width: 0;
-  padding-right: 1rem;
-  border-right: 1px solid #dedede;
-}
-
-.curationItem:last-child {
-  border-right: 0;
-  padding-right: 0;
-}
-
-.curationItem h2,
-.noteTitle {
-  margin: 0;
-  color: #111;
-  font-size: 1rem;
-  font-weight: 800;
-  line-height: 1.4;
-}
-
-.curationItem p:not(.sectionEyebrow),
-.noteText {
-  margin: 0.45rem 0 0;
-  color: #697386;
-  font-size: 0.78rem;
-  line-height: 1.65;
-}
-
-.categorySection {
-  padding: 2rem 0 1.8rem;
+.categorySection,
+.productBand,
+.rankingBand {
+  padding: 2rem 0;
   background: #f7f7f7;
 }
 
 .productBand,
 .rankingBand {
-  padding: 1.9rem 0;
-  background: #f7f7f7;
   scroll-margin-top: 6rem;
 }
 
-.rankingBand {
-  padding-top: 2rem;
-}
-
 .compactHeader {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
   margin-bottom: 1rem;
   padding-bottom: 0.8rem;
   border-bottom: 1px solid #13233a;
 }
 
-.mdNoteSection,
-.reviewHighlight {
-  padding: 2rem 0;
-  background: #f7f7f7;
-}
-
-.noteGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(260px, 0.9fr);
-  gap: 1.5rem;
-  align-items: end;
-}
-
-.comboGrid,
-.reviewGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.comboGrid article,
-.reviewGrid article {
-  min-width: 0;
-  padding: 1rem;
-  background: #fff;
-  border: 1px solid #dedede;
-}
-
-.comboGrid span {
-  display: block;
-  margin-bottom: 0.65rem;
-  color: #697386;
-  font-size: 0.74rem;
-  font-weight: 800;
-}
-
-.comboGrid strong {
-  display: block;
-  color: #111;
-  font-size: 0.94rem;
-  line-height: 1.45;
-}
-
-.comboGrid p,
-.reviewGrid p {
-  margin: 0.5rem 0 0;
-  color: #697386;
-  font-size: 0.84rem;
-  line-height: 1.7;
-}
-
-.reviewGrid span {
-  display: block;
-  margin-top: 0.75rem;
-  color: #111;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.sectionTitle {
-  margin: 0;
-  font-size: 1.08rem;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  color: #0a1628;
-}
-
-.categoryGrid,
 .categoryMoodGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
-}
-
-.categoryCard {
-  display: block;
-  overflow: hidden;
-  text-decoration: none;
-  color: inherit;
-  background: #fff;
-  border: 1px solid #dedede;
-  border-radius: 2px;
-  transition: border-color 0.15s ease;
-}
-
-.categoryCard:hover {
-  border-color: #111;
-}
-
-.categoryCardTextOnly {
-  display: grid;
-  min-height: 118px;
-  align-content: end;
-}
-
-.categoryCardTextOnly .categoryInfo {
-  min-height: 118px;
-  align-content: end;
-  border-top: 0;
-}
-
-.categoryImageWrapper {
-  position: relative;
-  width: 100%;
-  min-height: 145px;
-  overflow: hidden;
-  background: #eee;
-}
-
-.categoryImagePlaceholder {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: 145px;
-  overflow: hidden;
-}
-
-.categoryImage {
-  object-fit: cover;
-  transition: transform 0.25s ease;
-}
-
-.categoryCard:hover .categoryImage {
-  transform: scale(1.03);
-}
-
-.categoryInfo {
-  display: grid;
-  gap: 0.25rem;
-  min-height: 64px;
-  padding: 0.85rem 0.9rem;
-  background: #fff;
-  border-top: 1px solid #e6e6e6;
-}
-
-.categoryLabel {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #111;
-}
-
-.categoryCount {
-  font-size: 0.8rem;
-  line-height: 1.5;
-  color: #697386;
 }
 
 .bandSection {
   margin: 0 auto;
 }
 
-.saleNotice {
-  margin: 0;
-  padding: 1.7rem 0;
-  background: #111;
-}
-
-.saleNoticeInner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-}
-
-.saleNoticeTitle {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #fff;
-}
-
-.saleNoticeText {
-  margin: 0.45rem 0 0;
-  font-size: 0.86rem;
-  color: rgba(255, 255, 255, 0.72);
-}
-
-.saleNoticeActions {
-  flex: 0 0 auto;
-}
-
-.promoButton,
-.retryButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 38px;
-  padding: 0.65rem 1.1rem;
-  border: 1px solid #0a1628;
-  border-radius: 2px;
-  background: #0a1628;
-  color: #fff;
-  font-size: 0.86rem;
-  font-weight: 700;
-  text-decoration: none;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-
-.promoButton:hover,
-.retryButton:hover {
-  background: #111;
-  border-color: #111;
-}
-
-.saleNotice .sectionEyebrow {
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.saleNotice .promoButton {
-  border-color: #fff;
-  background: #fff;
-  color: #111;
-}
-
-.serviceInfo {
-  padding: 2.6rem 0 2.4rem;
-  background: #f7f7f7;
-}
-
-.serviceGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  padding-top: 1.4rem;
+.eventsEntry {
+  max-width: 1200px;
+  margin: 1.25rem auto 0;
+  padding: 1rem;
   border-top: 1px solid #dedede;
 }
 
-.serviceItem h2 {
-  margin: 0 0 0.6rem;
-  font-size: 0.92rem;
-  font-weight: 700;
+.eventsLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: #0a1628;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
 }
 
-.serviceItem p {
-  margin: 0;
-  font-size: 0.8rem;
-  line-height: 1.7;
-  color: #697386;
-  overflow-wrap: anywhere;
+.eventsLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
-.loadingShimmer {
-  animation: shimmer 1.5s infinite linear;
-  background: linear-gradient(90deg, #eee 25%, #ddd 50%, #eee 75%);
-  background-size: 200px 100%;
+.eventsLink:focus-visible {
+  outline: 2px solid #0a1628;
+  outline-offset: 3px;
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200px 0;
-  }
-
-  100% {
-    background-position: calc(200px + 100%) 0;
-  }
-}
-
-.categoryCard.loading,
-.loading {
-  pointer-events: none;
-  opacity: 0.7;
-}
-
-.errorContainer {
-  display: grid;
-  justify-items: center;
-  gap: 0.75rem;
-  padding: 2rem;
-  text-align: center;
-  background: #fff;
-  border: 1px dashed #c8c8c8;
-}
-
-.errorMessage {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #b42318;
-}
-
-@media (max-width: 1024px) {
-  .curationGrid,
-  .noteGrid {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-
-  .curationItem {
-    padding: 0.85rem 0;
-    border-right: 0;
-    border-bottom: 1px solid #dedede;
-  }
-
-  .curationItem:first-child {
-    padding-top: 0;
-  }
-
-  .curationItem:last-child {
-    border-bottom: 0;
-    padding-bottom: 0;
-  }
-
-  .serviceGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .categoryGrid,
+@media (max-width: 900px) {
   .categoryMoodGrid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.75rem;
-  }
-
-  .categoryImageWrapper,
-  .categoryImagePlaceholder {
-    min-height: 180px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 768px) {
   .sectionContainer,
-  .saleNoticeInner,
-  .serviceGrid {
-    padding: 0 0.75rem;
+  .eventsEntry {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
   }
 
   .categorySection,
   .productBand,
-  .rankingBand,
-  .serviceInfo {
+  .rankingBand {
     padding-top: 2rem;
     padding-bottom: 2rem;
   }
 
-  .saleNoticeInner {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .comboGrid,
-  .reviewGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .saleNoticeActions,
-  .promoButton {
-    width: 100%;
-  }
-}
-
-@media (max-width: 640px) {
-  .serviceInfo {
-    padding-top: 2.2rem;
-    padding-bottom: 2rem;
-  }
-
-  .serviceGrid {
-    grid-template-columns: 1fr;
-    gap: 0;
-    padding-top: 0;
-  }
-
-  .serviceItem {
-    padding: 1rem 0;
-    border-bottom: 1px solid #dedede;
-  }
-
-  .serviceItem:first-child {
-    padding-top: 0;
-  }
-
-  .serviceItem:last-child {
-    border-bottom: 0;
-    padding-bottom: 0;
-  }
-
-  .serviceItem h2 {
-    margin-bottom: 0.4rem;
-  }
-}
-
-@media (max-width: 900px) {
-  .categoryGrid,
-  .categoryMoodGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 480px) {
   .sectionContainer,
-  .saleNoticeInner,
-  .serviceGrid {
-    padding: 0 0.625rem;
+  .eventsEntry {
+    padding-right: 0.625rem;
+    padding-left: 0.625rem;
   }
 
-  .categoryGrid,
   .categoryMoodGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.75rem;
-  }
-
-  .serviceGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .categoryImageWrapper,
-  .categoryImagePlaceholder {
-    min-height: 180px;
-  }
-
-  .categoryInfo {
-    min-height: 72px;
-    padding: 0.75rem;
   }
 }

@@ -6,7 +6,7 @@ import Image from "next/image";
 import { CategoryOrderService } from '@/shared/services/categoryOrderService';
 import { CATEGORY_IMAGE_URLS } from '@/shared/constants/categoryImages';
 import { DEFAULT_CATEGORY_IDS, getDefaultCategoryNames } from '@/shared/utils/categoryUtils';
-import styles from '../page.module.css';
+import styles from './DynamicCategorySection.module.css';
 
 interface CategoryCardProps {
   id: string;
@@ -91,7 +91,11 @@ export default function DynamicCategorySection({
 
   if (loading) {
     return (
-      <div className={`${styles.categoryGrid} ${className}`}>
+      <div
+        className={`${styles.categoryGrid} ${className}`}
+        role="status"
+        aria-live="polite"
+      >
         {Array.from({ length: maxCategories }).map((_, index) => (
           <div
             key={index}

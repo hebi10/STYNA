@@ -6,6 +6,12 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { auth as mockedFirebaseAuth } from '@/shared/libs/firebase/firebase';
 import ChatWidget from './ChatWidget';
 
+const mockUsePathname = jest.fn();
+
+jest.mock('next/navigation', () => ({
+  usePathname: () => mockUsePathname(),
+}));
+
 jest.mock('@/shared/libs/firebase/firebase', () => ({
   auth: { currentUser: null },
 }));
@@ -18,8 +24,11 @@ const mockAuthState = mockedFirebaseAuth as unknown as {
   currentUser: null | { getIdToken: jest.Mock<Promise<string>, []> };
 };
 
-jest.mock('./ChatWidget.module.css', () => new Proxy({}, {
-  get: (_target, prop) => String(prop),
+jest.mock('./ChatWidget.module.css', () => ({
+  __esModule: true,
+  default: new Proxy({}, {
+    get: (_target, prop) => String(prop),
+  }),
 }));
 
 function renderChatWidget() {
@@ -30,17 +39,25 @@ function renderChatWidget() {
     },
   });
 
-  return render(
+  const renderWidget = () => (
     <QueryClientProvider client={queryClient}>
       <ChatWidget />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+
+  const rendered = render(renderWidget());
+
+  return {
+    ...rendered,
+    rerenderWidget: () => rendered.rerender(renderWidget()),
+  };
 }
 
 describe('ChatWidget', () => {
   beforeEach(() => {
     delete process.env.NEXT_PUBLIC_CHAT_API_URL;
     mockAuthState.currentUser = null;
+    mockUsePathname.mockReturnValue('/');
     jest.clearAllMocks();
 
     Element.prototype.scrollIntoView = jest.fn();
@@ -63,6 +80,48 @@ describe('ChatWidget', () => {
       ok: true,
       json: async () => ({ success: true, data: { response: '배송 안내입니다.' } }),
     }) as jest.Mock;
+  });
+
+  test.each(['/auth/login', '/orders/cart'])
+  ('does not render the chatbot on %s', (pathname) => {
+    mockUsePathname.mockReturnValue(pathname);
+
+    renderChatWidget();
+
+    expect(screen.queryByRole('button', { name: '채팅 열기' })).not.toBeInTheDocument();
+  });
+
+  test('closes an open chat before returning from a hidden order route', () => {
+    const { container, rerenderWidget } = renderChatWidget();
+
+    fireEvent.click(screen.getByRole('button', { name: '채팅 열기' }));
+    expect(container.querySelector('#help-chat-window')).toHaveAttribute('aria-hidden', 'false');
+
+    mockUsePathname.mockReturnValue('/orders/cart');
+    rerenderWidget();
+    expect(screen.queryByRole('button', { name: '채팅 열기' })).not.toBeInTheDocument();
+
+    mockUsePathname.mockReturnValue('/');
+    rerenderWidget();
+
+    expect(screen.getByRole('button', { name: '채팅 열기' })).toHaveAttribute('aria-expanded', 'false');
+    expect(container.querySelector('#help-chat-window')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  test.each(['/products/item-1', '/events/summer-sale'])
+  ('marks the chatbot as mobile-suppressed on %s', (pathname) => {
+    mockUsePathname.mockReturnValue(pathname);
+
+    renderChatWidget();
+
+    expect(screen.getByTestId('chat-widget')).toHaveClass('mobileSuppressed');
+  });
+
+  test('keeps the chatbot visible without mobile suppression on the public home', () => {
+    renderChatWidget();
+
+    expect(screen.getByTestId('chat-widget')).not.toHaveClass('mobileSuppressed');
+    expect(screen.getByRole('button', { name: '채팅 열기' })).toBeInTheDocument();
   });
 
   afterEach(() => {

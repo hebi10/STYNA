@@ -102,43 +102,6 @@
   color: white;
 }
 
-/* 통계 정보 */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.statItem {
-  text-align: left;
-  padding: 1rem;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  box-shadow: none;
-  transition: border-color 0.15s ease;
-}
-
-.statItem:hover {
-  border-color: var(--black);
-  transform: none;
-  box-shadow: none;
-}
-
-.statNumber {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
-  margin-bottom: var(--spacing-sm);
-}
-
-.statLabel {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-medium);
-}
-
 /* 검색 및 필터 컨트롤 */
 .controls {
   display: flex;
@@ -377,10 +340,6 @@
 
 /* Extra Small Devices (480px and down) */
 @media (max-width: 480px) {
-  .stats {
-    grid-template-columns: 1fr;
-  }
-
   .productGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.75rem;
@@ -398,28 +357,6 @@
     padding: 0 var(--spacing-sm);
   }
 
-  .stats {
-    grid-template-columns: 1fr;
-    gap: 0;
-    margin-bottom: 0;
-  }
-  
-  .statItem {
-    display: flex;
-    align-items: baseline;
-    gap: var(--spacing-sm);
-    padding: 0.75rem;
-  }
-
-  .statItem:not(:first-child) {
-    display: none;
-  }
-  
-  .statNumber {
-    margin-bottom: 0;
-    font-size: var(--font-size-lg);
-  }
-  
   .controls {
     gap: var(--spacing-md);
   }
@@ -481,11 +418,5 @@
     min-width: 44px;
     min-height: 44px;
     padding: var(--spacing-xs) var(--spacing-sm);
-  }
-}
-
-@media (max-width: 480px) {
-  .stats {
-    grid-template-columns: 1fr;
   }
 }
