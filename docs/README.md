@@ -22,7 +22,9 @@
 - 마이페이지 컴팩트 레이아웃 설계 : superpowers/specs/2026-07-13-mypage-compact-layout-design.md
 - 마이페이지 컴팩트 레이아웃 실행 계획 : superpowers/plans/2026-07-13-mypage-compact-layout.md
 - 인증 화면 UI 정리 : auth-ui.md
+- 상거래 정책과 데모 범위 : [commerce-policy.md](commerce-policy.md)
 - 상품 조회 구조 개선 : product-listing-structure.md
+- 리뷰 통계 동기화·백필 : review-statistics.md
 - 디자인 시스템 정리/리팩터 : design-system-refactor.md
 - 디자인 시스템 QA : design-system-qa.md
 - 대시보드 정리 : dashboard.md
@@ -47,3 +49,6 @@
 - 프로젝트 데드·중복 코드 정리 실행 계획 : superpowers/plans/2026-07-20-project-cleanup.md
 - 프로젝트 보안·품질 게이트 실행 계획 : superpowers/plans/2026-07-20-project-security-quality.md
 - 프로젝트 정책·구매 흐름 실행 계획 : superpowers/plans/2026-07-20-project-policy-purchase.md
+- 프로젝트 접근성·사용자 경험 개선 실행 계획 : superpowers/plans/2026-07-21-project-accessibility-ux.md
+- 프로젝트 성능·SEO 개선 실행 계획 : superpowers/plans/2026-07-21-project-performance-seo.md
+- SEO 경로·색인 정책 : seo-routing.md

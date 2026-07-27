@@ -86,4 +86,36 @@ describe('usePointHistory', () => {
     await waitFor(() => expect(result.current.history).toEqual(refreshedHistory));
     expect(PointService.getPointHistory).toHaveBeenCalledTimes(2);
   });
+
+  test('restores history after reset when refetch returns the same cached data reference', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const response = {
+      success: true,
+      history: [{
+        id: 'history-same',
+        type: 'earn',
+        amount: 1000,
+        description: '동일 내역',
+        date: new Date('2026-07-21T00:00:00.000Z'),
+        balanceAfter: 1000,
+      }],
+      lastDoc: null,
+      hasMore: false,
+    };
+    jest.mocked(PointService.getPointHistory).mockResolvedValue(response as never);
+
+    const { result } = renderHook(() => usePointHistory(50), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await waitFor(() => expect(result.current.history).toEqual(response.history));
+    await act(async () => {
+      await result.current.reset();
+    });
+
+    await waitFor(() => expect(PointService.getPointHistory).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.history).toEqual(response.history));
+  });
 });

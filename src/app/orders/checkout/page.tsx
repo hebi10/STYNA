@@ -1,6 +1,6 @@
  "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -10,10 +10,11 @@ import { useAuth } from "@/context/authProvider";
 import { useCoupon } from "@/context/couponProvider";
 import { OrderService } from "@/shared/services/orderService";
 import { db } from "@/shared/libs/firebase/firebase";
-import { cartKeys } from "@/shared/hooks/useCart";
 import { usePointBalance } from "@/shared/hooks/usePoint";
+import { useAvailableOrderCoupons } from "@/shared/hooks/useAvailableOrderCoupons";
 import { buildDemoDataNotice } from "@/shared/constants/commercePolicy";
-import { calculateOrderPreview } from "@/shared/utils/orderPricing";
+import { calculateOrderPreview, getCouponAvailability } from "@/shared/utils/orderPricing";
+import { refreshPostPurchaseState } from "@/shared/utils/postPurchaseSync";
 import { CheckoutDraft, parseCheckoutDraft } from "./checkoutDraft";
 import {
   buildCheckoutDeliveryAddresses,
@@ -41,11 +42,19 @@ export default function CheckoutPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, userData, loading: authLoading } = useAuth();
-  const { userCoupons } = useCoupon();
+  const {
+    userCoupons,
+    userCouponsReady,
+    loading: couponLoading,
+    error: couponError,
+    refreshUserCoupons,
+    getAvailableCouponsForOrder,
+  } = useCoupon();
   const { data: pointBalanceData } = usePointBalance();
   const pointBalance = pointBalanceData?.pointBalance ?? 0;
 
   const [orderData, setOrderData] = useState<CheckoutDraft | null>(null);
+  const [selectedCouponId, setSelectedCouponId] = useState("");
   const [selectedAddress, setSelectedAddress] = useState<DeliveryAddress | null>(null);
   const [useManualAddress, setUseManualAddress] = useState(false);
   const [manualAddress, setManualAddress] = useState<ManualDeliveryAddressInput>({
@@ -61,8 +70,10 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<(typeof paymentMethods)[number]["value"]>("card");
   const [usePoints, setUsePoints] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [checkoutRecoveryReason, setCheckoutRecoveryReason] = useState<string | null>(null);
+  const submissionLockRef = useRef(false);
 
   const addresses = useMemo(
     () => buildCheckoutDeliveryAddresses(userData),
@@ -86,6 +97,7 @@ export default function CheckoutPage() {
 
     setCheckoutRecoveryReason(null);
     setOrderData(result.draft);
+    setSelectedCouponId(result.draft.selectedCoupon || "");
   }, []);
 
   useEffect(() => {
@@ -113,26 +125,38 @@ export default function CheckoutPage() {
     }));
   }, [user?.displayName, userData]);
 
-  const selectedCouponView = userCoupons?.find((coupon) => coupon.id === orderData?.selectedCoupon) || null;
+  const pricingItems = useMemo(() => orderData?.items.map((item) => ({
+    productId: item.productId,
+    price: item.price,
+    discountAmount: item.discountAmount,
+    quantity: item.quantity,
+    isAvailable: true,
+  })) ?? [], [orderData]);
+  const couponLookupAmount = pricingItems.reduce(
+    (sum, item) => sum + Math.max(0, Math.floor(item.price)) * Math.max(0, Math.floor(item.quantity)),
+    0,
+  );
+  const orderCouponState = useAvailableOrderCoupons({
+    enabled: Boolean(user && orderData),
+    orderAmount: couponLookupAmount,
+    overviewCoupons: userCoupons,
+    loadAvailableCoupons: getAvailableCouponsForOrder,
+  });
+  const checkoutCoupons = orderCouponState.coupons;
+  const selectedCouponView = checkoutCoupons.find((coupon) => coupon.id === selectedCouponId) || null;
   const orderPreview = useMemo(() => {
     if (!orderData) {
       return null;
     }
 
     return calculateOrderPreview({
-      items: orderData.items.map((item) => ({
-        productId: item.productId,
-        price: item.price,
-        discountAmount: item.discountAmount,
-        quantity: item.quantity,
-        isAvailable: true,
-      })),
+      items: pricingItems,
       deliveryOption: orderData.deliveryOption,
       selectedCoupon: selectedCouponView,
       requestedPointAmount: usePoints,
       pointBalance,
     });
-  }, [orderData, selectedCouponView, usePoints, pointBalance]);
+  }, [orderData, pointBalance, pricingItems, selectedCouponView, usePoints]);
 
   const subtotal = orderPreview?.subtotal ?? 0;
   const discountAmount = orderPreview?.productDiscountAmount ?? 0;
@@ -140,6 +164,29 @@ export default function CheckoutPage() {
   const deliveryFee = orderPreview?.deliveryFee ?? 0;
   const maxUsablePoints = orderPreview?.maxUsablePoints ?? 0;
   const finalAmount = orderPreview?.finalAmount ?? 0;
+  const selectedCouponAvailability = selectedCouponView
+    ? getCouponAvailability(selectedCouponView, subtotal)
+    : null;
+  let couponSelectionMessage: string | null = null;
+  if (orderCouponState.loading) {
+    couponSelectionMessage = selectedCouponId
+      ? "저장된 쿠폰을 포함한 사용 가능한 쿠폰을 확인하는 중입니다. 확인이 끝날 때까지 주문할 수 없습니다."
+      : "사용 가능한 쿠폰을 확인하는 중입니다. 확인이 끝날 때까지 주문할 수 없습니다.";
+  } else if (selectedCouponId) {
+    if (selectedCouponView && !selectedCouponAvailability?.usable) {
+      couponSelectionMessage = "선택한 쿠폰을 현재 주문에 사용할 수 없습니다. 다른 쿠폰을 선택해주세요.";
+    } else if (!selectedCouponView && orderCouponState.error) {
+      couponSelectionMessage = "사용 가능한 쿠폰 전체를 불러오지 못했습니다. 쿠폰 없이 주문하려면 '쿠폰을 선택하지 않음'을 선택해주세요.";
+    } else if (!selectedCouponView && couponLoading && !userCouponsReady) {
+      couponSelectionMessage = "저장된 쿠폰 정보를 확인하는 중입니다. 확인이 끝날 때까지 주문할 수 없습니다.";
+    } else if (!selectedCouponView && couponError) {
+      couponSelectionMessage = "쿠폰 정보를 불러오지 못했습니다. 다시 불러오거나 쿠폰 없이 주문할지 선택해주세요.";
+    } else if (!selectedCouponView && (!orderCouponState.ready || !userCouponsReady)) {
+      couponSelectionMessage = "저장된 쿠폰 정보가 아직 확인되지 않았습니다. 쿠폰 없이 주문할지 선택해주세요.";
+    } else if (!selectedCouponView) {
+      couponSelectionMessage = "저장된 쿠폰을 확인할 수 없습니다. 쿠폰 없이 주문하려면 '쿠폰을 선택하지 않음'을 선택해주세요.";
+    }
+  }
 
   const handlePointChange = (raw: string) => {
     const parsed = Number(raw);
@@ -156,6 +203,10 @@ export default function CheckoutPage() {
   };
 
   const handleCompleteOrder = async () => {
+    if (submissionLockRef.current) {
+      return;
+    }
+
     if (!user || !orderData || !agreeTerms) {
       alert("필수 정보를 입력해주세요.");
       return;
@@ -163,6 +214,11 @@ export default function CheckoutPage() {
 
     if (!orderData.items.length) {
       alert("주문 대상 상품이 없습니다.");
+      return;
+    }
+
+    if (couponSelectionMessage) {
+      alert(couponSelectionMessage);
       return;
     }
 
@@ -185,9 +241,11 @@ export default function CheckoutPage() {
       return;
     }
 
+    submissionLockRef.current = true;
     setIsProcessing(true);
+    let response;
     try {
-      const response = await OrderService.createOrder({
+      response = await OrderService.createOrder({
         items: orderData.items.map((item) => ({
           productId: item.productId,
           id: item.id,
@@ -210,26 +268,54 @@ export default function CheckoutPage() {
         selectedCoupon: orderPreview?.usableCoupon?.id || undefined,
         requestedPointAmount: orderPreview?.pointUsed ?? usePoints,
       });
-
-      if (useManualAddress && saveManualAddress) {
-        try {
-          await updateDoc(doc(db, "users", user.uid), {
-            addresses: arrayUnion(deliveryAddress),
-            updatedAt: serverTimestamp(),
-          });
-        } catch (saveError) {
-          console.error("delivery address save failed:", saveError);
-          alert("주문은 완료됐지만 입력한 배송지는 저장하지 못했습니다.");
-        }
-      }
-
-      sessionStorage.setItem("orderResult", JSON.stringify({ orderId: response.orderId }));
-      await queryClient.invalidateQueries({ queryKey: cartKeys.list(user.uid) });
-      await queryClient.refetchQueries({ queryKey: cartKeys.count(user.uid), type: "active" });
-      router.push(`/orders/complete?orderId=${encodeURIComponent(response.orderId)}`);
     } catch (error) {
       console.error("order create failed:", error);
-      alert("주문 처리 중 문제가 발생했습니다.");
+      alert("주문 생성에 실패했습니다.");
+      submissionLockRef.current = false;
+      setIsProcessing(false);
+      return;
+    }
+
+    setCompletedOrderId(response.orderId);
+
+    if (useManualAddress && saveManualAddress) {
+      try {
+        await updateDoc(doc(db, "users", user.uid), {
+          addresses: arrayUnion(deliveryAddress),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (saveError) {
+        console.error("delivery address save failed:", saveError);
+        alert("주문은 완료됐지만 입력한 배송지는 저장하지 못했습니다.");
+      }
+    }
+
+    try {
+      sessionStorage.setItem("orderResult", JSON.stringify({ orderId: response.orderId }));
+    } catch (storageError) {
+      console.error("order result storage failed:", storageError);
+    }
+    try {
+      sessionStorage.removeItem("orderData");
+    } catch (storageError) {
+      console.error("order draft removal failed:", storageError);
+    }
+    try {
+      const refreshSummary = await refreshPostPurchaseState({
+        queryClient,
+        userId: user.uid,
+        refreshUserCoupons,
+      });
+      if (refreshSummary.failed > 0) {
+        console.error("post-purchase state refresh failed:", refreshSummary);
+      }
+    } catch (refreshError) {
+      console.error("post-purchase state refresh failed:", refreshError);
+    }
+    try {
+      await router.push(`/orders/complete?orderId=${encodeURIComponent(response.orderId)}`);
+    } catch (navigationError) {
+      console.error("order completion navigation failed:", navigationError);
     } finally {
       setIsProcessing(false);
     }
@@ -438,6 +524,54 @@ export default function CheckoutPage() {
             </section>
 
             <section className={styles.section}>
+              <h3 className={styles.sectionTitle}>쿠폰</h3>
+              <label>
+                <span>쿠폰 선택</span>
+                <select
+                  aria-label="쿠폰 선택"
+                  aria-describedby={couponSelectionMessage ? "checkout-coupon-status" : undefined}
+                  value={selectedCouponId}
+                  onChange={(event) => setSelectedCouponId(event.target.value)}
+                  disabled={orderCouponState.loading}
+                >
+                  <option value="">쿠폰을 선택하지 않음</option>
+                  {selectedCouponId && !selectedCouponView && (
+                    <option value={selectedCouponId} disabled>
+                      {orderCouponState.loading || couponLoading ? "저장된 쿠폰 확인 중" : "저장된 쿠폰 확인 필요"}
+                    </option>
+                  )}
+                  {checkoutCoupons.map((coupon) => {
+                    const availability = getCouponAvailability(coupon, subtotal);
+                    const reason = availability.reason === "expired"
+                      ? "기간 만료"
+                      : availability.reason === "minimum"
+                        ? `최소 주문금액 ${coupon.coupon.minOrderAmount?.toLocaleString("ko-KR")}원`
+                        : availability.reason === "inactive"
+                          ? "사용 중지"
+                          : availability.reason === "used"
+                            ? "사용 불가"
+                            : "";
+                    return (
+                      <option key={coupon.id} value={coupon.id} disabled={!availability.usable}>
+                        {coupon.coupon.name}{reason ? ` (${reason})` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+              {couponSelectionMessage && (
+                <p id="checkout-coupon-status" role="alert" className={styles.pointNote}>
+                  {couponSelectionMessage}
+                </p>
+              )}
+              {!selectedCouponId && orderCouponState.error && (
+                <p role="status" className={styles.pointNote}>
+                  사용 가능한 쿠폰 전체를 불러오지 못했습니다. 쿠폰 없이 주문은 계속할 수 있습니다.
+                </p>
+              )}
+            </section>
+
+            <section className={styles.section}>
               <h3 className={styles.sectionTitle}>포인트 사용</h3>
               <div className={styles.pointSection}>
                 <div className={styles.pointInfo}>
@@ -506,10 +640,28 @@ export default function CheckoutPage() {
               <button
                 className={styles.checkoutButton}
                 onClick={handleCompleteOrder}
-                disabled={!agreeTerms || isProcessing}
+                disabled={
+                  !agreeTerms
+                  || isProcessing
+                  || Boolean(completedOrderId)
+                  || Boolean(couponSelectionMessage)
+                }
               >
-                {isProcessing ? "주문 처리 중..." : `${finalAmount.toLocaleString()}원 주문 접수하기`}
+                {completedOrderId
+                  ? "주문 접수 완료"
+                  : isProcessing
+                    ? "주문 처리 중..."
+                    : `${finalAmount.toLocaleString()}원 주문 접수하기`}
               </button>
+
+              {completedOrderId && (
+                <div role="status" className={styles.paymentNotice}>
+                  <p>주문 접수가 완료되었습니다. 화면이 이동하지 않으면 아래 링크를 이용해주세요.</p>
+                  <Link href={`/orders/complete?orderId=${encodeURIComponent(completedOrderId)}`}>
+                    주문 완료 화면으로 이동
+                  </Link>
+                </div>
+              )}
 
               <Link href="/orders/cart" className={styles.backButton}>
                 뒤로가기

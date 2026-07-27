@@ -1,12 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import PageHeader from '../_components/PageHeader';
 import ProductCard from '@/app/products/_components/ProductCard';
 import { Product, ProductFilter, ProductSort } from '@/shared/types/product';
-import { ProductQueryInput, ProductService } from '@/shared/services/productService';
+import {
+  normalizeProductSearchTerm,
+  ProductPageCursor,
+  ProductQueryInput,
+  ProductService,
+} from '@/shared/services/productService';
+import { useCategoriesWithNames } from '@/shared/hooks/useProducts';
 import styles from './page.module.css';
 
 interface SearchState {
@@ -21,8 +26,12 @@ interface SearchState {
   error: string | null;
 }
 
-type SearchCursor = QueryDocumentSnapshot<DocumentData> | null;
-type SearchCategory = { id: string; name: string };
+type SearchCursor = ProductPageCursor | null;
+
+interface PendingSearchNavigation {
+  sourceQuery: string;
+  targetQuery: string;
+}
 
 const ITEMS_PER_PAGE = 20;
 
@@ -39,6 +48,7 @@ const popularSearchTerms = ['원피스', '가방', '탑', '신발', '아우터',
 export default function SearchClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: availableCategories = [] } = useCategoriesWithNames();
 
   const [state, setState] = useState<SearchState>({
     query: '',
@@ -55,8 +65,9 @@ export default function SearchClient() {
   const [cursorByPage, setCursorByPage] = useState<Record<number, SearchCursor>>({ 1: null });
   const [cacheByPage, setCacheByPage] = useState<Record<number, Product[]>>({});
   const [hasMoreByPage, setHasMoreByPage] = useState<Record<number, boolean>>({});
-  const [availableCategories, setAvailableCategories] = useState<SearchCategory[]>([]);
-  const urlQuery = searchParams?.get('q')?.trim() || '';
+  const urlQuery = normalizeProductSearchTerm(searchParams?.get('q') || '');
+  const requestGenerationRef = useRef(0);
+  const pendingNavigationRef = useRef<PendingSearchNavigation | null>(null);
 
   const queryInput = useMemo((): ProductQueryInput => ({
     keyword: state.committedQuery,
@@ -71,6 +82,15 @@ export default function SearchClient() {
     sort: state.sortBy,
     limitCount: ITEMS_PER_PAGE,
   }), [state.committedQuery, state.filters, state.sortBy]);
+  const querySignature = useMemo(
+    () => JSON.stringify(queryInput),
+    [queryInput],
+  );
+  const activeQuerySignatureRef = useRef(querySignature);
+
+  useEffect(() => {
+    activeQuerySignatureRef.current = querySignature;
+  }, [querySignature]);
 
   const resetPaging = useCallback(() => {
     setState((prev) => ({ ...prev, currentPage: 1, results: [] }));
@@ -84,9 +104,22 @@ export default function SearchClient() {
       return;
     }
 
+    const requestGeneration = ++requestGenerationRef.current;
+    const requestSignature = querySignature;
+    if (forceReload && page === 1) {
+      setCursorByPage({ 1: null });
+      setCacheByPage({});
+      setHasMoreByPage({});
+    }
     const cached = !forceReload ? cacheByPage[page] : undefined;
     if (cached) {
-      setState((prev) => ({ ...prev, results: cached, currentPage: page }));
+      setState((prev) => ({
+        ...prev,
+        results: cached,
+        currentPage: page,
+        loading: false,
+        error: null,
+      }));
       return;
     }
 
@@ -99,6 +132,13 @@ export default function SearchClient() {
         startAfterDoc,
       });
 
+      if (
+        requestGenerationRef.current !== requestGeneration ||
+        activeQuerySignatureRef.current !== requestSignature
+      ) {
+        return;
+      }
+
       setState((prev) => ({ ...prev, results: result.items, currentPage: page }));
       setCacheByPage((prev) => ({ ...prev, [page]: result.items }));
       setHasMoreByPage((prev) => ({ ...prev, [page]: result.hasMore }));
@@ -109,31 +149,53 @@ export default function SearchClient() {
         setCursorByPage((prev) => ({ ...prev, [page + 1]: null }));
       }
     } catch (error) {
+      if (
+        requestGenerationRef.current !== requestGeneration ||
+        activeQuerySignatureRef.current !== requestSignature
+      ) {
+        return;
+      }
       setState((prev) => ({
         ...prev,
         error: error instanceof Error ? error.message : '검색 결과를 불러오지 못했습니다.',
       }));
     } finally {
-      setState((prev) => ({ ...prev, loading: false }));
+      if (
+        requestGenerationRef.current === requestGeneration &&
+        activeQuerySignatureRef.current === requestSignature
+      ) {
+        setState((prev) => ({ ...prev, loading: false }));
+      }
     }
-  }, [cacheByPage, cursorByPage, queryInput, state.committedQuery]);
+  }, [cacheByPage, cursorByPage, queryInput, querySignature, state.committedQuery]);
 
   const submitSearch = useCallback((nextQuery: string) => {
-    const trimmed = nextQuery.trim();
+    const trimmed = normalizeProductSearchTerm(nextQuery);
+    const isSameCommittedQuery = Boolean(trimmed) && trimmed === state.committedQuery;
+    pendingNavigationRef.current = trimmed === urlQuery
+      ? null
+      : { sourceQuery: urlQuery, targetQuery: trimmed };
     setState((prev) => ({
       ...prev,
       query: trimmed,
       committedQuery: trimmed,
       hasSearched: Boolean(trimmed),
     }));
-    resetPaging();
 
-    if (trimmed) {
-      router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+    if (isSameCommittedQuery) {
+      void loadPage(1, true);
     } else {
-      router.push('/search');
+      resetPaging();
     }
-  }, [resetPaging, router]);
+
+    if (trimmed !== urlQuery) {
+      if (trimmed) {
+        router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+      } else {
+        router.push('/search');
+      }
+    }
+  }, [loadPage, resetPaging, router, state.committedQuery, urlQuery]);
 
   const updateFilters = useCallback((filters: ProductFilter) => {
     setState((prev) => ({ ...prev, filters }));
@@ -146,20 +208,21 @@ export default function SearchClient() {
   }, [resetPaging]);
 
   useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const categories = await ProductService.getCategoriesWithNames();
-        setAvailableCategories(categories);
-      } catch {
-        setAvailableCategories([]);
-      }
-    };
-
-    void loadCategories();
-  }, []);
-
-  useEffect(() => {
     const nextQuery = urlQuery;
+    const pendingNavigation = pendingNavigationRef.current;
+
+    if (pendingNavigation) {
+      if (nextQuery === pendingNavigation.targetQuery) {
+        pendingNavigationRef.current = null;
+        if (nextQuery === state.committedQuery) {
+          return;
+        }
+      } else if (nextQuery === pendingNavigation.sourceQuery) {
+        return;
+      } else {
+        pendingNavigationRef.current = null;
+      }
+    }
 
     if (nextQuery !== state.committedQuery) {
       setState((prev) => ({
@@ -173,10 +236,13 @@ export default function SearchClient() {
   }, [urlQuery, state.committedQuery, resetPaging]);
 
   useEffect(() => {
+    const requestGeneration = ++requestGenerationRef.current;
+    const requestSignature = querySignature;
+
     if (!state.committedQuery) {
-      if (!urlQuery) {
-        setState((prev) => ({ ...prev, hasSearched: false, results: [], loading: false }));
-      }
+      setState((prev) => prev.committedQuery
+        ? prev
+        : { ...prev, hasSearched: false, results: [], loading: false });
       return;
     }
 
@@ -191,20 +257,32 @@ export default function SearchClient() {
           startAfterDoc: null,
         });
 
-        if (!isActive) return;
+        if (
+          !isActive ||
+          requestGenerationRef.current !== requestGeneration ||
+          activeQuerySignatureRef.current !== requestSignature
+        ) return;
 
         setState((prev) => ({ ...prev, results: result.items, currentPage: 1 }));
         setCacheByPage({ 1: result.items });
         setHasMoreByPage({ 1: result.hasMore });
         setCursorByPage({ 1: null, 2: result.nextCursor as SearchCursor });
       } catch (error) {
-        if (!isActive) return;
+        if (
+          !isActive ||
+          requestGenerationRef.current !== requestGeneration ||
+          activeQuerySignatureRef.current !== requestSignature
+        ) return;
         setState((prev) => ({
           ...prev,
           error: error instanceof Error ? error.message : '검색 결과를 불러오지 못했습니다.',
         }));
       } finally {
-        if (isActive) {
+        if (
+          isActive &&
+          requestGenerationRef.current === requestGeneration &&
+          activeQuerySignatureRef.current === requestSignature
+        ) {
           setState((prev) => ({ ...prev, loading: false }));
         }
       }
@@ -215,7 +293,7 @@ export default function SearchClient() {
     return () => {
       isActive = false;
     };
-  }, [state.committedQuery, state.filters, state.sortBy, queryInput, urlQuery]);
+  }, [state.committedQuery, queryInput, querySignature]);
 
   const handleSortChange = useCallback((value: string) => {
     const [field, order] = value.split('-') as [ProductSort['field'], ProductSort['order']];
@@ -373,10 +451,10 @@ export default function SearchClient() {
               </div>
             </div>
 
-            {state.loading && <p>검색 중...</p>}
+            {state.loading && <p role="status" aria-live="polite">검색 중...</p>}
 
             {!state.loading && state.error && (
-              <div className={styles.error}>
+              <div className={styles.error} role="alert">
                 <p>{state.error}</p>
                 <button type="button" className={styles.retryButton} onClick={() => void loadPage(1, true)}>
                   다시 시도
@@ -391,7 +469,7 @@ export default function SearchClient() {
               </div>
             )}
 
-            {!state.loading && state.results.length > 0 && (
+            {state.results.length > 0 && (
               <>
                 <div className={styles.productGrid}>
                   {state.results.map((product) => (

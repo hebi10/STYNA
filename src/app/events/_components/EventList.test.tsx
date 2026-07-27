@@ -64,6 +64,9 @@ const baseEvent = (overrides: Partial<Event>): Event => ({
   bannerImage: '/events/2026/event-2026-06-midyear-sale-banner.webp',
   thumbnailImage: '/events/2026/event-2026-06-midyear-sale-thumb.webp',
   eventType: 'sale',
+  eligibilityType: 'none',
+  rewardType: 'none',
+  publicPolicyVerified: true,
   startDate: new Date('2026-06-01T00:00:00+09:00'),
   endDate: new Date('2026-06-30T23:59:59+09:00'),
   isActive: true,
@@ -129,6 +132,12 @@ describe('EventList', () => {
     expect(container.querySelectorAll('.eventBadges')).toHaveLength(0);
     expect(container.querySelector('.eventInfo')).toBeNull();
 
+    expect(screen.getByRole('heading', { level: 1, name: '이벤트' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: '바캉스 쿠폰팩' })).toBeInTheDocument();
+    expect(screen.getAllByText('여름 인기 상품을 큰 혜택으로 만나는 기간 한정 세일입니다.')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: '전체' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '쿠폰' })).toHaveAttribute('aria-pressed', 'false');
+
     expect(posterHero?.tagName).toBe('DIV');
     expect(posterHero?.closest('a')).toBeNull();
     expect(couponCard).toHaveAccessibleName(
@@ -149,17 +158,17 @@ describe('EventList', () => {
     );
     expect(couponCard?.querySelector('source')).toHaveAttribute(
       'srcset',
-      '/events/2026/event-2026-07-vacation-coupon-thumb.webp'
+      '/main/hero_editorial_sale.webp'
     );
     expect(couponCard?.querySelector('img')).toHaveAttribute(
       'src',
-      '/events/2026/event-2026-07-vacation-coupon-thumb.webp'
+      '/main/hero_editorial_sale.webp'
     );
 
     expect(container.querySelector('.posterHeroTitle')).toBeNull();
     expect(container.querySelector('.posterHeroDescription')).toBeNull();
-    expect(container.querySelector('.eventTitle')).toBeNull();
-    expect(container.querySelector('.eventDescription')).toBeNull();
+    expect(container.querySelector('.eventTitle')).not.toBeNull();
+    expect(container.querySelector('.eventDescription')).not.toBeNull();
     expect(container.querySelector('.eventDiscount')).toBeNull();
     expect(container.querySelectorAll('.eventPeriod')).toHaveLength(2);
     expect(couponCard?.querySelector(':scope > .eventFooter')).not.toBeNull();
@@ -193,6 +202,8 @@ describe('EventList', () => {
     expect(container.querySelectorAll('.eventPosterCard')).toHaveLength(8);
     expect(screen.getByRole('button', { name: '1' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '2' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: '2' })).not.toHaveAttribute('aria-current');
     expect(screen.queryByRole('button', { name: '3' })).not.toBeInTheDocument();
   });
 
@@ -216,5 +227,33 @@ describe('EventList', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('이벤트를 불러오는 중입니다');
     expect(screen.getAllByLabelText('이벤트 로딩 카드')).toHaveLength(3);
+  });
+
+  test('does not expose events whose public policy has not been verified', () => {
+    const unverifiedEvent = baseEvent({
+      id: 'unverified-event',
+      title: '리뷰 적립금 2배',
+      description: '구현되지 않은 혜택',
+      publicPolicyVerified: false,
+    });
+
+    useEvent.mockReturnValue({
+      events: [unverifiedEvent],
+      filteredEvents: [unverifiedEvent],
+      filter: {},
+      currentPage: 1,
+      eventsPerPage: 8,
+      loading: false,
+      error: null,
+      setFilter: jest.fn(),
+      setCurrentPage: jest.fn(),
+      refreshEvents: jest.fn(),
+    });
+
+    render(<EventList />);
+
+    expect(screen.queryByText(/적립금 2배|구현되지 않은 혜택/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /리뷰 적립금 2배/ })).not.toBeInTheDocument();
+    expect(screen.getByText('현재 노출할 이벤트가 없습니다.')).toBeInTheDocument();
   });
 });

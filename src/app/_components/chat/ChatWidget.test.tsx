@@ -1,6 +1,8 @@
 import React from 'react';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { auth as mockedFirebaseAuth } from '@/shared/libs/firebase/firebase';
 import ChatWidget from './ChatWidget';
 
@@ -42,6 +44,21 @@ describe('ChatWidget', () => {
     jest.clearAllMocks();
 
     Element.prototype.scrollIntoView = jest.fn();
+    Object.defineProperty(window, 'requestAnimationFrame', {
+      configurable: true,
+      value: (callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      },
+    });
+    Object.defineProperty(window, 'cancelAnimationFrame', {
+      configurable: true,
+      value: jest.fn(),
+    });
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: jest.fn().mockReturnValue({ matches: false }),
+    });
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ success: true, data: { response: '배송 안내입니다.' } }),
@@ -49,26 +66,102 @@ describe('ChatWidget', () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     jest.restoreAllMocks();
   });
 
-  test('keeps message input disabled until agent connect is requested', () => {
+  test('connects the toggle, window, title, message log, and labeled input with ARIA', () => {
+    const { container } = renderChatWidget();
+    const toggle = screen.getByRole('button', { name: '채팅 열기' });
+    const chatWindow = container.querySelector('#help-chat-window');
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAttribute('aria-controls', 'help-chat-window');
+    expect(chatWindow).toHaveAttribute('aria-hidden', 'true');
+    expect(chatWindow).toHaveAttribute('inert');
+    expect(chatWindow).toHaveAttribute('aria-labelledby', 'help-chat-title');
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(chatWindow).toHaveAttribute('aria-hidden', 'false');
+    expect(chatWindow).not.toHaveAttribute('inert');
+    expect(screen.getByRole('log')).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByRole('textbox', { name: '도움말 질문' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '주문/배송' })).toHaveFocus();
+  });
+
+  test('moves focus to the enabled input when direct question mode starts', () => {
+    renderChatWidget();
+
+    fireEvent.click(screen.getByRole('button', { name: '채팅 열기' }));
+    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
+
+    expect(screen.getByRole('textbox', { name: '도움말 질문' })).toHaveFocus();
+  });
+
+  test('returns focus to the toggle when the window close button hides the chat', () => {
+    renderChatWidget();
+
+    fireEvent.click(screen.getByRole('button', { name: '채팅 열기' }));
+    fireEvent.click(screen.getAllByRole('button', { name: '채팅 닫기' })[0]);
+
+    expect(screen.getByRole('button', { name: '채팅 열기' })).toHaveFocus();
+  });
+
+  test('uses instant message scrolling when reduced motion is preferred', () => {
+    jest.useFakeTimers();
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: jest.fn().mockReturnValue({ matches: true }),
+    });
+    renderChatWidget();
+
+    fireEvent.click(screen.getByRole('button', { name: '채팅 열기' }));
+    act(() => {
+      jest.advanceTimersByTime(100);
+    });
+
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto' });
+  });
+
+  test('keeps chatbot controls at least 44px in both dimensions', () => {
+    const css = readFileSync(
+      resolve(process.cwd(), 'src/app/_components/chat/ChatWidget.module.css'),
+      'utf8',
+    );
+
+    for (const selector of [
+      'chatButton',
+      'quickButton',
+      'startChatButton',
+      'resetButton',
+      'closeButton',
+      'sendButton',
+    ]) {
+      const rule = css.match(new RegExp(`\\.${selector}\\s*\\{([^}]*)\\}`, 's'))?.[1];
+      expect(rule).toMatch(/min-width:\s*(?:44px|(?:4[5-9]|[5-9]\d|\d{3,})px)/);
+      expect(rule).toMatch(/min-height:\s*(?:44px|(?:4[5-9]|[5-9]\d|\d{3,})px)/);
+    }
+  });
+
+  test('keeps message input disabled until direct question mode is requested', () => {
     renderChatWidget();
 
     fireEvent.click(screen.getByLabelText('채팅 열기'));
 
-    expect(screen.getByPlaceholderText('상담원 연결 후 메시지를 입력하세요')).toBeDisabled();
+    expect(screen.getByPlaceholderText('직접 질문하기 선택 후 메시지를 입력하세요')).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: '상담원 연결' }));
+    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
 
     expect(screen.getByPlaceholderText('메시지를 입력하세요...')).not.toBeDisabled();
   });
 
-  test('uses local chat API route after agent connect is requested', async () => {
+  test('uses local chat API route after direct question mode is requested', async () => {
     renderChatWidget();
 
     fireEvent.click(screen.getByLabelText('채팅 열기'));
-    fireEvent.click(screen.getByRole('button', { name: '상담원 연결' }));
+    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
     fireEvent.change(screen.getByPlaceholderText('메시지를 입력하세요...'), {
       target: { value: '배송이 궁금합니다' },
     });
@@ -94,7 +187,7 @@ describe('ChatWidget', () => {
     renderChatWidget();
 
     fireEvent.click(screen.getByLabelText('채팅 열기'));
-    fireEvent.click(screen.getByRole('button', { name: '상담원 연결' }));
+    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
     fireEvent.change(screen.getByPlaceholderText('메시지를 입력하세요...'), {
       target: { value: '로그인 상담 요청' },
     });
@@ -122,7 +215,7 @@ describe('ChatWidget', () => {
     renderChatWidget();
 
     fireEvent.click(screen.getByLabelText('채팅 열기'));
-    fireEvent.click(screen.getByRole('button', { name: '상담원 연결' }));
+    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
     fireEvent.change(screen.getByPlaceholderText('메시지를 입력하세요...'), {
       target: { value: '토큰 실패 요청' },
     });
@@ -140,7 +233,7 @@ describe('ChatWidget', () => {
     renderChatWidget();
 
     fireEvent.click(screen.getByLabelText('채팅 열기'));
-    fireEvent.click(screen.getByRole('button', { name: '상담원 연결' }));
+    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
     fireEvent.change(screen.getByPlaceholderText('메시지를 입력하세요...'), {
       target: { value: '배송이 궁금합니다' },
     });
@@ -154,5 +247,16 @@ describe('ChatWidget', () => {
         }),
       );
     });
+  });
+
+  test('labels the feature as a demo chatbot without claiming a human handoff or SLA', () => {
+    const { container } = renderChatWidget();
+
+    fireEvent.click(screen.getByLabelText('채팅 열기'));
+    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
+
+    expect(screen.getAllByText(/도움말 챗봇/).length).toBeGreaterThan(0);
+    expect(container.textContent).toContain('상담 요청을 저장하거나 전송하지 않습니다');
+    expect(container.textContent).not.toMatch(/실시간 상담|상담 연결 요청을 접수|다음 영업일.*답변/);
   });
 });

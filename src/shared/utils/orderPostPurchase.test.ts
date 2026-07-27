@@ -59,7 +59,7 @@ describe('구매 후 주문 안내', () => {
   it('상품 준비 이후 주문은 고객 취소 대신 안내를 제공한다', () => {
     expect(getCustomerCancellationAvailability('preparing')).toEqual({
       canCancel: false,
-      message: '상품 준비 이후 주문은 고객센터로 문의해 주세요.',
+      message: '상품 준비 이후에는 자동 취소를 지원하지 않습니다. 1:1 문의 기록을 남길 수 있지만 처리는 보장하지 않습니다.',
     });
   });
 });

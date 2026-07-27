@@ -24,7 +24,7 @@ function QnAWritePageContent() {
     title: '',
     content: '',
     isSecret: false,
-    isNotified: true,
+    isNotified: false,
     images: [],
     productId: searchParams.get('productId') || undefined,
     productName: searchParams.get('productName') || undefined,
@@ -119,7 +119,7 @@ function QnAWritePageContent() {
     <div className={styles.container}>
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>1:1 문의 작성</h1>
-        <p className={styles.pageDesc}>궁금한 사항을 작성해주시면 빠르게 답변해드리겠습니다.</p>
+        <p className={styles.pageDesc}>문의 기록은 저장되지만 답변 여부와 시점은 보장하지 않습니다.</p>
       </div>
 
       <form onSubmit={handleSubmit} className={styles.form}>
@@ -198,21 +198,6 @@ function QnAWritePageContent() {
               비밀글은 작성자와 관리자만 확인할 수 있습니다.
             </div>
           )}
-        </div>
-
-        {/* 답변 알림 설정 */}
-        <div className={styles.field}>
-          <div className={styles.checkboxGroup}>
-            <label className={styles.checkboxLabel}>
-              <input
-                type="checkbox"
-                checked={formData.isNotified}
-                onChange={(e) => handleInputChange('isNotified', e.target.checked)}
-                className={styles.checkbox}
-              />
-              <span className={styles.checkboxText}>답변 등록 시 이메일 알림 받기</span>
-            </label>
-          </div>
         </div>
 
         {/* 작성자 정보 */}

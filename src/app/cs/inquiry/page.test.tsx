@@ -51,6 +51,8 @@ describe('Inquiry account identity', () => {
   test('submits the authoritative user document email and name', async () => {
     render(<InquiryPage />);
 
+    expect(screen.getByText(/답변 여부와 시점은 보장하지 않습니다/)).toBeInTheDocument();
+
     fireEvent.change(screen.getByRole('textbox', { name: /제목/ }), {
       target: { value: '문의 제목' },
     });
@@ -65,6 +67,9 @@ describe('Inquiry account identity', () => {
       '문서 작성자',
       expect.objectContaining({ title: '문의 제목', content: '문의 내용' })
     ));
+    expect(window.alert).toHaveBeenCalledWith(
+      '문의가 저장되었습니다. 문의 내역에서 상태를 확인해 주세요.',
+    );
   });
 
   test('matches the Firestore length limits before submission', () => {

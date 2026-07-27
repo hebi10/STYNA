@@ -4,14 +4,39 @@ const admin = require("firebase-admin");
 
 require("dotenv").config({ path: path.resolve(process.cwd(), ".env.local") });
 
-function resolveProjectId() {
-  return (
+function resolveConfiguredProjectId() {
+  const configuredProjectId = (
     process.env.FIREBASE_PROJECT_ID ||
     process.env.GCLOUD_PROJECT ||
     process.env.GOOGLE_CLOUD_PROJECT ||
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
-    "hebimall"
+    null
   );
+  return typeof configuredProjectId === "string" && configuredProjectId.trim()
+    ? configuredProjectId.trim()
+    : null;
+}
+
+const serviceAccountPath = path.join(__dirname, "serviceAccountKey.json");
+const serviceAccount = fs.existsSync(serviceAccountPath)
+  ? require(serviceAccountPath)
+  : null;
+const credentialProjectId = typeof serviceAccount?.project_id === "string"
+  ? serviceAccount.project_id.trim()
+  : null;
+
+function resolveProjectId() {
+  const configuredProjectId = resolveConfiguredProjectId();
+  if (
+    configuredProjectId &&
+    credentialProjectId &&
+    configuredProjectId !== credentialProjectId
+  ) {
+    throw new Error(
+      "Firestore migration project mismatch. Refusing to initialize Admin SDK."
+    );
+  }
+  return credentialProjectId || configuredProjectId || "hebimall";
 }
 
 function initializeAdminApp() {
@@ -19,15 +44,12 @@ function initializeAdminApp() {
     return admin.app();
   }
 
-  const serviceAccountPath = path.join(__dirname, "serviceAccountKey.json");
   const projectId = resolveProjectId();
 
-  if (fs.existsSync(serviceAccountPath)) {
-    const serviceAccount = require(serviceAccountPath);
-
+  if (serviceAccount) {
     return admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      projectId: serviceAccount.project_id || projectId,
+      projectId,
     });
   }
 
@@ -37,10 +59,20 @@ function initializeAdminApp() {
   });
 }
 
-initializeAdminApp();
+const app = initializeAdminApp();
+const appProjectId = typeof app.options.projectId === "string"
+  ? app.options.projectId.trim()
+  : null;
+const projectId = resolveProjectId();
+if (appProjectId && appProjectId !== projectId) {
+  throw new Error(
+    "Firestore migration project mismatch. Refusing to create a database client."
+  );
+}
 
 module.exports = {
   admin,
   db: admin.firestore(),
-  projectId: resolveProjectId(),
+  projectId: appProjectId || projectId,
+  credentialProjectId,
 };

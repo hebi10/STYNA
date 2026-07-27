@@ -7,15 +7,19 @@ import {
   updateDoc, 
   deleteDoc, 
   deleteField,
+  documentId,
   query, 
   where, 
   orderBy, 
+  limit,
   Timestamp,
   writeBatch 
 } from 'firebase/firestore';
+import type { DocumentData, DocumentSnapshot, QueryDocumentSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 import { db, storage } from '../libs/firebase/firebase';
+import { isFirestorePermissionDenied } from '../utils/firebaseError';
 import {
   getImageUploadMetadata,
   getOptimizedWebpStorageFileName,
@@ -26,6 +30,31 @@ import { Event, EventFilter, EventParticipant } from '../types/event';
 const EVENTS_COLLECTION = 'events';
 const EVENT_PARTICIPANTS_COLLECTION = 'eventParticipants';
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
+
+type EventDocumentSnapshot =
+  | DocumentSnapshot<DocumentData>
+  | QueryDocumentSnapshot<DocumentData>;
+
+function mapEventDocument(snapshot: EventDocumentSnapshot): Event {
+  const data = snapshot.data();
+  if (!data) {
+    throw new Error(`Event document ${snapshot.id} has no data.`);
+  }
+
+  return {
+    id: snapshot.id,
+    ...data,
+    startDate: data.startDate.toDate(),
+    endDate: data.endDate.toDate(),
+    createdAt: data.createdAt.toDate(),
+    updatedAt: data.updatedAt.toDate(),
+  } as Event;
+}
+
+async function getEventDocumentById(id: string): Promise<Event | null> {
+  const snapshot = await getDoc(doc(db, EVENTS_COLLECTION, id));
+  return snapshot.exists() ? mapEventDocument(snapshot) : null;
+}
 
 export type EventRuntimeStatus = 'ongoing' | 'upcoming' | 'ended';
 export type EventParticipationErrorCode =
@@ -207,8 +236,31 @@ export function getFeaturedEvent(
 }
 
 export class EventService {
-  // 모든 이벤트 가져오기
-  static async getEvents(filter?: EventFilter): Promise<Event[]> {
+  // 공개 검증이 끝난 이벤트만 가져오기
+  static async getPublicEvents(filter?: EventFilter): Promise<Event[]> {
+    try {
+      const publicEventsQuery = query(
+        collection(db, EVENTS_COLLECTION),
+        where('publicPolicyVerified', '==', true),
+        where('isActive', '==', true)
+      );
+      const querySnapshot = await getDocs(publicEventsQuery);
+
+      return querySnapshot.docs
+        .map(mapEventDocument)
+        .filter((event) => (
+          (!filter?.eventType || event.eventType === filter.eventType)
+          && (filter?.isActive === undefined || event.isActive === filter.isActive)
+        ))
+        .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+    } catch (error) {
+      console.error('Error getting public events:', error);
+      throw error;
+    }
+  }
+
+  // 인증된 관리자 화면에서 검증 전 이벤트까지 가져오기
+  static async getAdminEvents(filter?: EventFilter): Promise<Event[]> {
     try {
       let q = query(collection(db, EVENTS_COLLECTION), orderBy('createdAt', 'desc'));
 
@@ -221,47 +273,49 @@ export class EventService {
       }
 
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        startDate: doc.data().startDate.toDate(),
-        endDate: doc.data().endDate.toDate(),
-        createdAt: doc.data().createdAt.toDate(),
-        updatedAt: doc.data().updatedAt.toDate(),
-      } as Event));
+      return querySnapshot.docs.map(mapEventDocument);
     } catch (error) {
-      console.error('Error getting events:', error);
+      console.error('Error getting admin events:', error);
       throw error;
     }
   }
 
-  // 특정 이벤트 가져오기
-  static async getEventById(id: string): Promise<Event | null> {
+  // 비공개 문서와 존재하지 않는 문서를 같은 null 계약으로 처리한다.
+  static async getPublicEventById(id: string): Promise<Event | null> {
     try {
-      const docRef = doc(db, EVENTS_COLLECTION, id);
-      const docSnap = await getDoc(docRef);
+      const publicEventQuery = query(
+        collection(db, EVENTS_COLLECTION),
+        where(documentId(), '==', id),
+        where('publicPolicyVerified', '==', true),
+        where('isActive', '==', true),
+        limit(1)
+      );
+      const snapshot = await getDocs(publicEventQuery);
+      const eventDocument = snapshot.docs[0];
 
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        return {
-          id: docSnap.id,
-          ...data,
-          startDate: data.startDate.toDate(),
-          endDate: data.endDate.toDate(),
-          createdAt: data.createdAt.toDate(),
-          updatedAt: data.updatedAt.toDate(),
-        } as Event;
+      return eventDocument ? mapEventDocument(eventDocument) : null;
+    } catch (error) {
+      if (isFirestorePermissionDenied(error)) {
+        return null;
       }
 
-      return null;
-    } catch (error) {
-      console.error('Error getting event:', error);
+      console.error('Error getting public event:', error);
       throw error;
     }
   }
 
-  // 활성 이벤트만 가져오기
-  static async getActiveEvents(): Promise<Event[]> {
+  // 관리자 상세는 인증된 브라우저 컨텍스트에서만 호출한다.
+  static async getAdminEventById(id: string): Promise<Event | null> {
+    try {
+      return await getEventDocumentById(id);
+    } catch (error) {
+      console.error('Error getting admin event:', error);
+      throw error;
+    }
+  }
+
+  // 관리자 대시보드용 활성 이벤트
+  static async getAdminActiveEvents(): Promise<Event[]> {
     try {
       // 복합 인덱스가 필요한 복잡한 쿼리 대신 간단한 쿼리 사용
       const q = query(
@@ -275,20 +329,11 @@ export class EventService {
       
       // 클라이언트 사이드에서 날짜 필터링
       return querySnapshot.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          startDate: doc.data().startDate.toDate(),
-          endDate: doc.data().endDate.toDate(),
-          createdAt: doc.data().createdAt.toDate(),
-          updatedAt: doc.data().updatedAt.toDate(),
-        } as Event))
+        .map(mapEventDocument)
         .filter(event => isOngoingEvent(event, now));
     } catch (error) {
       console.error('Error getting active events:', error);
-      // Firebase 에러가 발생하면 빈 배열 반환 (대시보드가 중단되지 않도록)
-      console.warn('Firebase 인덱스가 필요할 수 있습니다. 빈 배열을 반환합니다.');
-      return [];
+      throw error;
     }
   }
 

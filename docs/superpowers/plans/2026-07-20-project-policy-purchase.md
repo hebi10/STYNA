@@ -1,6 +1,6 @@
 # 프로젝트 정책·구매 흐름 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 화면의 상거래 정책을 실제 서버 동작과 일치시키고, 이벤트 자격·로그인 의도 복원·쿠폰 날짜·주문 후 캐시 갱신을 신뢰 가능한 단일 흐름으로 완성한다.
 
@@ -32,8 +32,11 @@
 - `src/shared/utils/safeRedirect.ts`: same-origin redirect 정규화.
 - `src/shared/utils/productIntent.ts`: TTL이 있는 versioned one-shot 상품 의도 저장·소비.
 - `src/shared/utils/kstDate.ts`, `functions/src/domain/kstDate.ts`: 각 런타임의 동일한 KST date-only 계약.
-- `src/shared/hooks/useOrders.ts`, `src/shared/hooks/usePoint.ts`, `src/shared/hooks/useCart.ts`: query key와 서버 조회 캐시의 소유자.
+- `src/shared/hooks/queryKeys.ts`: `cartKeys`, `pointKeys`, `orderKeys`의 단일 소유자. 각 hook은 호환 export를 제공한다.
+- `src/shared/hooks/useOrders.ts`, `src/shared/hooks/usePoint.ts`, `src/shared/hooks/useCart.ts`: 공통 query key를 소비하는 서버 조회 캐시 hook.
 - `src/shared/utils/postPurchaseSync.ts`: 주문 성공 후 여러 캐시·Context 갱신을 `Promise.allSettled`로 격리하는 helper.
+- `functions/src/domain/signupBonus.ts`, `src/shared/hooks/useSignupBonusReconciliation.ts`: 가입 5,000P 이력 판정과 marker가 없는 활성 계정의 idempotent 복구 경계.
+- `src/shared/utils/eventPublicPolicy.ts`, `src/shared/services/eventService.ts`, `firestore.rules`: 검증 완료 이벤트만 공개하고 관리자 조회를 인증 컨텍스트로 분리하는 fail-closed 경계.
 
 ## Dependency Order
 
@@ -61,11 +64,11 @@
 
 **Interfaces:**
 
-- Produces: `COMMERCE_POLICY`, `formatSignupBenefit()`, `buildDemoDataNotice()`, `buildChatPolicyPrompt()`.
+- Produces: `COMMERCE_POLICY`, `formatSignupBenefit()`, `formatShippingPolicy()`, `formatSupportHours()`, `buildDemoDataNotice()`, `buildChatPolicyPrompt()`.
 - Produces: `checkGeneratedCommerceSources()`와 `writeGeneratedCommerceSources()`; 기본 `sync:chat-responses`는 compare-only, `sync:chat-responses:write`만 파일을 쓴다.
 - Task 2 consumes: `COMMERCE_POLICY`, `formatSignupBenefit()`, `buildDemoDataNotice()`.
 
-- [ ] **Step 1: canonical 정책과 생성 경계의 실패 테스트를 작성한다**
+- [x] **Step 1: canonical 정책과 생성 경계의 실패 테스트를 작성한다**
 
 ```ts
 import {
@@ -101,7 +104,7 @@ test('rejects a stale generated policy target', () => {
 });
 ```
 
-- [ ] **Step 2: 실패를 확인한다**
+- [x] **Step 2: 실패를 확인한다**
 
 Run:
 
@@ -111,15 +114,19 @@ npx jest --runInBand --no-cache --runTestsByPath src/shared/constants/commercePo
 
 Expected: `commercePolicy.ts`와 새 sync API가 없어 FAIL한다.
 
-- [ ] **Step 3: canonical 정책 모듈을 최소 구현한다**
+- [x] **Step 3: canonical 정책 모듈을 최소 구현한다**
 
 ```ts
 export interface CommercePolicy {
   signupBonusPoints: 5000;
   shipping: {
     standardFee: 3000;
+    expressFee: 5000;
     freeThreshold: 50000;
     promisedDispatch: false;
+  };
+  support: {
+    weekdayHours: '평일 10:00~18:00';
   };
   demo: {
     realPayment: false;
@@ -131,8 +138,12 @@ export const COMMERCE_POLICY = {
   signupBonusPoints: 5000,
   shipping: {
     standardFee: 3000,
+    expressFee: 5000,
     freeThreshold: 50000,
     promisedDispatch: false,
+  },
+  support: {
+    weekdayHours: '평일 10:00~18:00',
   },
   demo: {
     realPayment: false,
@@ -149,9 +160,11 @@ export function buildDemoDataNotice(): string {
 }
 ```
 
+`formatShippingPolicy()`는 일반/특급 배송비와 무료배송 기준을 canonical 값으로 조합하고, `formatSupportHours()`는 `COMMERCE_POLICY.support.weekdayHours`를 반환한다.
+
 `buildChatPolicyPrompt()`는 일반 배송비·무료 기준, 실제 결제 없음, Firebase 저장 가능성, 구현된 5,000P만 포함한다. 생일·등급·구매 적립·간편결제·당일 출고는 문자열에 포함하지 않는다.
 
-- [ ] **Step 4: Functions 생성 경계를 최소 구현한다**
+- [x] **Step 4: Functions 생성 경계를 최소 구현한다**
 
 `scripts/sync-chat-responses.js`는 두 source/target 쌍을 한 번에 검증한다.
 
@@ -181,13 +194,13 @@ source.replace(
 
 기존 `buildGeneratedChatResponses`, `checkChatResponses`, `writeChatResponses` export는 호환을 위해 유지하고 새 복수 대상 함수에서 재사용한다. `--check`는 비교만 하고, `--write`는 임시 파일 후 rename 방식으로 두 target을 갱신한다.
 
-- [ ] **Step 5: menu 응답과 AI SYSTEM_PROMPT를 같은 정책으로 연결한다**
+- [x] **Step 5: menu 응답과 AI SYSTEM_PROMPT를 같은 정책으로 연결한다**
 
 - `src/shared/utils/chatResponses.ts`는 canonical formatter를 사용한다.
 - `functions/src/handlers/chat.ts`는 generated `../commercePolicy`의 `buildChatPolicyPrompt()`를 SYSTEM_PROMPT에 삽입한다.
 - 실제 지원하지 않는 결제수단 목록 대신 “선택한 결제 방식은 데모 주문 기록에만 사용되며 실제 승인·청구가 발생하지 않는다”를 사용한다.
 
-- [ ] **Step 6: 생성물을 명시적으로 갱신한 뒤 compare-only 검증을 통과시킨다**
+- [x] **Step 6: 생성물을 명시적으로 갱신한 뒤 compare-only 검증을 통과시킨다**
 
 Run:
 
@@ -201,7 +214,7 @@ npm run typecheck
 
 Expected: generated 두 파일이 source와 일치하고 모든 명령이 PASS한다. 이 명시적 write는 구현 단계에서만 실행하며 build 자체는 source를 쓰지 않는다.
 
-- [ ] **Step 7: 독립 리뷰를 받는다**
+- [x] **Step 7: 독립 리뷰를 받는다**
 
 Reviewer는 생성 import 경로, compare-only 보장, 기존 Task 6 sync 변경 보존, SYSTEM_PROMPT와 menu의 금지 문구 부재를 확인한다.
 
@@ -228,15 +241,20 @@ Reviewer는 생성 import 경로, compare-only 보장, 기존 Task 6 sync 변경
 - Modify: `src/app/mypage/point/page.tsx`
 - Modify: `src/shared/services/pointService.ts`
 - Modify: `src/shared/hooks/usePoint.ts`
+- Create: `src/shared/hooks/useSignupBonusReconciliation.ts`
+- Create: `functions/src/domain/signupBonus.ts`
+- Modify: `functions/src/handlers/points.ts`
+- Modify: `src/context/authProvider.tsx`
 - Modify: `scripts/seed-users.js`
 
 **Interfaces:**
 
 - Consumes: Task 1의 `COMMERCE_POLICY`, `formatSignupBenefit()`, `buildDemoDataNotice()`.
 - Preserves: `PointService.addSignupPoint()`와 `useSignupPoint()`.
+- Produces: `signupBonusGrantedAt` marker, legacy 5,000P 이력 backfill, 가입 완료와 보너스 재시도를 분리한 자동 reconciliation.
 - Removes: `addOrderPoint`, `addReviewPoint`, `addBirthdayPoint`, `useOrderPoint`, `useReviewPoint`, `useBirthdayPoint`.
 
-- [ ] **Step 1: 각 소비 화면의 실패 테스트를 작성한다**
+- [x] **Step 1: 각 소비 화면의 실패 테스트를 작성한다**
 
 ```tsx
 test('shows the implemented signup benefit and no fictional benefit', () => {
@@ -261,7 +279,7 @@ expect(container.textContent).not.toMatch(forbiddenPolicy);
 
 checkout은 `buildDemoDataNotice()` 전체 문구를, signup과 privacy는 실제 결제 없음과 Firebase 저장 가능성을 모두 표시해야 한다.
 
-- [ ] **Step 2: 테스트 실패를 확인한다**
+- [x] **Step 2: 테스트 실패를 확인한다**
 
 Run:
 
@@ -271,7 +289,7 @@ npx jest --runInBand --no-cache --runTestsByPath src/app/_components/header/Head
 
 Expected: 기존 10% 쿠폰·1% 적립·당일 배송 문구와 누락된 Firebase 고지 때문에 FAIL한다.
 
-- [ ] **Step 3: 정책 소비 화면을 최소 수정한다**
+- [x] **Step 3: 정책 소비 화면을 최소 수정한다**
 
 - Header의 “신규 회원 10% 쿠폰”을 `formatSignupBenefit()`으로 교체한다.
 - SiteGuidePopup은 배송비·무료 기준과 데모 범위만 안내한다.
@@ -280,7 +298,7 @@ Expected: 기존 10% 쿠폰·1% 적립·당일 배송 문구와 누락된 Fireba
 - signup submit 버튼 앞과 privacy 첫 설명에 같은 고지를 표시한다.
 - point 페이지의 숨김 benefit grid를 포함해 생일·구매·리뷰 자동 적립 안내를 제거하고 실제 잔액·내역 설명만 남긴다.
 
-- [ ] **Step 4: 죽은 point helper와 오해를 만드는 seed history를 제거한다**
+- [x] **Step 4: 죽은 point helper와 오해를 만드는 seed history를 제거한다**
 
 - 일반 사용자 호출 시 admin-only `points action:add`에 도달하는 주문·리뷰·생일 helper와 hook export를 삭제한다.
 - 가입 5,000P helper와 서버 `signupBonus` 경계는 보존한다.
@@ -295,7 +313,7 @@ rg -n "addOrderPoint|addReviewPoint|addBirthdayPoint|useOrderPoint|useReviewPoin
 
 Expected: 검색 결과가 없다.
 
-- [ ] **Step 5: focused 검증을 통과시킨다**
+- [x] **Step 5: focused 검증을 통과시킨다**
 
 Run:
 
@@ -307,7 +325,7 @@ npm run typecheck
 
 Expected: 모든 UI 정책 테스트 PASS, generated source 일치, typecheck PASS.
 
-- [ ] **Step 6: 한국어 깨짐과 전역 금지 문구를 확인한다**
+- [x] **Step 6: 한국어 깨짐과 전역 금지 문구를 확인한다**
 
 Run:
 
@@ -329,11 +347,11 @@ Expected: 정책 소비 코드에는 결과가 없고, 실제 관리 데이터�
 
 **Interfaces:**
 
-- Produces: `buildCouponSeedData(now: Date): { coupons: CouponSeed[]; userCoupons: UserCouponSeed[] }`.
+- Produces: `buildCouponSeedData(now: Date): { runDate: string; coupons: CouponSeed[]; userCoupons: UserCouponSeed[] }`.
 - Produces: `toKstDateKey(date: Date): string`, `addKstDays(dayKey: string, days: number): string` for this script only.
 - Does not call: Firebase initialization, dotenv, Firestore, `process.exit()` during module import.
 
-- [ ] **Step 1: deterministic 상대 날짜와 import 안전성 실패 테스트를 작성한다**
+- [x] **Step 1: deterministic 상대 날짜와 import 안전성 실패 테스트를 작성한다**
 
 ```js
 const { buildCouponSeedData } = require('./coupon-seed-data');
@@ -352,7 +370,7 @@ test('uses July 21 in Seoul after 15:00 UTC', () => {
 
 import 안전성 테스트는 `jest.isolateModules(() => require('./seed-coupons'))` 중 Firebase initialize와 dotenv config가 호출되지 않는다고 검증한다.
 
-- [ ] **Step 2: 실패를 확인한다**
+- [x] **Step 2: 실패를 확인한다**
 
 Run:
 
@@ -362,7 +380,7 @@ npx jest --runInBand --no-cache --runTestsByPath scripts/coupon-seed-data.test.j
 
 Expected: 순수 builder가 없어 FAIL한다.
 
-- [ ] **Step 3: 순수 seed builder를 최소 구현한다**
+- [x] **Step 3: 순수 seed builder를 최소 구현한다**
 
 `buildCouponSeedData()`는 고정 ID를 유지하면서 다음 상대 날짜를 만든다.
 
@@ -375,7 +393,7 @@ Expected: 순수 builder가 없어 FAIL한다.
 
 Date 문자열은 모두 `YYYY-MM-DD`이며 `createdAt`/`updatedAt` Timestamp는 builder가 아니라 runtime write 직전에 주입한다.
 
-- [ ] **Step 4: CLI runtime을 import 경계 밖으로 옮긴다**
+- [x] **Step 4: CLI runtime을 import 경계 밖으로 옮긴다**
 
 ```js
 function loadCouponSeedRuntime() {
@@ -394,7 +412,7 @@ module.exports = { loadCouponSeedRuntime, seedCouponData };
 
 `seedCouponData(data, runtime)`은 주입된 runtime만 사용하며 import 시 호출되지 않는다.
 
-- [ ] **Step 5: 테스트와 정적 검증만 실행한다**
+- [x] **Step 5: 테스트와 정적 검증만 실행한다**
 
 Run:
 
@@ -405,7 +423,7 @@ node -e "require('./scripts/seed-coupons.js'); console.log('import-safe')"
 
 Expected: PASS와 `import-safe`. `npm run seed:coupons`는 실행하지 않는다.
 
-- [ ] **Step 6: 독립 리뷰를 받는다**
+- [x] **Step 6: 독립 리뷰를 받는다**
 
 Reviewer는 실행일이 어느 해든 유효/만료 fixture가 함께 존재하는지, KST 자정 경계, import 부작용 부재, DB write 미실행을 확인한다.
 
@@ -426,10 +444,10 @@ Reviewer는 실행일이 어느 해든 유효/만료 fixture가 함께 존재하
 
 - Produces: `EventEligibilityType = 'none' | 'purchase' | 'delivered' | 'review'`.
 - Produces: `EventRewardType = 'none' | 'coupon'`.
-- Produces: `planEventEligibilityPatch(event): { patch; reasons; requiresManualTargetProducts }`.
+- Produces: `planEventEligibilityPatch(event): { patch; reasons; requiresManualTargetProducts; deleteFields }`.
 - Task 5 consumes: `eligibilityType`, `rewardType`, `targetProducts`, `rewardCouponId`.
 
-- [ ] **Step 1: type/form validation 실패 테스트를 작성한다**
+- [x] **Step 1: type/form validation 실패 테스트를 작성한다**
 
 ```tsx
 test('requires target product ids for purchase evidence', async () => {
@@ -447,7 +465,7 @@ test('submits only none or coupon rewards', async () => {
 });
 ```
 
-- [ ] **Step 2: legacy planner 실패 테스트를 작성한다**
+- [x] **Step 2: legacy planner 실패 테스트를 작성한다**
 
 ```js
 test('maps ordinary no-reward legacy events to none', () => {
@@ -467,7 +485,7 @@ test('maps review copy to review but blocks missing target products', () => {
 
 known review IDs `event-2026-02-knit-review`, `event-2026-03-photo-review`, `event-2026-05-best-review`, `event-2026-07-summer-review`도 같은 결과를 검증한다.
 
-- [ ] **Step 3: 실패를 확인한다**
+- [x] **Step 3: 실패를 확인한다**
 
 Run:
 
@@ -477,26 +495,27 @@ npx jest --runInBand --no-cache --runTestsByPath src/app/admin/events/_component
 
 Expected: 새 타입·폼 필드·planner가 없어 FAIL한다.
 
-- [ ] **Step 4: 타입과 관리자 폼을 최소 구현한다**
+- [x] **Step 4: 타입과 관리자 폼을 최소 구현한다**
 
 ```ts
 export type EventEligibilityType = 'none' | 'purchase' | 'delivered' | 'review';
 export type EventRewardType = 'none' | 'coupon';
 
 export interface Event {
-  eligibilityType: EventEligibilityType;
-  rewardType: EventRewardType;
+  eligibilityType?: EventEligibilityType;
+  rewardType?: EventRewardType;
   rewardCouponId?: string;
   targetProducts?: string[];
 }
 ```
 
+- 기존 Firestore 문서 읽기 호환을 위해 `Event`의 새 필드는 optional로 두되, 관리자 저장과 서버 참여 판정은 유효 값 누락을 허용하지 않는다.
 - 폼은 참여 자격과 보상 유형 select를 제공한다.
 - `purchase|delivered|review`는 trim·중복 제거된 `targetProducts`가 1개 이상이어야 한다.
 - `rewardType === 'coupon'`일 때만 `rewardCouponId`를 요구하고 payload에 포함한다.
 - 적립금·임의 금액 보상 입력은 제거한다. `discountAmount`가 프로모션 표시 값으로 필요하면 “할인 표시 금액”으로만 유지하고 지급 보상과 연결하지 않는다.
 
-- [ ] **Step 5: import-safe dry-run planner를 최소 구현한다**
+- [x] **Step 5: import-safe dry-run planner를 최소 구현한다**
 
 planner는 입력 document를 수정하지 않고 proposed patch만 반환한다.
 
@@ -505,6 +524,7 @@ planner는 입력 document를 수정하지 않고 proposed patch만 반환한다
 - review copy/known ID면 `eligibilityType:'review'`.
 - 그 외 보상 없는 legacy 이벤트는 `eligibilityType:'none'`.
 - review/purchase/delivered인데 targetProducts가 비면 `requiresManualTargetProducts:true`로 보고한다.
+- 자격/보상과 맞지 않는 legacy `targetProducts`와 `rewardCouponId`는 쓰지 않고 `deleteFields`에 proposed cleanup 대상으로 보고한다.
 - `scripts/firestore-migration-runtime.js`는 `main()` 안에서만 dynamic load한다.
 - CLI는 `analyze` 또는 기본 dry-run만 지원하며 write API와 `--execute` 옵션을 구현하지 않는다.
 
@@ -514,7 +534,7 @@ planner는 입력 document를 수정하지 않고 proposed patch만 반환한다
 "migrate:events:eligibility:dry-run": "node scripts/event-eligibility-migration.js analyze"
 ```
 
-- [ ] **Step 6: focused 검증을 통과시킨다**
+- [x] **Step 6: focused 검증을 통과시킨다**
 
 Run:
 
@@ -551,7 +571,7 @@ Expected: PASS. dry-run 명령도 실제 프로젝트 자격증명이 필요한 
 - Produces: `assertEventEligibility(transaction, db, input): Promise<EligibilityEvidence>`.
 - Consumes: Task 4 event fields.
 
-- [ ] **Step 1: 공통 구매 증거와 자격 matrix 실패 테스트를 작성한다**
+- [x] **Step 1: 공통 구매 증거와 자격 matrix 실패 테스트를 작성한다**
 
 ```ts
 test.each(['delivered', '배송완료', 'purchase_confirmed', '구매확정'])(
@@ -576,7 +596,7 @@ matrix는 다음을 모두 포함한다.
 - `review`: delivered 증거와 같은 주문/상품/옵션의 `verifiedPurchase:true` review가 모두 필요.
 - 다른 사용자 주문/review, 잘못된 상품·옵션, 빈 targetProducts는 거부.
 
-- [ ] **Step 2: handler transaction 실패 테스트를 먼저 작성한다**
+- [x] **Step 2: handler transaction 실패 테스트를 먼저 작성한다**
 
 `functions/__tests__/httpHandlers.test.ts`에 기간·정원·중복·자격·보상 발급이 한 transaction에서 원자적으로 동작하는 matrix를 추가한다.
 
@@ -596,7 +616,7 @@ test('rolls back participation when coupon issuance fails', async () => {
 });
 ```
 
-- [ ] **Step 3: 실패를 확인한다**
+- [x] **Step 3: 실패를 확인한다**
 
 Run:
 
@@ -606,13 +626,13 @@ npx jest --runInBand --no-cache --runTestsByPath functions/__tests__/eventEligib
 
 Expected: eligibility domain과 새 error code가 없어 FAIL한다.
 
-- [ ] **Step 4: purchase evidence helper를 review handler에 먼저 적용한다**
+- [x] **Step 4: purchase evidence helper를 review handler에 먼저 적용한다**
 
 - 기존 review handler의 배송 상태, 주문 products, 옵션 비교, deterministic ID 로직을 `purchaseEvidence.ts`로 이동한다.
 - 공개 동작과 review document ID는 변경하지 않는다.
 - 기존 review handler 테스트를 먼저 PASS시켜 추출이 행동 변경을 만들지 않았음을 확인한다.
 
-- [ ] **Step 5: event eligibility를 transaction 읽기 단계에 연결한다**
+- [x] **Step 5: event eligibility를 transaction 읽기 단계에 연결한다**
 
 transaction 순서는 다음으로 고정한다.
 
@@ -638,14 +658,14 @@ type EventParticipationErrorCode =
 
 eligibilityType 누락/오류와 필수 targetProducts 누락은 `event_misconfigured`로 fail-closed한다. Task 4 dry-run 결과의 수동 보정이 끝나기 전에는 배포하지 않는다.
 
-- [ ] **Step 6: Event UI를 eligibilityType과 stable error code에 연결한다**
+- [x] **Step 6: Event UI를 eligibilityType과 stable error code에 연결한다**
 
 - 참여 방법과 CTA는 title keyword가 아니라 `eligibilityType`을 사용한다.
 - visual campaign variant는 기존 `eventUiMeta`를 유지하되 참여 자격 카피와 분리한다.
 - `eventService`는 stable code를 한국어 재선택·구매·배송·리뷰 안내로 매핑한다.
 - 이미 참여한 요청은 기존 idempotent 성공을 유지한다.
 
-- [ ] **Step 7: focused 검증을 통과시킨다**
+- [x] **Step 7: focused 검증을 통과시킨다**
 
 Run:
 
@@ -657,7 +677,7 @@ npm run typecheck
 
 Expected: eligibility matrix, review 회귀, transaction rollback, Event UI 모두 PASS.
 
-- [ ] **Step 8: 독립 서버 보안 리뷰를 받는다**
+- [x] **Step 8: 독립 서버 보안 리뷰를 받는다**
 
 Reviewer는 모든 transaction read가 write보다 앞서는지, 타 사용자 주문/review가 증거가 되지 않는지, coupon 실패 시 participant/count가 남지 않는지 확인한다.
 
@@ -684,7 +704,7 @@ Reviewer는 모든 transaction read가 write보다 앞서는지, 타 사용자 �
 - Produces: `saveProductIntent(storage, intent, nowMs)`, `consumeProductIntent(storage, nowMs): ProductIntentResult`.
 - TTL: 10분. Storage key와 payload version은 모듈 상수로 한 곳에서 관리한다.
 
-- [ ] **Step 1: hostile redirect 실패 테스트를 작성한다**
+- [x] **Step 1: hostile redirect 실패 테스트를 작성한다**
 
 ```ts
 test.each([
@@ -702,7 +722,7 @@ test('keeps an internal path with search and hash', () => {
 });
 ```
 
-- [ ] **Step 2: one-shot intent 실패 테스트를 작성한다**
+- [x] **Step 2: one-shot intent 실패 테스트를 작성한다**
 
 ```ts
 test('consumes a valid intent exactly once', () => {
@@ -720,7 +740,7 @@ test('removes an expired intent', () => {
 
 schema는 action `cart|buy|wishlist`, productId, pathname, size, color, positive integer quantity, createdAt, version을 검증한다.
 
-- [ ] **Step 3: 실패를 확인한다**
+- [x] **Step 3: 실패를 확인한다**
 
 Run:
 
@@ -730,20 +750,20 @@ npx jest --runInBand --no-cache --runTestsByPath src/shared/utils/safeRedirect.t
 
 Expected: helper와 복원 동작이 없어 FAIL한다.
 
-- [ ] **Step 4: pure helper를 최소 구현한다**
+- [x] **Step 4: pure helper를 최소 구현한다**
 
 `getSafeRedirectTarget()`은 `new URL(candidate, origin)`으로 파싱하고 exact `parsed.origin === new URL(origin).origin`일 때만 `pathname+search+hash`를 반환한다. backslash와 malformed URL은 fallback한다.
 
 `consumeProductIntent()`는 JSON parse 직후 storage key를 먼저 삭제한 다음 version/schema/TTL을 판정한다. side effect 실패 후 새로고침해도 자동 재실행하지 않는다.
 
-- [ ] **Step 5: 로그인 전 세 action을 저장한다**
+- [x] **Step 5: 로그인 전 세 action을 저장한다**
 
 - ProductDetailClient는 현재 pathname, product ID, size/color/quantity, action을 저장한다.
 - redirect target은 원 상품 URL에 `resumeIntent=1`을 붙인다.
 - login URL은 `/auth/login?redirect=${encodeURIComponent(target)}`다.
 - wishlist는 옵션이 없어도 저장하고, cart/buy는 현재 선택 상태를 함께 저장한다.
 
-- [ ] **Step 6: 상품 상세 복귀 시 한 번만 검증·실행한다**
+- [x] **Step 6: 상품 상세 복귀 시 한 번만 검증·실행한다**
 
 - `resumeIntent=1`일 때만 consume한다.
 - productId/path가 현재 상품과 일치하는지 확인한다.
@@ -752,11 +772,11 @@ Expected: helper와 복원 동작이 없어 FAIL한다.
 - missing/malformed/expired/mismatch/invalid option은 상세에 머물고 “옵션을 다시 선택해 주세요.”를 표시한다.
 - React StrictMode 중복 effect는 component ref로 차단하고 storage는 side effect 전에 이미 삭제한다.
 
-- [ ] **Step 7: event redirect를 현재 URL로 연결한다**
+- [x] **Step 7: event redirect를 현재 URL로 연결한다**
 
 비로그인 참여는 `/auth/login` 단독 이동 대신 현재 `/events/{eventId}`를 encoded redirect로 포함한다. 이벤트 참여 자동 실행은 요구 범위가 아니며 로그인 후 원 이벤트 화면 복귀만 보장한다.
 
-- [ ] **Step 8: focused 검증을 통과시킨다**
+- [x] **Step 8: focused 검증을 통과시킨다**
 
 Run:
 
@@ -795,7 +815,7 @@ Expected: hostile redirect, TTL, one-shot, 세 action, invalid option, event ret
 - Produces server-only: `ExpiredOrderCouponError`, `markExpiredUserCoupon(db, input): Promise<void>`.
 - Task 8 consumes: client `isExpiredOnKstDay()` through `getCouponAvailability()`.
 
-- [ ] **Step 1: 동일한 KST contract matrix 실패 테스트를 양쪽에 작성한다**
+- [x] **Step 1: 동일한 KST contract matrix 실패 테스트를 양쪽에 작성한다**
 
 ```ts
 test.each([
@@ -816,7 +836,7 @@ test.each(['2026-07-21', '2026.07.21', '2026/07/21'])(
 
 invalid date, Date, Firestore Timestamp-like `toDate()` 값도 양쪽에서 같은 결과를 검증한다.
 
-- [ ] **Step 2: order rollback 분리 실패 테스트를 작성한다**
+- [x] **Step 2: order rollback 분리 실패 테스트를 작성한다**
 
 ```ts
 test('commits only expired coupon status after the order transaction rolls back', async () => {
@@ -831,7 +851,7 @@ test('commits only expired coupon status after the order transaction rolls back'
 
 별도 테스트는 만료 marking transaction이 이미 사용완료/소유자 불일치인 coupon을 덮어쓰지 않는지 검증한다.
 
-- [ ] **Step 3: 실패를 확인한다**
+- [x] **Step 3: 실패를 확인한다**
 
 Run:
 
@@ -841,14 +861,14 @@ npx jest --runInBand --no-cache --runTestsByPath src/shared/utils/kstDate.test.t
 
 Expected: UTC 비교와 transaction rollback 때문에 FAIL한다.
 
-- [ ] **Step 4: client KST helper와 순수 availability를 최소 구현한다**
+- [x] **Step 4: client KST helper와 순수 availability를 최소 구현한다**
 
 - `Intl.DateTimeFormat(..., { timeZone:'Asia/Seoul' }).formatToParts()`로 Date/Timestamp instant를 day key로 만든다.
 - date-only 문자열은 정규식으로 year/month/day를 검증하고 해당 달의 실제 날짜인지 확인한다.
 - `orderPricing.isCouponExpired`, `CouponService.getAvailableCouponsForOrder`, `getDaysUntilExpiry`가 같은 helper를 사용한다.
 - `CouponService.expireUserCoupon()`와 client `updateDoc(user_coupons)` 호출을 제거한다. Rules가 금지한 client write를 background에서 시도하지 않는다.
 
-- [ ] **Step 5: Functions KST helper를 모든 coupon 날짜 경계에 연결한다**
+- [x] **Step 5: Functions KST helper를 모든 coupon 날짜 경계에 연결한다**
 
 - `couponDomain.couponHasExpired`.
 - coupon register/issue/use/cleanup의 issuedDate/usedDate/expiredDate.
@@ -857,7 +877,7 @@ Expected: UTC 비교와 transaction rollback 때문에 FAIL한다.
 
 서버와 클라이언트는 서로 import하지 않지만 같은 test matrix를 통과해야 한다.
 
-- [ ] **Step 6: order 만료 상태를 rollback 밖에서 저장한다**
+- [x] **Step 6: order 만료 상태를 rollback 밖에서 저장한다**
 
 주문 transaction 안에서는 만료 update를 하지 않는다.
 
@@ -883,7 +903,7 @@ if (error instanceof ExpiredOrderCouponError) {
 
 `markExpiredUserCoupon()`은 user coupon 소유자·사용 가능 상태·master expiry를 다시 읽고 여전히 만료일 때만 `기간만료`로 바꾼다. marking 실패는 성공처럼 숨기지 않고 500으로 처리해 상태 불일치를 관측 가능하게 한다.
 
-- [ ] **Step 7: focused 검증을 통과시킨다**
+- [x] **Step 7: focused 검증을 통과시킨다**
 
 Run:
 
@@ -895,7 +915,7 @@ npm run typecheck
 
 Expected: KST 경계, expiry day, rollback, 동시 상태 보호 테스트가 PASS.
 
-- [ ] **Step 8: cron batch 위험을 구현 범위 밖으로 유지한다**
+- [x] **Step 8: cron batch 위험을 구현 범위 밖으로 유지한다**
 
 이번 Task에서는 날짜 판정만 교체한다. 500-write batch 분할과 coupon master read cache는 Task 9 문서의 후속 위험에 기록하고 코드 변경을 섞지 않는다.
 
@@ -907,6 +927,7 @@ Expected: KST 경계, expiry day, rollback, 동시 상태 보호 테스트가 PA
 
 **Files:**
 
+- Create: `src/shared/hooks/queryKeys.ts`
 - Create: `src/shared/hooks/useOrders.ts`
 - Create: `src/shared/hooks/useOrders.test.tsx`
 - Create: `src/shared/utils/postPurchaseSync.ts`
@@ -920,11 +941,11 @@ Expected: KST 경계, expiry day, rollback, 동시 상태 보호 테스트가 PA
 
 **Interfaces:**
 
-- Produces: `pointKeys`, `orderKeys`, existing `cartKeys` preservation.
+- Produces: `src/shared/hooks/queryKeys.ts`가 `cartKeys`, `pointKeys`, `orderKeys`를 소유하고 기존 hook re-export를 보존한다.
 - Produces: `refreshPostPurchaseState({ queryClient, userId, refreshUserCoupons }): Promise<SettledRefreshSummary>`.
 - Consumes: Task 7의 `getCouponAvailability()` KST 판정.
 
-- [ ] **Step 1: query key와 post-purchase helper 실패 테스트를 작성한다**
+- [x] **Step 1: query key와 post-purchase helper 실패 테스트를 작성한다**
 
 ```ts
 test('settles every refresh even when coupon refresh fails', async () => {
@@ -938,7 +959,7 @@ test('settles every refresh even when coupon refresh fails', async () => {
 
 `pointKeys`와 `orderKeys`는 사용자별 prefix로 balance/history와 list를 한 번에 무효화할 수 있어야 한다.
 
-- [ ] **Step 2: 바로구매 coupon selector 실패 테스트를 작성한다**
+- [x] **Step 2: 바로구매 coupon selector 실패 테스트를 작성한다**
 
 ```tsx
 test('allows a buy-now draft with no preset coupon to select an available coupon', async () => {
@@ -958,7 +979,7 @@ test('disables expired and minimum-order coupons', () => {
 });
 ```
 
-- [ ] **Step 3: 주문 성공·후속 실패 경계 테스트를 작성한다**
+- [x] **Step 3: 주문 성공·후속 실패 경계 테스트를 작성한다**
 
 ```tsx
 test('navigates to completion even when one cache refresh rejects', async () => {
@@ -978,7 +999,7 @@ test('keeps the draft and skips refresh when order creation fails', async () => 
 });
 ```
 
-- [ ] **Step 4: 실패를 확인한다**
+- [x] **Step 4: 실패를 확인한다**
 
 Run:
 
@@ -988,7 +1009,9 @@ npx jest --runInBand --no-cache --runTestsByPath src/shared/hooks/useOrders.test
 
 Expected: order cache/helper와 checkout selector가 없어 FAIL한다.
 
-- [ ] **Step 5: query key와 order list cache를 최소 구현한다**
+- [x] **Step 5: query key와 order list cache를 최소 구현한다**
+
+다음 key factory는 Firebase 의존성이 없는 `src/shared/hooks/queryKeys.ts`에 둔다.
 
 ```ts
 export const orderKeys = {
@@ -1008,14 +1031,14 @@ export const pointKeys = {
 - 주문 취소 성공도 order key를 invalidate하고 coupon/point 복구 데이터를 갱신할 수 있도록 같은 key를 사용한다.
 - `usePointHistory`는 refetch된 첫 페이지 data를 `allHistory`에 다시 반영한다. 기존 `!isInitialized` 조건 때문에 invalidate 후 stale history가 유지되지 않게 한다.
 
-- [ ] **Step 6: checkout coupon selector를 최소 구현한다**
+- [x] **Step 6: checkout coupon selector를 최소 구현한다**
 
 - `selectedCouponId` state를 draft의 기존 ID 또는 빈 값으로 초기화한다.
 - userCoupons 전체를 option으로 표시하되 `getCouponAvailability(coupon, subtotal)` 결과가 unusable이면 disabled와 한국어 사유를 붙인다.
 - 선택 변경 시 `calculateOrderPreview`가 즉시 다시 계산된다.
 - submit payload에는 `orderPreview.usableCoupon?.id`만 보낸다.
 
-- [ ] **Step 7: 주문 성공 후 갱신을 allSettled 경계로 분리한다**
+- [x] **Step 7: 주문 성공 후 갱신을 allSettled 경계로 분리한다**
 
 `refreshPostPurchaseState()`는 다음 Promise를 `Promise.allSettled()`에 넣는다.
 
@@ -1033,7 +1056,7 @@ checkout 흐름은 다음 순서를 지킨다.
 4. `await refreshPostPurchaseState()`; 실패 항목은 log만 남기고 주문을 실패로 바꾸지 않음.
 5. complete route 이동.
 
-- [ ] **Step 8: focused 검증을 통과시킨다**
+- [x] **Step 8: focused 검증을 통과시킨다**
 
 Run:
 
@@ -1044,7 +1067,7 @@ npm run typecheck
 
 Expected: buy-now coupon, disabled 사유, exact key, partial refresh failure, create failure draft 보존 테스트가 PASS.
 
-- [ ] **Step 9: 독립 데이터 일관성 리뷰를 받는다**
+- [x] **Step 9: 독립 데이터 일관성 리뷰를 받는다**
 
 Reviewer는 주문이 이미 성공한 뒤 cache 오류가 재주문을 유도하지 않는지, point history가 실제 refetch data로 바뀌는지, usable coupon ID만 서버로 가는지 확인한다.
 
@@ -1069,7 +1092,7 @@ Reviewer는 주문이 이미 성공한 뒤 cache 오류가 재주문을 유도�
 - Consumes: 모든 Task의 최종 파일명·함수명·검증 결과.
 - Produces: 재현 가능한 정책·날짜·이벤트·의도·주문 캐시 문서와 최종 검증 기록.
 
-- [ ] **Step 1: 관련 문서를 실제 구현 기준으로 갱신한다**
+- [x] **Step 1: 관련 문서를 실제 구현 기준으로 갱신한다**
 
 `docs/commerce-policy.md`에는 다음만 기록한다.
 
@@ -1086,7 +1109,9 @@ Reviewer는 주문이 이미 성공한 뒤 cache 오류가 재주문을 유도�
 
 `docs/event-page-review.md`에는 eligibility/reward 타입, transaction 증거, stable error code, dry-run planner와 수동 targetProducts gate를 기록한다.
 
-- [ ] **Step 2: 후속 위험을 범위와 분리해 문서화한다**
+실제 구현에서 추가된 이벤트 공개 경계도 함께 기록한다. Firestore Rules와 공개 전용 EventService 조회는 `publicPolicyVerified: true`만 허용하고, 관리자 폼·이미지 apply는 콘텐츠 변경 후 이를 `false`로 되돌린다. 새 이미지 110개와 공개 검증 22건이 아직 미완료인 상태를 배포 완료처럼 쓰지 않는다.
+
+- [x] **Step 2: 후속 위험을 범위와 분리해 문서화한다**
 
 - scheduled coupon cleanup의 500-write batch 분할과 master read cache.
 - 이벤트 자격 판정을 위해 사용자 주문 전체를 읽는 구조의 장기 확장성 및 eligibility projection 필요성.
@@ -1094,7 +1119,7 @@ Reviewer는 주문이 이미 성공한 뒤 cache 오류가 재주문을 유도�
 
 이 항목을 해결한 것처럼 쓰지 않고 이번 범위 미구현으로 명시한다.
 
-- [ ] **Step 3: 금지 명령이 계획 실행 기록에 없는지 확인한다**
+- [x] **Step 3: 금지 명령이 계획 실행 기록에 없는지 확인한다**
 
 실행하지 않는 명령:
 
@@ -1107,7 +1132,7 @@ git commit
 git push
 ```
 
-- [ ] **Step 4: focused source sync와 전체 정적 검증을 실행한다**
+- [x] **Step 4: focused source sync와 전체 정적 검증을 실행한다**
 
 Run:
 
@@ -1123,7 +1148,7 @@ npm run build
 
 Expected: 모든 명령 exit code 0. 5분 동안 출력이 없는 명령은 중지하고 프로세스·잠금·캐시를 분석한 뒤 대체 검증과 함께 최종 보고한다.
 
-- [ ] **Step 5: 한국어·금지 정책 문구 정적 검증을 실행한다**
+- [x] **Step 5: 한국어·금지 정책 문구 정적 검증을 실행한다**
 
 Run:
 
@@ -1134,7 +1159,7 @@ rg -n "\\uFFFD|ì|ë|í" src functions/src docs scripts
 
 Expected: 허위 정책 결과가 없고 한국어 깨짐 의심 결과는 각 파일을 UTF-8로 열어 확인한다.
 
-- [ ] **Step 6: 안전한 로컬/에뮬레이터 브라우저 QA를 수행한다**
+- [x] **Step 6: 안전한 로컬/에뮬레이터 브라우저 QA를 수행한다**
 
 Browser skill을 사용해 390×844와 1440×900에서 다음을 확인한다.
 
@@ -1148,7 +1173,7 @@ Browser skill을 사용해 390×844와 1440×900에서 다음을 확인한다.
 
 실제 PG 결제, production DB seed/migration, 배포는 수행하지 않는다. emulator에서 주문 검증이 불가능하면 주문 생성 직전까지 UI를 확인하고 handler/cache 테스트 결과를 남은 근거로 명시한다.
 
-- [ ] **Step 7: 세 영역의 독립 리뷰를 병렬로 받는다**
+- [x] **Step 7: 세 영역의 독립 리뷰를 병렬로 받는다**
 
 1. 정책/generated sync/허위 문구 리뷰.
 2. 이벤트 schema/planner/transaction/review 증거 리뷰.
@@ -1156,7 +1181,7 @@ Browser skill을 사용해 390×844와 1440×900에서 다음을 확인한다.
 
 각 reviewer는 Critical/Important/Minor와 Ready 여부를 반환한다. Important 이상이 남으면 전체 Ready는 No다.
 
-- [ ] **Step 8: 최종 사실 보고를 남긴다**
+- [x] **Step 8: 최종 사실 보고를 남긴다**
 
 - 변경 파일과 새 파일.
 - focused/전체 검증의 실제 exit code.

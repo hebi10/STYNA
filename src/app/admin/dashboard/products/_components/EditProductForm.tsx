@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Product } from '@/shared/types/product';
-import { useCategories } from '@/context/categoryProvider';
+import { CategoryProvider, useCategories } from '@/context/categoryProvider';
 import useInputs from '@/shared/hooks/useInput';
 import { 
   uploadProductImages, 
@@ -176,7 +176,7 @@ interface EditProductFormProps {
   onCancel: () => void;
 }
 
-export default function EditProductForm({ product, onSave, onCancel }: EditProductFormProps) {
+function EditProductFormContent({ product, onSave, onCancel }: EditProductFormProps) {
   const { categories, loading: categoriesLoading } = useCategories();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
@@ -855,5 +855,13 @@ export default function EditProductForm({ product, onSave, onCancel }: EditProdu
         </button>
       </div>
     </form>
+  );
+}
+
+export default function EditProductForm(props: EditProductFormProps) {
+  return (
+    <CategoryProvider>
+      <EditProductFormContent {...props} />
+    </CategoryProvider>
   );
 }

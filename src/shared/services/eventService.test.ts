@@ -13,6 +13,8 @@ jest.mock('firebase/firestore', () => ({
   updateDoc,
   deleteDoc: jest.fn(),
   deleteField,
+  documentId: jest.fn(() => '__name__'),
+  limit: jest.fn(),
   query: jest.fn(),
   where: jest.fn(),
   orderBy: jest.fn(),
@@ -46,6 +48,7 @@ jest.mock('../libs/firebase/imageOptimization', () => ({
 }));
 
 import { EventParticipationError, EventService } from './eventService';
+import { documentId, getDoc, getDocs, orderBy, where } from 'firebase/firestore';
 
 describe('EventService conditional policy fields', () => {
   beforeEach(() => {
@@ -60,6 +63,74 @@ describe('EventService conditional policy fields', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  test('queries public events through both verified and active publication gates', async () => {
+    jest.mocked(getDocs).mockResolvedValue({ docs: [] } as never);
+
+    await EventService.getPublicEvents({ eventType: 'sale', isActive: true });
+
+    expect(where).toHaveBeenCalledTimes(2);
+    expect(where).toHaveBeenCalledWith('publicPolicyVerified', '==', true);
+    expect(where).toHaveBeenCalledWith('isActive', '==', true);
+    expect(orderBy).not.toHaveBeenCalled();
+  });
+
+  test('queries public event detail by id and both publication gates', async () => {
+    jest.mocked(getDoc).mockResolvedValue({ exists: () => false } as never);
+    jest.mocked(getDocs).mockResolvedValue({ docs: [] } as never);
+
+    await expect(EventService.getPublicEventById('event-1')).resolves.toBeNull();
+
+    expect(getDoc).not.toHaveBeenCalled();
+    expect(documentId).toHaveBeenCalledTimes(1);
+    expect(where).toHaveBeenCalledWith('__name__', '==', 'event-1');
+    expect(where).toHaveBeenCalledWith('publicPolicyVerified', '==', true);
+    expect(where).toHaveBeenCalledWith('isActive', '==', true);
+  });
+
+  test('keeps public detail query failures distinct from an empty result', async () => {
+    const upstreamError = new Error('firestore unavailable');
+    jest.mocked(getDocs).mockRejectedValue(upstreamError);
+
+    await expect(EventService.getPublicEventById('event-1')).rejects.toBe(upstreamError);
+  });
+
+  test.each(['permission-denied', 'firestore/permission-denied'])(
+    'normalizes Firebase %s to null for a hidden or missing public event',
+    async (code) => {
+      jest.mocked(getDocs).mockRejectedValue({ code });
+
+      await expect(EventService.getPublicEventById('event-1')).resolves.toBeNull();
+    }
+  );
+
+  test.each(['unavailable', 'failed-precondition'])(
+    'propagates Firebase %s failures from public event detail',
+    async (code) => {
+      const upstreamError = { code };
+      jest.mocked(getDocs).mockRejectedValue(upstreamError);
+
+      await expect(EventService.getPublicEventById('event-1')).rejects.toBe(upstreamError);
+    }
+  );
+
+  test('keeps unverified event listing in an explicit admin-only method', async () => {
+    jest.mocked(getDocs).mockResolvedValue({ docs: [] } as never);
+
+    await EventService.getAdminEvents({ eventType: 'sale', isActive: true });
+
+    expect(where).toHaveBeenCalledWith('eventType', '==', 'sale');
+    expect(where).toHaveBeenCalledWith('isActive', '==', true);
+    expect(where).not.toHaveBeenCalledWith('publicPolicyVerified', '==', true);
+    expect(orderBy).toHaveBeenCalledWith('createdAt', 'desc');
+  });
+
+  test('propagates admin active-event query failures instead of returning an empty dashboard', async () => {
+    const upstreamError = { code: 'permission-denied' };
+    jest.mocked(getDocs).mockRejectedValue(upstreamError);
+
+    await expect(EventService.getAdminActiveEvents()).rejects.toBe(upstreamError);
   });
 
   test('deletes stale target and coupon fields when an event is changed to none', async () => {

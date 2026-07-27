@@ -33,6 +33,17 @@ function getBooleanValue(value: unknown): boolean {
   return typeof value === "boolean" ? value : false;
 }
 
+const INFO_EDIT_ERROR_CONTROL_IDS: Record<string, string> = {
+  email: "info-email",
+  currentPassword: "info-current-password",
+  newPassword: "info-new-password",
+  confirmPassword: "info-confirm-password",
+  name: "info-name",
+  phone: "info-phone",
+  birth: "info-birth-year",
+  gender: "info-gender-male",
+};
+
 export default function InfoEditPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -55,6 +66,25 @@ export default function InfoEditPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const focusFirstError = (fieldErrors: Record<string, string>) => {
+    const firstErrorKey = Object.keys(INFO_EDIT_ERROR_CONTROL_IDS).find(
+      (key) => fieldErrors[key]
+    );
+
+    if (!firstErrorKey) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      document.getElementById(INFO_EDIT_ERROR_CONTROL_IDS[firstErrorKey])?.focus();
+    });
+  };
+
+  const reportErrors = (fieldErrors: Record<string, string>) => {
+    setErrors(fieldErrors);
+    focusFirstError(fieldErrors);
+  };
 
   // 사용자 데이터 로드
   useEffect(() => {
@@ -126,7 +156,7 @@ export default function InfoEditPage() {
       newErrors.gender = "성별을 선택해주세요.";
     }
 
-    setErrors(newErrors);
+    reportErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
@@ -143,7 +173,7 @@ export default function InfoEditPage() {
       // 이메일이나 비밀번호 변경이 있는 경우 재인증 필요
       if (formData.email !== userData?.email || formData.newPassword) {
         if (!formData.currentPassword) {
-          setErrors({ currentPassword: "현재 비밀번호를 입력해주세요." });
+          reportErrors({ currentPassword: "현재 비밀번호를 입력해주세요." });
           setIsSubmitting(false);
           return;
         }
@@ -189,12 +219,17 @@ export default function InfoEditPage() {
       console.error("Update failed:", error);
       
       // Firebase 에러 메시지 처리
-      if (error instanceof FirebaseError && error.code === "auth/wrong-password") {
-        setErrors({ currentPassword: "현재 비밀번호가 올바르지 않습니다." });
+      if (
+        error instanceof FirebaseError
+        && ["auth/wrong-password", "auth/invalid-credential"].includes(error.code)
+      ) {
+        reportErrors({ currentPassword: "현재 비밀번호가 올바르지 않습니다." });
+      } else if (error instanceof FirebaseError && error.code === "auth/requires-recent-login") {
+        reportErrors({ currentPassword: "보안을 위해 현재 비밀번호로 다시 인증해주세요." });
       } else if (error instanceof FirebaseError && error.code === "auth/email-already-in-use") {
-        setErrors({ email: "이미 사용 중인 이메일입니다." });
+        reportErrors({ email: "이미 사용 중인 이메일입니다." });
       } else {
-        setErrors({ general: "정보 업데이트에 실패했습니다. 다시 시도해주세요." });
+        reportErrors({ general: "정보 업데이트에 실패했습니다. 다시 시도해주세요." });
       }
     } finally {
       setIsSubmitting(false);
@@ -230,120 +265,183 @@ export default function InfoEditPage() {
           <p className={styles.subtitle}>회원정보를 안전하게 관리하세요</p>
         </div>
 
-        <form onSubmit={handleSubmit} className={styles.infoEditForm}>
+        <form noValidate onSubmit={handleSubmit} className={styles.infoEditForm}>
           {/* 일반 에러 메시지 */}
           {errors.general && (
-            <div className={styles.errorMessage}>
+            <div className={styles.errorMessage} role="alert">
               {errors.general}
             </div>
           )}
           
           {/* 이메일 */}
           <div className={styles.formGroup}>
-            <label className={styles.label}>
-              이메일 <span className={styles.required}>*</span>
+            <label htmlFor="info-email" className={styles.label}>
+              이메일 <span aria-hidden="true" className={styles.required}>*</span>
             </label>
             <input
+              id="info-email"
               type="email"
               name="email"
               value={formData.email}
               onChange={onChange}
+              required
+              autoComplete="email"
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? "info-email-error" : undefined}
               placeholder="example@hebimall.com"
               className={styles.input}
             />
-            {errors.email && <div className={styles.errorText}>{errors.email}</div>}
+            {errors.email && (
+              <p id="info-email-error" role="alert" className={styles.errorText}>
+                {errors.email}
+              </p>
+            )}
           </div>
 
           {/* 현재 비밀번호 */}
           <div className={styles.formGroup}>
-            <label className={styles.label}>
+            <label htmlFor="info-current-password" className={styles.label}>
               현재 비밀번호
             </label>
             <input
+              id="info-current-password"
               type="password"
               name="currentPassword"
               value={formData.currentPassword}
               onChange={onChange}
+              required={formData.email !== userData?.email || Boolean(formData.newPassword)}
+              autoComplete="current-password"
+              aria-invalid={Boolean(errors.currentPassword)}
+              aria-describedby={errors.currentPassword ? "info-current-password-error" : undefined}
               placeholder="이메일이나 비밀번호 변경 시 필요"
               className={styles.input}
             />
-            {errors.currentPassword && <div className={styles.errorText}>{errors.currentPassword}</div>}
+            {errors.currentPassword && (
+              <p id="info-current-password-error" role="alert" className={styles.errorText}>
+                {errors.currentPassword}
+              </p>
+            )}
           </div>
 
           {/* 새 비밀번호 */}
           <div className={styles.formGroup}>
-            <label className={styles.label}>
+            <label htmlFor="info-new-password" className={styles.label}>
               새 비밀번호
             </label>
             <input
+              id="info-new-password"
               type="password"
               name="newPassword"
               value={formData.newPassword}
               onChange={onChange}
+              autoComplete="new-password"
+              aria-invalid={Boolean(errors.newPassword)}
+              aria-describedby={errors.newPassword ? "info-new-password-error" : undefined}
               placeholder="변경을 원할 때만 입력 (8자 이상)"
               className={styles.input}
             />
-            {errors.newPassword && <div className={styles.errorText}>{errors.newPassword}</div>}
+            {errors.newPassword && (
+              <p id="info-new-password-error" role="alert" className={styles.errorText}>
+                {errors.newPassword}
+              </p>
+            )}
           </div>
 
           {/* 새 비밀번호 확인 */}
           <div className={styles.formGroup}>
-            <label className={styles.label}>
+            <label htmlFor="info-confirm-password" className={styles.label}>
               새 비밀번호 확인
             </label>
             <input
+              id="info-confirm-password"
               type="password"
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={onChange}
+              required={Boolean(formData.newPassword)}
+              autoComplete="new-password"
+              aria-invalid={Boolean(errors.confirmPassword)}
+              aria-describedby={errors.confirmPassword ? "info-confirm-password-error" : undefined}
               placeholder="새 비밀번호를 다시 입력해주세요"
               className={styles.input}
             />
-            {errors.confirmPassword && <div className={styles.errorText}>{errors.confirmPassword}</div>}
+            {errors.confirmPassword && (
+              <p id="info-confirm-password-error" role="alert" className={styles.errorText}>
+                {errors.confirmPassword}
+              </p>
+            )}
           </div>
 
           {/* 이름 */}
           <div className={styles.formGroup}>
-            <label className={styles.label}>
-              이름 <span className={styles.required}>*</span>
+            <label htmlFor="info-name" className={styles.label}>
+              이름 <span aria-hidden="true" className={styles.required}>*</span>
             </label>
             <input
+              id="info-name"
               type="text"
               name="name"
               value={formData.name}
               onChange={onChange}
+              required
+              autoComplete="name"
+              aria-invalid={Boolean(errors.name)}
+              aria-describedby={errors.name ? "info-name-error" : undefined}
               placeholder="실명을 입력해주세요"
               className={styles.input}
             />
-            {errors.name && <div className={styles.errorText}>{errors.name}</div>}
+            {errors.name && (
+              <p id="info-name-error" role="alert" className={styles.errorText}>
+                {errors.name}
+              </p>
+            )}
           </div>
 
           {/* 전화번호 */}
           <div className={styles.formGroup}>
-            <label className={styles.label}>
-              전화번호 <span className={styles.required}>*</span>
+            <label htmlFor="info-phone" className={styles.label}>
+              전화번호 <span aria-hidden="true" className={styles.required}>*</span>
             </label>
             <input
+              id="info-phone"
               type="tel"
               name="phone"
               value={formData.phone}
               onChange={onChange}
+              required
+              autoComplete="tel"
+              aria-invalid={Boolean(errors.phone)}
+              aria-describedby={errors.phone ? "info-phone-error" : undefined}
               placeholder="010-1234-5678"
               className={styles.input}
             />
-            {errors.phone && <div className={styles.errorText}>{errors.phone}</div>}
+            {errors.phone && (
+              <p id="info-phone-error" role="alert" className={styles.errorText}>
+                {errors.phone}
+              </p>
+            )}
           </div>
 
           {/* 생년월일 */}
-          <div className={styles.formGroup}>
-            <label className={styles.label}>
-              생년월일 <span className={styles.required}>*</span>
-            </label>
+          <fieldset
+            className={`${styles.formGroup} ${styles.fieldset}`}
+            aria-invalid={Boolean(errors.birth)}
+            aria-describedby={errors.birth ? "info-birth-error" : undefined}
+          >
+            <legend className={styles.label}>
+              생년월일 <span aria-hidden="true" className={styles.required}>*</span>
+            </legend>
             <div className={styles.birthGroup}>
               <select
+                id="info-birth-year"
                 name="birthYear"
                 value={formData.birthYear}
                 onChange={onChange}
+                required
+                autoComplete="bday-year"
+                aria-label="생년월일 연도"
+                aria-invalid={Boolean(errors.birth)}
+                aria-describedby={errors.birth ? "info-birth-error" : undefined}
                 className={styles.select}
               >
                 <option value="">년도</option>
@@ -352,9 +450,15 @@ export default function InfoEditPage() {
                 ))}
               </select>
               <select
+                id="info-birth-month"
                 name="birthMonth"
                 value={formData.birthMonth}
                 onChange={onChange}
+                required
+                autoComplete="bday-month"
+                aria-label="생년월일 월"
+                aria-invalid={Boolean(errors.birth)}
+                aria-describedby={errors.birth ? "info-birth-error" : undefined}
                 className={styles.select}
               >
                 <option value="">월</option>
@@ -363,9 +467,15 @@ export default function InfoEditPage() {
                 ))}
               </select>
               <select
+                id="info-birth-day"
                 name="birthDay"
                 value={formData.birthDay}
                 onChange={onChange}
+                required
+                autoComplete="bday-day"
+                aria-label="생년월일 일"
+                aria-invalid={Boolean(errors.birth)}
+                aria-describedby={errors.birth ? "info-birth-error" : undefined}
                 className={styles.select}
               >
                 <option value="">일</option>
@@ -374,56 +484,79 @@ export default function InfoEditPage() {
                 ))}
               </select>
             </div>
-            {errors.birth && <div className={styles.errorText}>{errors.birth}</div>}
-          </div>
+            {errors.birth && (
+              <p id="info-birth-error" role="alert" className={styles.errorText}>
+                {errors.birth}
+              </p>
+            )}
+          </fieldset>
 
           {/* 성별 */}
-          <div className={styles.formGroup}>
-            <label className={styles.label}>
-              성별 <span className={styles.required}>*</span>
-            </label>
+          <fieldset
+            className={`${styles.formGroup} ${styles.fieldset}`}
+            aria-invalid={Boolean(errors.gender)}
+            aria-describedby={errors.gender ? "info-gender-error" : undefined}
+          >
+            <legend className={styles.label}>
+              성별 <span aria-hidden="true" className={styles.required}>*</span>
+            </legend>
             <div className={styles.genderGroup}>
               <label className={styles.radioItem}>
                 <input
+                  id="info-gender-male"
                   type="radio"
                   name="gender"
                   value="male"
                   checked={formData.gender === "male"}
                   onChange={onChange}
+                  required
+                  autoComplete="sex"
+                  aria-describedby={errors.gender ? "info-gender-error" : undefined}
                 />
                 <span>남성</span>
               </label>
               <label className={styles.radioItem}>
                 <input
+                  id="info-gender-female"
                   type="radio"
                   name="gender"
                   value="female"
                   checked={formData.gender === "female"}
                   onChange={onChange}
+                  required
+                  autoComplete="sex"
+                  aria-describedby={errors.gender ? "info-gender-error" : undefined}
                 />
                 <span>여성</span>
               </label>
             </div>
-            {errors.gender && <div className={styles.errorText}>{errors.gender}</div>}
-          </div>
+            {errors.gender && (
+              <p id="info-gender-error" role="alert" className={styles.errorText}>
+                {errors.gender}
+              </p>
+            )}
+          </fieldset>
 
           {/* 마케팅 정보 수신 동의 */}
-          <div className={styles.agreementSection}>
-            <label className={styles.label}>마케팅 정보 수신</label>
+          <fieldset className={`${styles.agreementSection} ${styles.fieldset}`}>
+            <legend className={styles.label}>마케팅 정보 수신</legend>
             <div className={styles.agreementGroup}>
               <div className={styles.checkboxItem}>
                 <input
+                  id="info-marketing-agree"
                   type="checkbox"
                   name="marketingAgree"
                   checked={formData.marketingAgree}
                   onChange={onChange}
+                  autoComplete="off"
+                  aria-invalid="false"
                 />
-                <label className={styles.checkboxLabel}>
+                <label htmlFor="info-marketing-agree" className={styles.checkboxLabel}>
                   마케팅 정보 수신에 동의합니다 (선택)
                 </label>
               </div>
             </div>
-          </div>
+          </fieldset>
 
           {/* 수정 버튼 */}
           <button

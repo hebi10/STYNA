@@ -32,7 +32,7 @@ jest.mock('@/app/_components/Button', () => ({
 
 jest.mock('@/shared/services/eventService', () => ({
   EventService: {
-    getEvents: jest.fn(),
+    getAdminEvents: jest.fn(),
     toggleEventStatus: jest.fn(),
     deleteEvent: jest.fn(),
   },
@@ -61,7 +61,7 @@ describe('AdminEventList', () => {
   });
 
   test('filters event list by upcoming status and event type', async () => {
-    jest.mocked(EventService.getEvents).mockResolvedValue([
+    jest.mocked(EventService.getAdminEvents).mockResolvedValue([
       event({
         id: 'upcoming-sale',
         title: '예정 세일',
@@ -94,5 +94,16 @@ describe('AdminEventList', () => {
 
     expect(screen.getByText('예정 세일')).toBeInTheDocument();
     expect(screen.queryByText('진행 쿠폰')).not.toBeInTheDocument();
+  });
+
+  test('labels discountAmount as a display amount rather than points', async () => {
+    jest.mocked(EventService.getAdminEvents).mockResolvedValue([
+      event({ discountAmount: 5000 }),
+    ]);
+
+    render(<AdminEventList />);
+
+    expect(await screen.findByText('할인 표시 금액: 5,000원')).toBeInTheDocument();
+    expect(screen.queryByText(/적립금:/)).not.toBeInTheDocument();
   });
 });

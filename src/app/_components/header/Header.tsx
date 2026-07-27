@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/authProvider";
 import { useCartItemCount } from "@/shared/hooks/useCart";
@@ -9,7 +9,6 @@ import {
   formatSignupBenefit,
 } from "@/shared/constants/commercePolicy";
 import { CategoryOrderService } from "@/shared/services/categoryOrderService";
-import { DEFAULT_CATEGORY_IDS, getDefaultCategoryNames } from "@/shared/utils/categoryUtils";
 import styles from "./Header.module.css";
 
 interface HeaderCategory {
@@ -23,19 +22,18 @@ interface HeaderNavItem {
   href: string;
 }
 
-const DEFAULT_CATEGORY_NAMES = getDefaultCategoryNames();
-const DEFAULT_CATEGORIES: HeaderCategory[] = DEFAULT_CATEGORY_IDS.slice(0, 4).map((id) => ({
-  id,
-  name: DEFAULT_CATEGORY_NAMES[id] || id,
-  href: `/categories/${id}`,
-}));
+const FALLBACK_CATEGORIES: HeaderCategory[] = [{
+  id: "all",
+  name: "카테고리",
+  href: "/categories",
+}];
 
 const SUPPORT_LINKS: HeaderNavItem[] = [
   { label: "이벤트", href: "/events" },
   { label: "리뷰", href: "/reviews" },
   { label: "1:1문의", href: "/cs/inquiry" },
   { label: "상품문의", href: "/qna" },
-  { label: "고객센터", href: "/cs/faq" },
+  { label: "도움말", href: "/cs/faq" },
 ];
 
 const ANNOUNCEMENTS = [
@@ -44,6 +42,8 @@ const ANNOUNCEMENTS = [
   "출고 일정은 주문별 배송 상태에서 확인할 수 있습니다.",
 ];
 
+const DESKTOP_BREAKPOINT_PX = 960;
+
 function toNavLabel(category: HeaderCategory) {
   return category.name;
 }
@@ -51,9 +51,11 @@ function toNavLabel(category: HeaderCategory) {
 export default function Header() {
   const { user, isAdmin, logout } = useAuth();
   const { data: cartItemCount = 0 } = useCartItemCount(user?.uid || null);
-  const [categories, setCategories] = useState<HeaderCategory[]>(DEFAULT_CATEGORIES);
+  const [categories, setCategories] = useState<HeaderCategory[]>(FALLBACK_CATEGORIES);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -77,7 +79,7 @@ export default function Header() {
       } catch (error) {
         console.error("헤더 카테고리 로딩 실패:", error);
         if (isActive) {
-          setCategories(DEFAULT_CATEGORIES);
+          setCategories(FALLBACK_CATEGORIES);
         }
       }
     };
@@ -88,6 +90,73 @@ export default function Header() {
       isActive = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const mobileMenuButton = mobileMenuButtonRef.current;
+    const mobileMenu = mobileMenuRef.current;
+    let shouldRestoreFocus = true;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setIsMobileMenuOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab" || !mobileMenuButton || !mobileMenu) {
+        return;
+      }
+
+      const menuFocusables = Array.from(mobileMenu.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ));
+      const firstMenuControl = menuFocusables[0];
+      const lastMenuControl = menuFocusables.at(-1);
+      const activeElement = document.activeElement;
+
+      if (!firstMenuControl || !lastMenuControl) {
+        event.preventDefault();
+        mobileMenuButton.focus();
+        return;
+      }
+
+      if (activeElement === mobileMenuButton) {
+        event.preventDefault();
+        (event.shiftKey ? lastMenuControl : firstMenuControl).focus();
+      } else if (!event.shiftKey && activeElement === lastMenuControl) {
+        event.preventDefault();
+        mobileMenuButton.focus();
+      } else if (event.shiftKey && activeElement === firstMenuControl) {
+        event.preventDefault();
+        mobileMenuButton.focus();
+      } else if (!mobileMenu.contains(activeElement)) {
+        event.preventDefault();
+        mobileMenuButton.focus();
+      }
+    };
+    const handleResize = () => {
+      if (window.innerWidth >= DESKTOP_BREAKPOINT_PX) {
+        shouldRestoreFocus = false;
+        mobileMenuButton?.blur();
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", handleResize);
+      document.body.style.overflow = previousOverflow;
+      if (shouldRestoreFocus) {
+        mobileMenuButton?.focus();
+      }
+    };
+  }, [isMobileMenuOpen]);
 
   const safeCartItemCount = isMounted ? cartItemCount : 0;
   const featuredCategories = categories.slice(0, 1);
@@ -104,7 +173,7 @@ export default function Header() {
   ].slice(0, 6);
   const secondaryNavItems: HeaderNavItem[] = [
     { label: "추천", href: "/recommend" },
-    ...SUPPORT_LINKS.filter((item) => item.label !== "고객센터"),
+    ...SUPPORT_LINKS.filter((item) => item.href !== "/cs/faq"),
   ];
 
   const toggleMobileMenu = () => {
@@ -116,8 +185,18 @@ export default function Header() {
   };
 
   return (
-    <header className={`${styles.header} ${isMobileMenuOpen ? styles.headerMenuOpen : ""}`}>
-      <div className={styles.announcementBar} aria-label="쇼핑 안내">
+    <header
+      className={`${styles.header} ${isMobileMenuOpen ? styles.headerMenuOpen : ""}`}
+      role={isMobileMenuOpen ? "dialog" : undefined}
+      aria-modal={isMobileMenuOpen || undefined}
+      aria-label={isMobileMenuOpen ? "모바일 메뉴" : undefined}
+    >
+      <div
+        className={styles.announcementBar}
+        aria-label="쇼핑 안내"
+        aria-hidden={isMobileMenuOpen || undefined}
+        inert={isMobileMenuOpen}
+      >
         <div className={styles.announcementViewport}>
           {ANNOUNCEMENTS.map((message, index) => (
             <span
@@ -132,7 +211,11 @@ export default function Header() {
       </div>
       <div className={styles.container}>
         <div className={styles.headerContent}>
-          <div className={styles.logo}>
+          <div
+            className={styles.logo}
+            aria-hidden={isMobileMenuOpen || undefined}
+            inert={isMobileMenuOpen}
+          >
             <Link href="/" className={styles.logoLink} aria-label="STYNA home">
               <span className={styles.logoTopRow}>
                 <span className={styles.logoWordmark}>STYNA</span>
@@ -142,6 +225,7 @@ export default function Header() {
           </div>
 
           <button
+            ref={mobileMenuButtonRef}
             className={styles.mobileMenuButton}
             onClick={toggleMobileMenu}
             aria-label={isMobileMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
@@ -159,7 +243,12 @@ export default function Header() {
             ></span>
           </button>
 
-          <nav className={styles.nav} aria-label="Primary">
+          <nav
+            className={styles.nav}
+            aria-label="Primary"
+            aria-hidden={isMobileMenuOpen || undefined}
+            inert={isMobileMenuOpen}
+          >
             <div className={styles.navList}>
               {primaryNavItems.map((item) => (
                 <Link key={item.label} href={item.href} className={styles.navLink}>
@@ -179,7 +268,11 @@ export default function Header() {
             </div>
           </nav>
 
-          <div className={styles.userMenu}>
+          <div
+            className={styles.userMenu}
+            aria-hidden={isMobileMenuOpen || undefined}
+            inert={isMobileMenuOpen}
+          >
             <Link href="/search" className={styles.userLink}>
               검색
             </Link>
@@ -207,6 +300,7 @@ export default function Header() {
         </div>
 
         <div
+          ref={mobileMenuRef}
           id="mobile-navigation"
           className={`${styles.mobileMenu} ${isMobileMenuOpen ? styles.mobileMenuOpen : ""}`}
           aria-hidden={!isMobileMenuOpen}
@@ -328,7 +422,11 @@ export default function Header() {
         </div>
 
         {isMobileMenuOpen && (
-          <div className={styles.mobileMenuOverlay} onClick={closeMobileMenu}></div>
+          <div
+            className={styles.mobileMenuOverlay}
+            aria-hidden="true"
+            onClick={closeMobileMenu}
+          ></div>
         )}
       </div>
     </header>

@@ -29,7 +29,14 @@ describe('KST coupon date contract', () => {
     })).toBe('2026-07-21');
   });
 
-  test.each(['2026-02-29', '2026-13-01', 'not-a-date', new Date('invalid')])(
+  test.each([
+    '2026-02-29',
+    '2026-13-01',
+    '2026-07/21',
+    '2026.07/21',
+    'not-a-date',
+    new Date('invalid'),
+  ])(
     'rejects invalid expiry value %p',
     (value) => {
       expect(parseCouponExpiryDay(value)).toBeNull();

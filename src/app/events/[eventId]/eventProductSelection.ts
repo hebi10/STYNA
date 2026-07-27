@@ -28,7 +28,7 @@ export interface LoadEventProductsOptions {
 const STRICT_PRODUCT_LOADER_OPTIONS = { throwOnError: true } as const;
 
 export const defaultEventProductLoader: EventProductLoader = {
-  getProductById: id => ProductService.getProductById(id),
+  getProductById: id => ProductService.getPublicProductById(id),
   getProductsByCategory: (category, limit) =>
     ProductService.getProductsByCategory(category, limit, STRICT_PRODUCT_LOADER_OPTIONS),
   getSaleProducts: limit =>
@@ -44,7 +44,7 @@ export const defaultEventProductLoader: EventProductLoader = {
 const PRODUCT_SECTION_META: Record<EventUiVariant, EventProductSectionMeta> = {
   sale: {
     title: '지금 할인 중인 상품',
-    description: '이벤트 할인이 적용되는 상품을 확인해 보세요.',
+    description: '현재 할인가가 등록된 상품을 확인해 보세요.',
     href: '/main/sale',
     linkLabel: '할인 상품 더 보기',
   },

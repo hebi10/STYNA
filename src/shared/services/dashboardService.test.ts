@@ -15,7 +15,7 @@ jest.mock('./couponService', () => ({
 
 jest.mock('./eventService', () => ({
   EventService: {
-    getActiveEvents: jest.fn(),
+    getAdminActiveEvents: jest.fn(),
   },
 }));
 
@@ -52,7 +52,7 @@ jest.mock('./orderService', () => ({
 describe('DashboardService', () => {
   beforeEach(() => {
     jest.mocked(CouponService.getActiveCoupons).mockResolvedValue([]);
-    jest.mocked(EventService.getActiveEvents).mockResolvedValue([]);
+    jest.mocked(EventService.getAdminActiveEvents).mockResolvedValue([]);
     jest.mocked(AdminUserService.getAllUsersSimple).mockResolvedValue([]);
     jest.mocked(SimpleQnAService.getAllQnAs).mockResolvedValue([]);
     jest.mocked(InquiryService.getAllInquiries).mockResolvedValue([]);

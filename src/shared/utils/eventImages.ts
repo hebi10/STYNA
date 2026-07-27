@@ -48,28 +48,54 @@ const LEGACY_EVENT_IMAGE_PATTERNS = [
   '준비',
 ];
 
+const FIREBASE_HOSTING_REDIRECTED_EVENT_IMAGE_PATTERNS = [
+  /^\/events\/2026(?:\/|$)/,
+  /^\/events\/2026-v2(?:\/|$)/,
+  /^\/events\/2026-v3(?:\/|$)/,
+  /^\/events\/2026-editorial\/[^/]*-202607(?:15|21)-[^/]*\.webp$/,
+];
+
 const SALE_KEYWORDS = ['sale', '세일', '특가', '할인'];
-const REVIEW_KEYWORDS = ['review', '리뷰', '후기'];
 const NEW_KEYWORDS = ['new', '신상', 'collection', '컬렉션'];
 
-const isPlaceholderEventImage = (imageUrl?: string | null): boolean => {
-  if (!imageUrl?.trim()) {
-    return true;
-  }
-
-  const normalizedUrl = imageUrl.toLowerCase();
-  return LEGACY_EVENT_IMAGE_PATTERNS.some((pattern) => normalizedUrl.includes(pattern));
-};
-
-const getGeneratedDetailImage = (bannerImage?: string | null): string | null => {
-  if (!bannerImage?.includes('/events/2026/') || !bannerImage.endsWith('-banner.webp')) {
+const sanitizeEventImage = (imageUrl?: string | null): string | null => {
+  const trimmedUrl = imageUrl?.trim();
+  if (!trimmedUrl) {
     return null;
   }
 
-  return bannerImage.replace('-banner.webp', '-detail.webp');
+  const normalizedUrl = trimmedUrl.toLowerCase();
+  if (LEGACY_EVENT_IMAGE_PATTERNS.some((pattern) => normalizedUrl.includes(pattern))) {
+    return null;
+  }
+
+  let parsedUrl: URL;
+  try {
+    if (trimmedUrl.startsWith('/') && !trimmedUrl.startsWith('//')) {
+      parsedUrl = new URL(trimmedUrl, 'https://local.invalid');
+    } else {
+      parsedUrl = new URL(trimmedUrl);
+      if (parsedUrl.protocol !== 'https:' || parsedUrl.username || parsedUrl.password) {
+        return null;
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  if (FIREBASE_HOSTING_REDIRECTED_EVENT_IMAGE_PATTERNS.some((pattern) => pattern.test(parsedUrl.pathname.toLowerCase()))) {
+    return null;
+  }
+
+  return trimmedUrl;
 };
 
 const pickEditorialVariant = (event: Event): EventUiVariant => {
+  const semanticVariant = getEventUiVariant(event);
+  if (semanticVariant === 'review') {
+    return semanticVariant;
+  }
+
   const searchableText = [
     event.title,
     event.description,
@@ -84,31 +110,22 @@ const pickEditorialVariant = (event: Event): EventUiVariant => {
     return 'sale';
   }
 
-  if (REVIEW_KEYWORDS.some((keyword) => searchableText.includes(keyword))) {
-    return 'review';
-  }
-
   if (NEW_KEYWORDS.some((keyword) => searchableText.includes(keyword))) {
     return 'new';
   }
 
-  return getEventUiVariant(event);
+  return semanticVariant;
 };
 
 export const getEventDisplayImages = (event: Event): EventEditorialImages => {
   const editorialImages = EDITORIAL_EVENT_IMAGES[pickEditorialVariant(event)];
-  const generatedDetailImage = getGeneratedDetailImage(event.bannerImage);
-  const detailImage = event.detailImage ?? generatedDetailImage ?? event.bannerImage;
+  const bannerImage = sanitizeEventImage(event.bannerImage);
+  const thumbnailImage = sanitizeEventImage(event.thumbnailImage);
+  const detailImage = sanitizeEventImage(event.detailImage ?? event.bannerImage);
 
   return {
-    bannerImage: isPlaceholderEventImage(event.bannerImage)
-      ? editorialImages.bannerImage
-      : event.bannerImage,
-    thumbnailImage: isPlaceholderEventImage(event.thumbnailImage)
-      ? editorialImages.thumbnailImage
-      : event.thumbnailImage,
-    detailImage: isPlaceholderEventImage(detailImage)
-      ? editorialImages.detailImage
-      : detailImage,
+    bannerImage: bannerImage ?? editorialImages.bannerImage,
+    thumbnailImage: thumbnailImage ?? editorialImages.thumbnailImage,
+    detailImage: detailImage ?? editorialImages.detailImage,
   };
 };

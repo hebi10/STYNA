@@ -5,7 +5,9 @@
 - 메인 카테고리 4장은 기존 PNG 대신 `public/category/*_q75.webp`를 사용한다. 합계 전송 크기는 약 6MB에서 약 92KB로 줄었다.
 - Cloud Functions의 이미지 최적화 경로가 원격 이미지를 거부하지 않도록 `next.config.ts`의 `unoptimized`를 활성화한다. `next/image`는 반응형 레이아웃만 담당하고 브라우저는 로컬 또는 Firebase Storage 원본 URL을 직접 요청한다.
 - 신규 상품·카테고리·이벤트 이미지 업로드는 WebP q75, 긴 변 최대 1600px, `public, max-age=31536000, immutable` 메타데이터를 사용한다.
-- 메인 배너는 활성 슬라이드와 양옆 슬라이드의 이미지 6장만 렌더링하고 모두 우선 요청한다. 링크·이미지의 브라우저 기본 드래그는 막아 가로 스와이프가 취소되지 않게 한다.
+- 메인 배너는 활성 슬라이드와 양옆 슬라이드의 이미지 6장만 렌더링한다. 활성 슬라이드의 첫 번째 LCP 후보 한 장만 `priority`로 요청하고 나머지는 기본 지연 로딩 정책을 따른다. 링크·이미지의 브라우저 기본 드래그는 막아 가로 스와이프가 취소되지 않게 한다.
+- Firebase Hosting에서 이벤트 목록 HTML로 리다이렉트하는 `/events/2026`, `/events/2026-v2`, `/events/2026-v3` 하위 경로와 `/events/2026-editorial/*-20260715-*.webp`, `*-20260721-*.webp`는 이미지 URL로 사용하지 않고 기존 에디토리얼 이미지로 대체한다. Firebase Storage의 인코딩된 객체 URL은 이 판정에 포함하지 않는다.
+- 이벤트 이미지 소스는 `/`로 시작하는 로컬 절대 경로 또는 `https:` URL만 허용한다. `javascript:`, `data:`, `http:`, protocol-relative 및 상대 경로는 `next/image`에 전달하지 않고 에디토리얼 이미지로 대체하며, 유효한 URL의 앞뒤 공백은 제거한다.
 - 상품 WebP 마이그레이션은 `images`, `mainImage`, `detailImages`를 모두 대상으로 삼는다.
 
 ## Firebase Storage 후속 작업

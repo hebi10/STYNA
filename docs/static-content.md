@@ -14,7 +14,9 @@
 
 오프라인 매장 콘텐츠는 예시 데이터이며 상세·길찾기 기능은 제공하지 않는다.
 
-추천 상품은 `FeaturedProductService`와 `/admin/featured-products`에서 관리한다. 홈 연결은 후속 성능·큐레이션 단계에서 진행한다.
+추천 상품은 `FeaturedProductService`와 `/admin/featured-products`에서 관리한다. 홈은 추천 설정을 한 번 읽고 공개 상품을 병렬 조회한 뒤 관리자 설정 순서대로 표시한다. 설정이 없거나 유효한 공개 상품이 없으면 섹션을 숨긴다.
+
+메인 배너 링크는 사이트 내부의 `/` 경로만 허용한다. 외부 URL, protocol-relative URL, 역슬래시·제어 문자가 포함된 경로는 `/products`로 대체한다.
 
 ## 초기 데이터 반영
 

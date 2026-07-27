@@ -14,9 +14,12 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
+  documentId,
   getDoc,
   getDocs,
+  limit,
   orderBy,
   query,
   serverTimestamp,
@@ -136,6 +139,31 @@ function validInquiryCreate(userId = 'owner-1') {
   };
 }
 
+function productData(status?: 'active' | 'inactive' | 'draft') {
+  return {
+    name: '테스트 상품',
+    price: 10000,
+    ...(status ? { status } : {}),
+    createdAt: fixedTime,
+    updatedAt: fixedTime,
+  };
+}
+
+function initialProductReviewStats() {
+  return {
+    rating: 0,
+    reviewCount: 0,
+    reviewSummary: {
+      schemaVersion: 1,
+      totalReviews: 0,
+      averageRating: 0,
+      recommendedCount: 0,
+      recommendationRate: 0,
+      ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+    },
+  };
+}
+
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
     projectId,
@@ -168,6 +196,33 @@ beforeEach(async () => {
       }),
       setDoc(doc(db, 'featuredProducts', 'mainPageFeatured'), {
         productIds: ['product-1'],
+      }),
+      setDoc(doc(db, 'products', 'active-product'), productData('active')),
+      setDoc(doc(db, 'products', 'inactive-product'), productData('inactive')),
+      setDoc(doc(db, 'products', 'draft-product'), productData('draft')),
+      setDoc(doc(db, 'products', 'legacy-product'), productData()),
+      setDoc(doc(db, 'events', 'verified-event'), {
+        title: '검증 완료 이벤트',
+        publicPolicyVerified: true,
+        isActive: true,
+        createdAt: fixedTime,
+      }),
+      setDoc(doc(db, 'events', 'verified-inactive-event'), {
+        title: '검증 완료 비활성 이벤트',
+        publicPolicyVerified: true,
+        isActive: false,
+        createdAt: fixedTime,
+      }),
+      setDoc(doc(db, 'events', 'unverified-event'), {
+        title: '미검증 이벤트',
+        publicPolicyVerified: false,
+        isActive: true,
+        createdAt: fixedTime,
+      }),
+      setDoc(doc(db, 'events', 'legacy-event'), {
+        title: '레거시 이벤트',
+        isActive: true,
+        createdAt: fixedTime,
       }),
       setDoc(doc(db, 'reviews', 'review-1'), {
         productId: 'product-1',
@@ -357,6 +412,7 @@ describe('strict admin boundary', () => {
     for (const collectionName of ['categories', 'products', 'notices', 'featuredProducts']) {
       await assertSucceeds(setDoc(doc(adminDb, collectionName, `strict-${collectionName}`), {
         name: collectionName,
+        ...(collectionName === 'products' ? initialProductReviewStats() : {}),
       }));
     }
   });
@@ -869,6 +925,170 @@ describe('inquiry rules', () => {
 });
 
 describe('other server-managed collections', () => {
+  test('exposes only active products to public reads and requires an active query constraint', async () => {
+    const publicDb = testEnv.unauthenticatedContext().firestore();
+
+    await assertSucceeds(getDoc(doc(publicDb, 'products', 'active-product')));
+    await assertFails(getDoc(doc(publicDb, 'products', 'inactive-product')));
+    await assertFails(getDoc(doc(publicDb, 'products', 'draft-product')));
+    await assertFails(getDoc(doc(publicDb, 'products', 'legacy-product')));
+
+    const activeProductsQuery = query(
+      collection(publicDb, 'products'),
+      where('status', '==', 'active'),
+    );
+    const snapshot = await assertSucceeds(getDocs(activeProductsQuery));
+    expect(snapshot.docs.map((productDoc) => productDoc.id)).toEqual(['active-product']);
+
+    await assertFails(getDocs(collection(publicDb, 'products')));
+    await assertFails(getDocs(query(
+      collection(publicDb, 'products'),
+      where('status', '==', 'draft'),
+    )));
+
+    const activeDetailSnapshot = await assertSucceeds(getDocs(query(
+      collection(publicDb, 'products'),
+      where(documentId(), '==', 'active-product'),
+      where('status', '==', 'active'),
+      limit(1),
+    )));
+    expect(activeDetailSnapshot.docs.map((productDoc) => productDoc.id)).toEqual(['active-product']);
+
+    for (const productId of ['inactive-product', 'missing-product']) {
+      await expect(getDocs(query(
+        collection(publicDb, 'products'),
+        where(documentId(), '==', productId),
+        where('status', '==', 'active'),
+        limit(1),
+      ))).rejects.toMatchObject({ code: 'permission-denied' });
+    }
+  });
+
+  test('allows only a strict admin to read every product status', async () => {
+    const adminDb = testEnv.authenticatedContext('admin-1', { admin: true }).firestore();
+    const claimOnlyDb = testEnv.authenticatedContext('claim-only', { admin: true }).firestore();
+
+    const snapshot = await assertSucceeds(getDocs(collection(adminDb, 'products')));
+    expect(snapshot.docs.map((productDoc) => productDoc.id).sort()).toEqual([
+      'active-product',
+      'draft-product',
+      'inactive-product',
+      'legacy-product',
+    ]);
+    await assertFails(getDoc(doc(claimOnlyDb, 'products', 'draft-product')));
+  });
+
+  test('keeps materialized review statistics server-owned during admin edits', async () => {
+    const adminDb = testEnv.authenticatedContext('admin-1', { admin: true }).firestore();
+
+    await assertSucceeds(updateDoc(doc(adminDb, 'products', 'active-product'), {
+      name: '관리자 수정 상품',
+    }));
+    for (const protectedUpdate of [
+      { rating: 1 },
+      { reviewCount: 999 },
+      { reviewSummary: { schemaVersion: 1, totalReviews: 999 } },
+      { reviewStatsEventTime: 'stale' },
+      { reviewStatsRunToken: 'stale' },
+      { reviewStatsUpdatedAt: Timestamp.now() },
+    ]) {
+      await assertFails(updateDoc(
+        doc(adminDb, 'products', 'active-product'),
+        protectedUpdate,
+      ));
+    }
+  });
+
+  test('requires a zero review summary and forbids review watermarks on product creation', async () => {
+    const adminDb = testEnv.authenticatedContext('admin-1', { admin: true }).firestore();
+    const safeProduct = {
+      name: '안전한 신규 상품',
+      status: 'active',
+      ...initialProductReviewStats(),
+    };
+
+    await assertSucceeds(setDoc(doc(adminDb, 'products', 'safe-created-product'), safeProduct));
+    const unsafeProducts = [
+      { ...safeProduct, rating: 5 },
+      { ...safeProduct, reviewCount: 99 },
+      {
+        ...safeProduct,
+        reviewSummary: {
+          ...safeProduct.reviewSummary,
+          totalReviews: 99,
+        },
+      },
+      { ...safeProduct, reviewStatsEventTime: '9999-12-31T23:59:59.999999999Z' },
+      { ...safeProduct, reviewStatsRunToken: 'forged-token' },
+      { ...safeProduct, reviewStatsUpdatedAt: Timestamp.now() },
+      { name: '요약 없는 상품', rating: 0, reviewCount: 0 },
+    ];
+    for (const [index, unsafeProduct] of unsafeProducts.entries()) {
+      await assertFails(setDoc(
+        doc(adminDb, 'products', `unsafe-created-product-${index}`),
+        unsafeProduct,
+      ));
+    }
+  });
+
+  test('exposes only policy-verified active events to public reads', async () => {
+    const publicDb = testEnv.unauthenticatedContext().firestore();
+
+    await assertSucceeds(getDoc(doc(publicDb, 'events', 'verified-event')));
+    await assertFails(getDoc(doc(publicDb, 'events', 'verified-inactive-event')));
+    await assertFails(getDoc(doc(publicDb, 'events', 'unverified-event')));
+    await assertFails(getDoc(doc(publicDb, 'events', 'legacy-event')));
+
+    const publicEventsQuery = query(
+      collection(publicDb, 'events'),
+      where('publicPolicyVerified', '==', true),
+      where('isActive', '==', true)
+    );
+    const snapshot = await assertSucceeds(getDocs(publicEventsQuery));
+    expect(snapshot.docs.map((eventDoc) => eventDoc.id)).toEqual(['verified-event']);
+
+    await assertFails(getDocs(collection(publicDb, 'events')));
+    await assertFails(getDocs(query(
+      collection(publicDb, 'events'),
+      where('publicPolicyVerified', '==', true)
+    )));
+
+    const verifiedDetailSnapshot = await assertSucceeds(getDocs(query(
+      collection(publicDb, 'events'),
+      where(documentId(), '==', 'verified-event'),
+      where('publicPolicyVerified', '==', true),
+      where('isActive', '==', true),
+      limit(1),
+    )));
+    expect(verifiedDetailSnapshot.docs.map((eventDoc) => eventDoc.id)).toEqual(['verified-event']);
+
+    for (const eventId of ['unverified-event', 'missing-event']) {
+      await expect(getDocs(query(
+        collection(publicDb, 'events'),
+        where(documentId(), '==', eventId),
+        where('publicPolicyVerified', '==', true),
+        where('isActive', '==', true),
+        limit(1),
+      ))).rejects.toMatchObject({ code: 'permission-denied' });
+    }
+  });
+
+  test('allows only a strict admin to read unverified events', async () => {
+    const adminDb = testEnv.authenticatedContext('admin-1', { admin: true }).firestore();
+
+    await assertSucceeds(getDoc(doc(adminDb, 'events', 'unverified-event')));
+    await assertSucceeds(getDocs(collection(adminDb, 'events')));
+
+    for (const [userId, claims] of [
+      ['claim-only', { admin: true }],
+      ['role-only', {}],
+      ['inactive-admin', { admin: true }],
+    ] as const) {
+      const deniedDb = testEnv.authenticatedContext(userId, claims).firestore();
+      await assertFails(getDoc(doc(deniedDb, 'events', 'unverified-event')));
+    }
+  });
+
   test('denies direct coupon, event, participant, and review creation by a user', async () => {
     const userDb = testEnv.authenticatedContext('user-1').firestore();
 
@@ -891,6 +1111,28 @@ describe('other server-managed collections', () => {
     }));
   });
 
+  test('keeps schema-valid review creation on the server-only boundary', async () => {
+    const userDb = testEnv.authenticatedContext('owner-1').firestore();
+    const adminDb = testEnv.authenticatedContext('admin-1', { admin: true }).firestore();
+    const review = {
+      productId: 'active-product',
+      userId: 'owner-1',
+      userName: 'owner-1 name',
+      rating: 5,
+      title: '좋아요',
+      content: '구매 인증 리뷰',
+      images: [],
+      size: 'M',
+      color: 'black',
+      isRecommended: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    await assertFails(setDoc(doc(userDb, 'reviews', 'direct-user-review'), review));
+    await assertFails(setDoc(doc(adminDb, 'reviews', 'direct-admin-review'), review));
+  });
+
   test('allows only an active review owner to edit permitted fields', async () => {
     const ownerDb = testEnv.authenticatedContext('owner-1').firestore();
     const inactiveDb = testEnv.authenticatedContext('inactive-1').firestore();
@@ -904,6 +1146,40 @@ describe('other server-managed collections', () => {
     }));
     await assertFails(updateDoc(doc(inactiveDb, 'reviews', 'review-1'), {
       content: '비활성 계정 변경',
+    }));
+  });
+
+  test.each([
+    ['fractional rating', { rating: 4.5 }],
+    ['rating below range', { rating: 0 }],
+    ['rating above range', { rating: 6 }],
+    ['non-boolean recommendation', { isRecommended: 'yes' }],
+    ['missing rating', { rating: deleteField() }],
+    ['missing recommendation', { isRecommended: deleteField() }],
+  ])('denies review updates with an invalid aggregate contract: %s', async (_caseName, change) => {
+    const ownerDb = testEnv.authenticatedContext('owner-1').firestore();
+
+    await assertFails(updateDoc(doc(ownerDb, 'reviews', 'review-1'), {
+      ...change,
+      updatedAt: serverTimestamp(),
+    }));
+  });
+
+  test('applies the review aggregate contract and immutable identity to strict admin updates', async () => {
+    const adminDb = testEnv.authenticatedContext('admin-1', { admin: true }).firestore();
+
+    await assertSucceeds(updateDoc(doc(adminDb, 'reviews', 'review-1'), {
+      rating: 4,
+      isRecommended: false,
+      updatedAt: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(doc(adminDb, 'reviews', 'review-1'), {
+      rating: 3.5,
+      updatedAt: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(doc(adminDb, 'reviews', 'review-1'), {
+      productId: 'product-2',
+      updatedAt: serverTimestamp(),
     }));
   });
 });

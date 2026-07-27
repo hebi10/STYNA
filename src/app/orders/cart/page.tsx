@@ -9,6 +9,7 @@ import Button from "../../_components/Button";
 import { useAuth } from "@/context/authProvider";
 import { useCoupon } from "@/context/couponProvider";
 import { useCart, useUpdateCartItem, useRemoveFromCart } from "@/shared/hooks/useCart";
+import { useAvailableOrderCoupons } from "@/shared/hooks/useAvailableOrderCoupons";
 import {
   COMMERCE_POLICY,
   formatShippingPolicy,
@@ -28,7 +29,7 @@ interface CartItemWithSelection extends CartItem {
 export default function OrderCartPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const { userCoupons } = useCoupon();
+  const { userCoupons, getAvailableCouponsForOrder } = useCoupon();
   
   // Firebase 장바구니 데이터 가져오기
   const { data: cart, isLoading: cartLoading, error: cartError } = useCart(user?.uid || null);
@@ -129,7 +130,17 @@ export default function OrderCartPage() {
 
   // 주문 계산
   const selectedItems = cartItems.filter(item => item.selected && item.isAvailable);
-  const selectedCouponView = userCoupons?.find(coupon => coupon.id === selectedCoupon) || null;
+  const couponLookupAmount = selectedItems.reduce(
+    (sum, item) => sum + Math.max(0, Math.floor(item.price)) * Math.max(0, Math.floor(item.quantity)),
+    0,
+  );
+  const orderCouponState = useAvailableOrderCoupons({
+    enabled: Boolean(user && selectedItems.length > 0),
+    orderAmount: couponLookupAmount,
+    overviewCoupons: userCoupons,
+    loadAvailableCoupons: getAvailableCouponsForOrder,
+  });
+  const selectedCouponView = orderCouponState.coupons.find(coupon => coupon.id === selectedCoupon) || null;
   const orderPreview = useMemo(
     () => calculateOrderPreview({
       items: selectedItems,
@@ -156,11 +167,36 @@ export default function OrderCartPage() {
   const couponDiscount = orderPreview.couponDiscount;
   const deliveryFee = orderPreview.deliveryFee;
   const finalAmount = orderPreview.finalAmount;
+  const selectedCouponAvailability = selectedCouponView
+    ? getCouponAvailability(selectedCouponView, subtotal)
+    : null;
+  let couponSelectionMessage: string | null = null;
+  if (selectedCoupon) {
+    if (orderCouponState.loading) {
+      couponSelectionMessage = '선택한 쿠폰을 다시 확인하는 중입니다.';
+    } else if (!selectedCouponView && orderCouponState.error) {
+      couponSelectionMessage = "선택한 쿠폰을 다시 불러오지 못했습니다. 쿠폰 없이 주문하려면 '쿠폰을 선택해주세요'를 선택해주세요.";
+    } else if (!selectedCouponView && !orderCouponState.ready) {
+      couponSelectionMessage = '선택한 쿠폰 정보가 아직 확인되지 않았습니다.';
+    } else if (!selectedCouponView) {
+      couponSelectionMessage = '선택한 쿠폰을 현재 주문에 사용할 수 없습니다. 다른 쿠폰을 선택해주세요.';
+    } else if (!selectedCouponAvailability?.usable) {
+      couponSelectionMessage = '선택한 쿠폰의 사용 조건을 충족하지 않습니다. 다른 쿠폰을 선택해주세요.';
+    }
+  }
 
   // 주문하기
   const handleCheckout = () => {
     if (selectedItems.length === 0) {
       alert("선택된 상품이 없습니다.");
+      return;
+    }
+    if (couponSelectionMessage) {
+      alert(couponSelectionMessage);
+      return;
+    }
+    if (orderCouponState.loading) {
+      alert("사용 가능한 쿠폰을 확인하는 중입니다.");
       return;
     }
     
@@ -434,12 +470,15 @@ export default function OrderCartPage() {
               <h3 className={styles.sectionSubtitle}>쿠폰 적용</h3>
               <div className={styles.couponSelect}>
                 <select
+                  aria-label="쿠폰 선택"
+                  aria-describedby={couponSelectionMessage ? 'cart-coupon-status' : undefined}
                   value={selectedCoupon}
                   onChange={(e) => setSelectedCoupon(e.target.value)}
                   className={styles.couponDropdown}
+                  disabled={orderCouponState.loading}
                 >
                   <option value="">쿠폰을 선택해주세요</option>
-                  {userCoupons?.map(coupon => {
+                  {orderCouponState.coupons.map(coupon => {
                     const availability = getCouponAvailability(coupon, subtotal);
                     const suffix = !availability.usable
                       ? availability.reason === "minimum"
@@ -464,6 +503,13 @@ export default function OrderCartPage() {
                   쿠폰함 보기
                 </Link>
               </div>
+              {orderCouponState.loading && <p role="status">사용 가능한 쿠폰을 확인하는 중...</p>}
+              {couponSelectionMessage && (
+                <p id="cart-coupon-status" role="alert">{couponSelectionMessage}</p>
+              )}
+              {!couponSelectionMessage && orderCouponState.error && (
+                <p role="alert">사용 가능한 쿠폰 전체를 불러오지 못했습니다. 현재 보이는 쿠폰만 확인할 수 있습니다.</p>
+              )}
             </div>
           </div>
 

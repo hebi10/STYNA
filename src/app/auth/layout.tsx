@@ -1,5 +1,12 @@
 import { ReactNode } from 'react';
 import styles from './layout.module.css';
+import type { Metadata } from 'next';
+import { noIndexMetadata } from '@/shared/constants/routeMetadata';
+
+export const metadata: Metadata = {
+  title: '회원 인증 | STYNA',
+  ...noIndexMetadata,
+};
 
 interface AuthLayoutProps {
   children: ReactNode;

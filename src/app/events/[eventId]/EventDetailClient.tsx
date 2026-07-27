@@ -17,6 +17,7 @@ import {
 import { Event, EventUiVariant } from '@/shared/types/event';
 import { sanitizeEventHtml } from '@/shared/utils/eventHtml';
 import { getEventDisplayImages } from '@/shared/utils/eventImages';
+import { isPublicEventReady } from '@/shared/utils/eventPublicPolicy';
 import Link from 'next/link';
 import EventActionBar, {
   EventActionSummaryItem,
@@ -77,7 +78,7 @@ const getBenefitItems = (event: Event) => {
   const items: string[] = [];
 
   if (event.discountRate && event.discountRate > 0) {
-    items.push(`최대 ${event.discountRate}% 할인 혜택이 적용됩니다.`);
+    items.push(`할인 표시율은 최대 ${event.discountRate}%입니다. 실제 가격은 상품별로 확인해주세요.`);
   }
 
   if (event.discountAmount && event.discountAmount > 0) {
@@ -148,11 +149,11 @@ const getNoticeItems = (
   }
 
   if (event.eventType === 'coupon' && event.couponType === 'manual') {
-    notices.push('수동 쿠폰 이벤트는 고객센터 또는 별도 공지로 받은 코드 입력이 필요합니다.');
+    notices.push('수동 쿠폰의 온라인 코드 발급은 제공하지 않습니다. 이벤트 상세에 표시된 검증된 안내만 확인해주세요.');
   }
 
   if (event.eventType === 'sale') {
-    notices.push('세일 대상 상품과 할인율은 재고 상황에 따라 일부 조정될 수 있습니다.');
+    notices.push('상품 가격과 할인율은 각 상품에 현재 등록된 정보를 확인해주세요.');
   }
 
   if (event.eligibilityType === 'review') {
@@ -228,10 +229,10 @@ const getPrimaryCtaConfig = (
 
   if (!isDirectParticipationAvailable) {
     return {
-      eyebrow: '쿠폰 코드 안내',
-      label: '쿠폰 코드 문의하기',
-      description: '수동 쿠폰 이벤트이므로 고객센터에서 코드와 사용 조건을 먼저 확인해주세요.',
-      action: 'support',
+      eyebrow: '수동 쿠폰 안내',
+      label: '수동 쿠폰 안내 확인',
+      description: '온라인 코드 발급은 제공하지 않습니다. 이벤트 상세의 검증된 안내를 확인해주세요.',
+      action: 'notice',
     };
   }
 
@@ -270,7 +271,7 @@ const getScopeSummary = (event: Event) => {
   }
 };
 
-export default function EventDetailClient({ event }: EventDetailClientProps) {
+function EventDetailContent({ event }: EventDetailClientProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const noticeSectionRef = useRef<HTMLElement | null>(null);
@@ -590,4 +591,20 @@ export default function EventDetailClient({ event }: EventDetailClientProps) {
       />
     </div>
   );
+}
+
+export default function EventDetailClient({ event }: EventDetailClientProps) {
+  if (!isPublicEventReady(event)) {
+    return (
+      <main className={styles.container}>
+        <section className={styles.content} role="status" aria-live="polite">
+          <h1>이벤트 공개 준비 중</h1>
+          <p>혜택과 참여 조건의 운영 검증이 끝난 뒤 공개됩니다.</p>
+          <Link href="/events">전체 이벤트 보기</Link>
+        </section>
+      </main>
+    );
+  }
+
+  return <EventDetailContent event={event} />;
 }

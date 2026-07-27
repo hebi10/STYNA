@@ -36,7 +36,7 @@ export default function NotFound() {
             </Link>
             <span className={styles.separator}>|</span>
             <Link href="/recommend?filter=review" className={styles.link}>
-              인기 상품 보기
+              상품 보기
             </Link>
             <span className={styles.separator}>|</span>
             <Link href="/brand" className={styles.link}>

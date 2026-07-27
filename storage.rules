@@ -48,7 +48,7 @@ service firebase.storage {
     }
 
     match /events/{allPaths=**} {
-      allow read: if true;
+      allow read: if isAdmin();
       allow create, update: if isAdmin() && isValidImageUpload();
       allow delete: if isAdmin();
     }

@@ -6,6 +6,7 @@
 - 좌측 카드는 상품 중심 이미지, 우측 카드는 모델 착용 중심 이미지로 구성한다.
 - 좌우 카드는 비슷한 컬러 무드를 공유하지만 서로 다른 상품 상세 URL로 이동한다.
 - 메인 배너 이미지는 Firebase Storage의 `images/main-banner/{productId}/banner.webp`에서 읽는다.
+- 마운트 당시 첫 슬라이드의 첫 번째 이미지 한 장만 초기 LCP 후보로 `priority`를 사용한다. 자동·수동 이동이나 세션 복원 뒤에는 새 활성 이미지로 `priority`를 옮기지 않는다.
 - 상품 상세 이미지는 Firestore `products/{productId}` 문서의 `mainImage`, `images`, `detailImages` 필드에서 읽으며, 값은 Firebase Storage URL이다.
 - 배너 상품 상세는 로컬 fallback 데이터를 사용하지 않는다. Firestore `products/{productId}` 문서가 실제 데이터 원본이다.
 
@@ -33,7 +34,7 @@
 - 워시드 와이드 데님 팬츠: `/products/washed-wide-denim-pants`
 
 ## 검증
-- `MainBanner.test.tsx`에서 5개 세트, 10개 상품 링크, Firebase Storage 이미지 URL, 이벤트/카테고리 링크 미사용, 수동/자동 슬라이드 이동을 확인한다.
+- `MainBanner.test.tsx`에서 5개 세트, 10개 상품 링크, Firebase Storage 이미지 URL, 이벤트/카테고리 링크 미사용, 초기 단일 `priority` 이미지와 수동·자동·세션 복원 뒤 priority 재할당 방지를 확인한다.
 - `productService.mainBannerFallback.test.ts`에서 Firestore에 상품 ID 문서가 없을 때 로컬 fallback 상품 데이터가 반환되지 않는지 확인한다.
 - Firestore의 `products/{productId}.mainImage`, `images`, `detailImages`는 `/products/main-banner/*` 같은 로컬 경로가 아니라 `https://firebasestorage.googleapis.com/...` URL이어야 한다.
 - 배너 이미지를 바꾸면 브라우저에서 좌측 상품 중심 이미지, 우측 모델 중심 이미지, 좌우 7% 미리보기, 가로 이동 전환을 확인한다.
@@ -46,3 +47,11 @@
 - 슬라이드 전환 중에는 버튼, 페이지네이션, 자동 전환, 새 드래그 이동을 받지 않는다. 빠른 연속 입력으로 트랙이 여러 칸을 역방향 이동하는 현상을 방지한다.
 - 무한 순환의 복제 슬라이드 위치 보정은 `transform`의 `transitionend`에서만 처리한다. 고정 시간 타이머를 함께 사용하지 않는다.
 - 현재 슬라이드 번호는 브라우저 세션에 저장한다. 상품 상세를 열었다가 뒤로 가기로 돌아오면 마지막으로 보던 배너를 복원한다.
+
+## 2026-07-21 접근성 재생 제어
+
+- 자동 재생 시작·정지 버튼을 제공하며, 사용자가 정지한 상태에서는 자동 전환을 다시 시작하지 않는다.
+- 배너에 마우스를 올리거나 키보드 포커스가 머무는 동안 자동 전환을 일시 중지하고 영역을 벗어나면 사용자 재생 설정을 유지한 채 재개한다.
+- `prefers-reduced-motion: reduce`에서는 자동 재생 시작 버튼을 비활성화하고 transform 전환을 사용하지 않는다. 설정을 해제하기 전에는 이전·다음·페이지 버튼으로만 즉시 전환한다.
+- 전환 중 운영체제의 모션 감소 설정이 켜져도 현재 전환 잠금을 즉시 해제한다. 무한 순환 경계의 복제 슬라이드에 있으면 같은 실제 슬라이드 위치로 즉시 정규화해 설정을 다시 꺼도 여러 칸을 가로지르거나 잠기지 않는다.
+- 모바일 페이지 점은 시각 점 크기와 별개로 각 44×44px 터치 영역을 제공한다.

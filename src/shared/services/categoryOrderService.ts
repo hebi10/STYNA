@@ -70,11 +70,8 @@ export function getCuratedMainPageCategories(
   });
 
   return MAIN_PAGE_CATEGORY_PRIORITY
-    .map((id, index) => byCuratedId.get(id) || {
-      id,
-      name: DEFAULT_CATEGORY_NAMES[id] || id,
-      order: index,
-    })
+    .map((id) => byCuratedId.get(id))
+    .filter((category): category is SortedCategory => Boolean(category))
     .slice(0, maxCount);
 }
 
@@ -176,11 +173,7 @@ export class CategoryOrderService {
       return sortedCategories;
     } catch (error) {
       console.error('정렬된 카테고리 조회 실패:', error);
-      return DEFAULT_CATEGORY_IDS.map((id, index) => ({
-        id,
-        name: DEFAULT_CATEGORY_NAMES[id] || id,
-        order: index,
-      }));
+      throw error;
     }
   }
 

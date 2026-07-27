@@ -25,10 +25,10 @@ interface DynamicCategorySectionProps {
 }
 
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
-  tops: '매일 입기 좋은 기본 상의',
-  bottoms: '실루엣을 잡아주는 기본 하의',
-  shoes: '오래 걸어도 편한 데일리 슈즈',
-  sports: '가볍게 움직이기 좋은 액티브웨어',
+  tops: '현재 등록된 기본 상의 상품',
+  bottoms: '현재 등록된 기본 하의 상품',
+  shoes: '현재 등록된 신발 상품',
+  sports: '현재 등록된 스포츠 상품',
 };
 
 const TEXT_MODE_CATEGORY_IDS = ['tops', 'bottoms', 'shoes', 'sports'] as const;

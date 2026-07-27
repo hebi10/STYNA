@@ -1,5 +1,7 @@
 import { 
+  average,
   collection, 
+  count,
   doc, 
   updateDoc, 
   deleteDoc, 
@@ -10,6 +12,7 @@ import {
   orderBy, 
   limit, 
   startAfter,
+  getAggregateFromServer,
   getCountFromServer,
   QueryDocumentSnapshot,
   DocumentData,
@@ -38,6 +41,69 @@ export interface ReviewEligibilityOption {
   productId: string;
   size: string;
   color: string;
+}
+
+const REVIEW_SUMMARY_SCHEMA_VERSION = 1;
+const REVIEW_RATINGS = [5, 4, 3, 2, 1] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function readMaterializedReviewSummary(value: unknown): ReviewSummary | null {
+  if (!isRecord(value) || value.schemaVersion !== REVIEW_SUMMARY_SCHEMA_VERSION) {
+    return null;
+  }
+
+  const totalReviews = value.totalReviews;
+  const averageRating = value.averageRating;
+  const recommendedCount = value.recommendedCount;
+  const recommendationRate = value.recommendationRate;
+  const distribution = value.ratingDistribution;
+  if (
+    !Number.isSafeInteger(totalReviews) || Number(totalReviews) < 0
+    || typeof averageRating !== 'number' || !Number.isFinite(averageRating)
+    || averageRating < 0 || averageRating > 5
+    || !Number.isSafeInteger(recommendedCount) || Number(recommendedCount) < 0
+    || Number(recommendedCount) > Number(totalReviews)
+    || !Number.isSafeInteger(recommendationRate) || Number(recommendationRate) < 0
+    || Number(recommendationRate) > 100
+    || !isRecord(distribution)
+  ) {
+    return null;
+  }
+
+  const ratingDistribution = REVIEW_RATINGS.reduce<ReviewSummary['ratingDistribution']>(
+    (normalized, rating) => {
+      const count = distribution[String(rating)];
+      normalized[rating] = Number.isSafeInteger(count) && Number(count) >= 0
+        ? Number(count)
+        : -1;
+      return normalized;
+    },
+    { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+  );
+  const distributionTotal = REVIEW_RATINGS.reduce(
+    (sum, rating) => sum + ratingDistribution[rating],
+    0,
+  );
+  const expectedRecommendationRate = Number(totalReviews) > 0
+    ? Math.round((Number(recommendedCount) / Number(totalReviews)) * 100)
+    : 0;
+  if (
+    distributionTotal !== totalReviews
+    || recommendationRate !== expectedRecommendationRate
+    || (totalReviews === 0 && averageRating !== 0)
+  ) {
+    return null;
+  }
+
+  return {
+    totalReviews: Number(totalReviews),
+    averageRating,
+    ratingDistribution,
+    recommendationRate: Number(recommendationRate),
+  };
 }
 
 function toReview(data: Record<string, unknown>): Review {
@@ -140,6 +206,7 @@ export class ReviewService {
       let reviewQuery = query(
         reviewsCollection,
         where('productId', '==', productId),
+        orderBy('createdAt', 'desc'),
         limit(pageSize)
       );
 
@@ -198,15 +265,29 @@ export class ReviewService {
         reviewQuery = query(reviewQuery, where('rating', '==', rating));
       }
 
-      const snapshot = await getDocs(reviewQuery);
-      const reviews = snapshot.docs.map(doc => doc.data());
-      
-      const totalCount = reviews.length;
-      const averageRating = totalCount > 0 
-        ? reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / totalCount
-        : 0;
-      const recommendationRate = totalCount > 0 
-        ? (reviews.filter(review => review.isRecommended).length / totalCount) * 100
+      const recommendedReviewsQuery = query(
+        reviewQuery,
+        where('isRecommended', '==', true)
+      );
+      const [statisticsSnapshot, recommendationSnapshot] = await Promise.all([
+        getAggregateFromServer(reviewQuery, {
+          totalCount: count(),
+          averageRating: average('rating'),
+        }),
+        getAggregateFromServer(recommendedReviewsQuery, {
+          recommendedCount: count(),
+        }),
+      ]);
+
+      const statistics = statisticsSnapshot.data();
+      const recommendation = recommendationSnapshot.data();
+      const totalCount = statistics.totalCount;
+      const averageRating = Math.min(5, Math.max(0, statistics.averageRating ?? 0));
+      const recommendationRate = totalCount > 0
+        ? Math.min(100, Math.max(
+          0,
+          (recommendation.recommendedCount / totalCount) * 100,
+        ))
         : 0;
 
       return {
@@ -394,11 +475,28 @@ export class ReviewService {
   // 상품 리뷰 요약 정보 조회
   static async getReviewSummary(productId: string): Promise<ReviewSummary> {
     try {
+      try {
+        const productSnapshot = await getDoc(doc(db, 'products', productId));
+        if (productSnapshot.exists()) {
+          const materializedSummary = readMaterializedReviewSummary(
+            productSnapshot.data().reviewSummary,
+          );
+          if (materializedSummary) return materializedSummary;
+        }
+      } catch (error) {
+        console.warn('Product review summary read used aggregate fallback:', error);
+      }
+
       const reviewsCollection = collection(db, 'reviews');
       const reviewQuery = query(reviewsCollection, where('productId', '==', productId));
-      const snapshot = await getDocs(reviewQuery);
-      
-      if (snapshot.empty) {
+      const summarySnapshot = await getAggregateFromServer(reviewQuery, {
+        totalReviews: count(),
+        averageRating: average('rating'),
+      });
+      const summaryData = summarySnapshot.data();
+      const totalReviews = Math.max(0, Math.floor(Number(summaryData.totalReviews) || 0));
+
+      if (totalReviews === 0) {
         return {
           averageRating: 0,
           totalReviews: 0,
@@ -407,23 +505,32 @@ export class ReviewService {
         };
       }
 
-      const reviews = snapshot.docs.map(doc => doc.data());
-      const totalReviews = reviews.length;
-      
-      // 평점 분포 계산
-      const ratingDistribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-      let totalRating = 0;
-      let recommendedCount = 0;
-
-      reviews.forEach(review => {
-        const rating = review.rating as keyof typeof ratingDistribution;
-        ratingDistribution[rating]++;
-        totalRating += review.rating;
-        if (review.isRecommended) recommendedCount++;
-      });
-
-      const averageRating = totalRating / totalReviews;
-      const recommendationRate = (recommendedCount / totalReviews) * 100;
+      const ratingValues = REVIEW_RATINGS;
+      const [recommendedSnapshot, ...ratingSnapshots] = await Promise.all([
+        getCountFromServer(query(reviewQuery, where('isRecommended', '==', true))),
+        ...ratingValues.map((rating) => (
+          getCountFromServer(query(reviewQuery, where('rating', '==', rating)))
+        )),
+      ]);
+      const safeCount = (value: unknown) => Math.min(
+        totalReviews,
+        Math.max(0, Math.floor(Number(value) || 0)),
+      );
+      const ratingDistribution = ratingValues.reduce<ReviewSummary['ratingDistribution']>(
+        (distribution, rating, index) => {
+          distribution[rating] = safeCount(ratingSnapshots[index]?.data().count);
+          return distribution;
+        },
+        { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      );
+      const recommendedCount = safeCount(recommendedSnapshot.data().count);
+      const averageRating = Math.min(
+        5,
+        Math.max(0, Number(summaryData.averageRating) || 0),
+      );
+      const recommendationRate = Math.min(100, Math.max(0, (
+        recommendedCount / totalReviews
+      ) * 100));
 
       return {
         averageRating: Math.round(averageRating * 10) / 10, // 소수점 1자리

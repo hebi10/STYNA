@@ -9,6 +9,8 @@ import {
 } from "@/shared/services/siteContentService";
 import styles from "./page.module.css";
 
+const UNAVAILABLE_DELIVERY_CLAIM = /당일\s*(?:발송|출고|배송)/;
+
 export default function OfflinePage() {
   const [stores, setStores] = useState<OfflineStoreContent[]>([]);
   const [services, setServices] = useState<OfflineServiceContent[]>([]);
@@ -77,7 +79,7 @@ export default function OfflinePage() {
                     </div>
 
                     <div className={styles.storeFeatures}>
-                      {store.features.map((feature) => (
+                      {store.features.filter(feature => !UNAVAILABLE_DELIVERY_CLAIM.test(feature)).map((feature) => (
                         <span key={feature} className={styles.feature}>
                           {feature}
                         </span>

@@ -16,10 +16,36 @@ function normalizeString(value) {
 
 function normalizeTargetProducts(value) {
   if (!Array.isArray(value)) {
-    return [];
+    return {
+      targetProducts: [],
+      hasInvalidTargetProducts: value !== undefined && value !== null,
+    };
   }
 
-  return Array.from(new Set(value.map(normalizeString).filter(Boolean)));
+  const targetProducts = [];
+  let hasInvalidTargetProducts = false;
+
+  for (const rawTargetProduct of value) {
+    const targetProduct = normalizeString(rawTargetProduct);
+    if (!isValidFirestoreDocumentId(targetProduct)) {
+      hasInvalidTargetProducts = true;
+      continue;
+    }
+    if (!targetProducts.includes(targetProduct)) {
+      targetProducts.push(targetProduct);
+    }
+  }
+
+  return { targetProducts, hasInvalidTargetProducts };
+}
+
+function isValidFirestoreDocumentId(value) {
+  return Boolean(value)
+    && value !== '.'
+    && value !== '..'
+    && !value.includes('/')
+    && !/^__.*__$/.test(value)
+    && Buffer.byteLength(value, 'utf8') <= 1500;
 }
 
 function isKnownReviewEvent(event) {
@@ -29,17 +55,27 @@ function isKnownReviewEvent(event) {
     .join(' ');
 
   return KNOWN_REVIEW_EVENT_IDS.includes(eventId)
-    || REVIEW_EVENT_KEYWORDS.some(keyword => reviewCopy.includes(keyword));
+    || (
+      event.eventType === 'special'
+      && REVIEW_EVENT_KEYWORDS.some(keyword => reviewCopy.includes(keyword))
+    );
 }
 
 function planEventEligibilityPatch(event) {
   const source = event && typeof event === 'object' && !Array.isArray(event) ? event : {};
   const reasons = [];
-  const targetProducts = normalizeTargetProducts(source.targetProducts);
-  const rewardCouponId = normalizeString(source.rewardCouponId);
+  const {
+    targetProducts,
+    hasInvalidTargetProducts,
+  } = normalizeTargetProducts(source.targetProducts);
+  const rawRewardCouponId = normalizeString(source.rewardCouponId);
+  const rewardCouponId = isValidFirestoreDocumentId(rawRewardCouponId)
+    ? rawRewardCouponId
+    : '';
 
+  const hasCanonicalEligibilityType = VALID_ELIGIBILITY_TYPES.has(source.eligibilityType);
   let eligibilityType;
-  if (VALID_ELIGIBILITY_TYPES.has(source.eligibilityType)) {
+  if (hasCanonicalEligibilityType) {
     eligibilityType = source.eligibilityType;
     reasons.push('preserved_valid_eligibility');
   } else if (isKnownReviewEvent(source)) {
@@ -50,8 +86,9 @@ function planEventEligibilityPatch(event) {
     reasons.push('defaulted_legacy_eligibility_to_none');
   }
 
+  const hasCanonicalRewardType = VALID_REWARD_TYPES.has(source.rewardType);
   let rewardType;
-  if (VALID_REWARD_TYPES.has(source.rewardType)) {
+  if (hasCanonicalRewardType) {
     rewardType = source.rewardType;
     reasons.push('preserved_valid_reward');
   } else if (rewardCouponId) {
@@ -65,32 +102,49 @@ function planEventEligibilityPatch(event) {
   const patch = {
     eligibilityType,
     rewardType,
-    ...(EVIDENCE_ELIGIBILITY_TYPES.has(eligibilityType) && targetProducts.length > 0
+    ...(
+      EVIDENCE_ELIGIBILITY_TYPES.has(eligibilityType)
+      && targetProducts.length > 0
+      && !hasInvalidTargetProducts
       ? { targetProducts }
       : {}),
     ...(rewardType === 'coupon' && rewardCouponId ? { rewardCouponId } : {}),
   };
+  const hasStaleTargetProducts =
+    !EVIDENCE_ELIGIBILITY_TYPES.has(eligibilityType)
+    && Object.prototype.hasOwnProperty.call(source, 'targetProducts');
+  const hasStaleRewardCoupon =
+    rewardType !== 'coupon'
+    && Object.prototype.hasOwnProperty.call(source, 'rewardCouponId');
   const deleteFields = [];
   const requiresManualTargetProducts =
-    EVIDENCE_ELIGIBILITY_TYPES.has(eligibilityType) && targetProducts.length === 0;
+    EVIDENCE_ELIGIBILITY_TYPES.has(eligibilityType)
+    && (targetProducts.length === 0 || hasInvalidTargetProducts);
+  const requiresManualRewardCoupon = rewardType === 'coupon' && !rewardCouponId;
+  const requiresManualPublicPolicyVerification = source.publicPolicyVerified !== true;
+  const requiresManualConfiguration =
+    requiresManualTargetProducts
+    || requiresManualRewardCoupon
+    || requiresManualPublicPolicyVerification
+    || !hasCanonicalEligibilityType
+    || !hasCanonicalRewardType
+    || hasStaleTargetProducts
+    || hasStaleRewardCoupon;
 
   if (requiresManualTargetProducts) {
-    reasons.push('missing_target_products');
+    reasons.push(hasInvalidTargetProducts ? 'invalid_target_products' : 'missing_target_products');
   }
-  if (rewardType === 'coupon' && !rewardCouponId) {
-    reasons.push('missing_reward_coupon_id');
+  if (requiresManualRewardCoupon) {
+    reasons.push(rawRewardCouponId ? 'invalid_reward_coupon_id' : 'missing_reward_coupon_id');
   }
-  if (
-    !EVIDENCE_ELIGIBILITY_TYPES.has(eligibilityType)
-    && Object.prototype.hasOwnProperty.call(source, 'targetProducts')
-  ) {
+  if (requiresManualPublicPolicyVerification) {
+    reasons.push('public_policy_unverified');
+  }
+  if (hasStaleTargetProducts) {
     deleteFields.push('targetProducts');
     reasons.push('stale_target_products');
   }
-  if (
-    rewardType !== 'coupon'
-    && Object.prototype.hasOwnProperty.call(source, 'rewardCouponId')
-  ) {
+  if (hasStaleRewardCoupon) {
     deleteFields.push('rewardCouponId');
     reasons.push('stale_reward_coupon_id');
   }
@@ -99,6 +153,9 @@ function planEventEligibilityPatch(event) {
     patch,
     reasons,
     requiresManualTargetProducts,
+    requiresManualRewardCoupon,
+    requiresManualPublicPolicyVerification,
+    requiresManualConfiguration,
     deleteFields,
   };
 }
@@ -123,6 +180,10 @@ async function analyzeEventEligibility(runtime) {
     dryRun: true,
     eventCount: plans.length,
     manualTargetProductCount: plans.filter(plan => plan.requiresManualTargetProducts).length,
+    manualRewardCouponCount: plans.filter(plan => plan.requiresManualRewardCoupon).length,
+    manualPublicPolicyVerificationCount:
+      plans.filter(plan => plan.requiresManualPublicPolicyVerification).length,
+    manualConfigurationCount: plans.filter(plan => plan.requiresManualConfiguration).length,
     plans,
   };
 }

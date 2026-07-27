@@ -4,14 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CartService } from '../services/cartService';
 import { AddToCartRequest, UpdateCartItemRequest } from '../types/cart';
 import { Product } from '../types/product';
+import { cartKeys } from './queryKeys';
 
-// Query Keys
-export const cartKeys = {
-  all: ['cart'] as const,
-  lists: () => [...cartKeys.all, 'list'] as const,
-  list: (userId: string) => [...cartKeys.lists(), userId] as const,
-  count: (userId: string) => [...cartKeys.all, 'count', userId] as const,
-};
+export { cartKeys } from './queryKeys';
 
 /**
  * 사용자 장바구니 조회 훅

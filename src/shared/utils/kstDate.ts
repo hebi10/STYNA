@@ -1,5 +1,6 @@
 const SEOUL_TIME_ZONE = 'Asia/Seoul';
-const DATE_ONLY_PATTERN = /^(\d{4})[-./](\d{2})[-./](\d{2})$/;
+const DATE_ONLY_SHAPE_PATTERN = /^\d{4}[-./]\d{2}[-./]\d{2}$/;
+const DATE_ONLY_PATTERN = /^(\d{4})([-./])(\d{2})\2(\d{2})$/;
 
 const seoulDayFormatter = new Intl.DateTimeFormat('en-US', {
   timeZone: SEOUL_TIME_ZONE,
@@ -15,8 +16,8 @@ function normalizeDateOnly(value: string): string | null {
   }
 
   const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
+  const month = Number(match[3]);
+  const day = Number(match[4]);
   const candidate = new Date(Date.UTC(year, month - 1, day));
   if (
     candidate.getUTCFullYear() !== year
@@ -26,7 +27,7 @@ function normalizeDateOnly(value: string): string | null {
     return null;
   }
 
-  return `${match[1]}-${match[2]}-${match[3]}`;
+  return `${match[1]}-${match[3]}-${match[4]}`;
 }
 
 function toInstant(value: unknown): Date | null {
@@ -52,7 +53,7 @@ function toInstant(value: unknown): Date | null {
 }
 
 export function toKstDayKey(value: unknown): string {
-  if (typeof value === 'string' && DATE_ONLY_PATTERN.test(value.trim())) {
+  if (typeof value === 'string' && DATE_ONLY_SHAPE_PATTERN.test(value.trim())) {
     const dateOnly = normalizeDateOnly(value);
     if (!dateOnly) {
       throw new RangeError('A valid date value is required.');
@@ -77,7 +78,7 @@ export function toKstDayKey(value: unknown): string {
 }
 
 export function parseCouponExpiryDay(value: unknown): string | null {
-  if (typeof value === 'string' && DATE_ONLY_PATTERN.test(value.trim())) {
+  if (typeof value === 'string' && DATE_ONLY_SHAPE_PATTERN.test(value.trim())) {
     return normalizeDateOnly(value);
   }
 

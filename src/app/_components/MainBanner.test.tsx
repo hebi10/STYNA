@@ -41,6 +41,23 @@ const finishTrackTransition = (track: HTMLElement) => {
   fireEvent(track, transitionEnd);
 };
 
+const setReducedMotion = (matches: boolean) => {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: jest.fn().mockImplementation((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)' ? matches : false,
+      media: query,
+      onchange: null,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+};
+
 const expectedCards = [
   {
     href: '/products/cool-touch-oversized-shirt',
@@ -95,6 +112,10 @@ const expectedCards = [
 ];
 
 describe('MainBanner', () => {
+  beforeEach(() => {
+    setReducedMotion(false);
+  });
+
   afterEach(() => {
     jest.useRealTimers();
     window.sessionStorage.clear();
@@ -119,13 +140,14 @@ describe('MainBanner', () => {
     expect(links.some((link) => link.getAttribute('href')?.startsWith('/categories/'))).toBe(false);
   });
 
-  test('preloads current and adjacent slide images before a user navigates', () => {
+  test('preloads only the first LCP candidate while keeping adjacent slide images non-priority', () => {
     const { container } = render(<MainBanner />);
     const images = Array.from(container.querySelectorAll<HTMLImageElement>('img'));
     const priorityImages = images.filter((image) => image.dataset.priority === 'true');
 
     expect(images).toHaveLength(6);
-    expect(priorityImages).toHaveLength(6);
+    expect(priorityImages).toHaveLength(1);
+    expect(priorityImages[0]).toHaveAttribute('src', expectedCards[0].image);
     expect(images.every((image) => image.src.startsWith('https://firebasestorage.googleapis.com/'))).toBe(true);
     expect(images.some((image) => image.src.includes('mesh-low-profile-sneakers'))).toBe(false);
   });
@@ -141,6 +163,11 @@ describe('MainBanner', () => {
 
     expect(track?.style.getPropertyValue('--track-index')).toBe('2');
     expect(screen.getByRole('button', { name: '2번 배너 보기' })).toHaveAttribute('aria-current', 'true');
+    expect(
+      Array.from(container.querySelectorAll<HTMLImageElement>('img'))
+        .filter((image) => image.dataset.priority === 'true')
+        .map((image) => image.getAttribute('src')),
+    ).toEqual([expectedCards[0].image]);
   });
 
   test('ignores repeated navigation until the current transition finishes', () => {
@@ -184,6 +211,168 @@ describe('MainBanner', () => {
     });
 
     expect(track?.style.getPropertyValue('--track-index')).toBe('3');
+  });
+
+  test('lets the user pause and resume automatic rotation', () => {
+    jest.useFakeTimers();
+    const { container } = render(<MainBanner />);
+    const track = container.querySelector<HTMLElement>('.bannerTrack');
+    const pauseButton = screen.getByRole('button', { name: '배너 자동 재생 정지' });
+
+    expect(pauseButton).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(pauseButton);
+
+    act(() => {
+      jest.advanceTimersByTime(4500);
+    });
+    expect(track?.style.getPropertyValue('--track-index')).toBe('1');
+
+    const playButton = screen.getByRole('button', { name: '배너 자동 재생 시작' });
+    expect(playButton).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(playButton);
+
+    act(() => {
+      jest.advanceTimersByTime(4500);
+    });
+    expect(track?.style.getPropertyValue('--track-index')).toBe('2');
+    expect(
+      Array.from(container.querySelectorAll<HTMLImageElement>('img'))
+        .filter((image) => image.dataset.priority === 'true')
+        .map((image) => image.getAttribute('src')),
+    ).toEqual([expectedCards[0].image]);
+  });
+
+  test('pauses automatic rotation while the carousel is hovered or focused', () => {
+    jest.useFakeTimers();
+    const { container } = render(<MainBanner />);
+    const region = screen.getByLabelText('메인 상품 배너');
+    const track = container.querySelector<HTMLElement>('.bannerTrack');
+
+    fireEvent.mouseEnter(region);
+    act(() => {
+      jest.advanceTimersByTime(4500);
+    });
+    expect(track?.style.getPropertyValue('--track-index')).toBe('1');
+
+    fireEvent.mouseLeave(region);
+    fireEvent.focusIn(region);
+    act(() => {
+      jest.advanceTimersByTime(4500);
+    });
+    expect(track?.style.getPropertyValue('--track-index')).toBe('1');
+
+    fireEvent.focusOut(region, { relatedTarget: document.body });
+    act(() => {
+      jest.advanceTimersByTime(4500);
+    });
+    expect(track?.style.getPropertyValue('--track-index')).toBe('2');
+  });
+
+  test('starts paused and navigates without transition lock for reduced motion', () => {
+    setReducedMotion(true);
+    jest.useFakeTimers();
+    const { container } = render(<MainBanner />);
+    const track = container.querySelector<HTMLElement>('.bannerTrack');
+
+    const autoPlayButton = screen.getByRole('button', { name: '배너 자동 재생 시작' });
+    expect(autoPlayButton).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(autoPlayButton).toBeDisabled();
+    expect(track).toHaveClass('bannerTrackReducedMotion');
+
+    fireEvent.click(autoPlayButton);
+    act(() => {
+      jest.advanceTimersByTime(4500);
+    });
+    expect(track?.style.getPropertyValue('--track-index')).toBe('1');
+
+    fireEvent.click(screen.getByRole('button', { name: '다음 배너' }));
+    fireEvent.click(screen.getByRole('button', { name: '다음 배너' }));
+    expect(track?.style.getPropertyValue('--track-index')).toBe('3');
+  });
+
+  test('releases an active transition when reduced motion is enabled at runtime', () => {
+    let motionChangeListener: ((event: MediaQueryListEvent) => void) | undefined;
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: jest.fn().mockImplementation(() => ({
+        matches: false,
+        media: '(prefers-reduced-motion: reduce)',
+        onchange: null,
+        addEventListener: (
+          _type: string,
+          listener: (event: MediaQueryListEvent) => void,
+        ) => {
+          motionChangeListener = listener;
+        },
+        removeEventListener: jest.fn(),
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+      })),
+    });
+    const { container } = render(<MainBanner />);
+    const nextButton = screen.getByRole('button', { name: '다음 배너' });
+    const track = container.querySelector<HTMLElement>('.bannerTrack');
+
+    fireEvent.click(nextButton);
+    expect(nextButton).toBeDisabled();
+
+    act(() => {
+      motionChangeListener?.({ matches: true } as MediaQueryListEvent);
+    });
+
+    expect(nextButton).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: '배너 자동 재생 시작' })).toBeDisabled();
+    fireEvent.click(nextButton);
+    expect(track?.style.getPropertyValue('--track-index')).toBe('3');
+  });
+
+  test('normalizes a boundary clone when reduced motion changes during wraparound', () => {
+    let motionChangeListener: ((event: MediaQueryListEvent) => void) | undefined;
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: jest.fn().mockImplementation(() => ({
+        matches: false,
+        media: '(prefers-reduced-motion: reduce)',
+        onchange: null,
+        addEventListener: (
+          _type: string,
+          listener: (event: MediaQueryListEvent) => void,
+        ) => {
+          motionChangeListener = listener;
+        },
+        removeEventListener: jest.fn(),
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+      })),
+    });
+    const { container } = render(<MainBanner />);
+    const track = container.querySelector<HTMLElement>('.bannerTrack');
+    const nextButton = screen.getByRole('button', { name: '다음 배너' });
+
+    fireEvent.click(screen.getByRole('button', { name: '5번 배너 보기' }));
+    finishTrackTransition(track!);
+    fireEvent.click(nextButton);
+    expect(track?.style.getPropertyValue('--track-index')).toBe('6');
+
+    act(() => {
+      motionChangeListener?.({ matches: true } as MediaQueryListEvent);
+    });
+    expect(track?.style.getPropertyValue('--track-index')).toBe('1');
+
+    act(() => {
+      motionChangeListener?.({ matches: false } as MediaQueryListEvent);
+    });
+    fireEvent.click(nextButton);
+    expect(track?.style.getPropertyValue('--track-index')).toBe('2');
+    finishTrackTransition(track!);
+    expect(nextButton).not.toBeDisabled();
   });
 
   test('moves one slide when the banner is dragged left', () => {
@@ -297,6 +486,10 @@ describe('MainBanner', () => {
     await waitFor(() => {
       expect(track?.style.getPropertyValue('--track-index')).toBe('3');
       expect(container.querySelectorAll('.paginationDot')[2]).toHaveAttribute('aria-current', 'true');
+      expect(
+        Array.from(container.querySelectorAll<HTMLImageElement>('img'))
+          .filter((image) => image.dataset.priority === 'true'),
+      ).toHaveLength(0);
     });
   });
 });

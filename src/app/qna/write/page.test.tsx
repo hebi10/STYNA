@@ -56,6 +56,10 @@ describe('QnA write account identity', () => {
   test('submits the authoritative user document email and name', async () => {
     render(<QnAWritePage />);
 
+    expect(screen.getByText(/문의 기록은 저장되지만 답변 여부와 시점은 보장하지 않습니다/))
+      .toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /이메일 알림/ })).not.toBeInTheDocument();
+
     fireEvent.change(screen.getByPlaceholderText('문의 제목을 입력해주세요'), {
       target: { value: '문의 제목' },
     });
@@ -68,7 +72,7 @@ describe('QnA write account identity', () => {
       'owner-1',
       'owner-1@example.com',
       '문서 작성자',
-      expect.objectContaining({ title: '문의 제목', content: '문의 내용' })
+      expect.objectContaining({ title: '문의 제목', content: '문의 내용', isNotified: false })
     ));
   });
 

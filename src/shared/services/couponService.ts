@@ -3,12 +3,15 @@
 import { 
   collection, 
   doc, 
+  getCountFromServer,
   getDoc, 
   getDocs, 
+  limit,
   query, 
   where, 
   documentId,
-  orderBy
+  orderBy,
+  type QueryConstraint,
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '@/shared/libs/firebase/firebase';
@@ -75,6 +78,12 @@ function normalizeCoupon(id: string, data: Record<string, unknown>): Coupon {
     createdAt: (data.createdAt as { toDate?: () => Date } | undefined)?.toDate?.() || new Date(),
     updatedAt: (data.updatedAt as { toDate?: () => Date } | undefined)?.toDate?.() || new Date()
   } as Coupon;
+}
+
+export interface UserCouponOverview {
+  coupons: UserCouponView[];
+  stats: CouponStats;
+  isTruncated: boolean;
 }
 
 export class CouponService {
@@ -233,12 +242,12 @@ export class CouponService {
     const uniqueIds = Array.from(new Set(couponIds)).filter(Boolean);
     const coupons = new Map<string, Coupon>();
 
-    for (const ids of chunk(uniqueIds, 10)) {
-      const snapshot = await getDocs(query(
+    const snapshots = await Promise.all(chunk(uniqueIds, 10).map((ids) => getDocs(query(
         collection(db, 'coupons'),
         where(documentId(), 'in', ids)
-      ));
+      ))));
 
+    for (const snapshot of snapshots) {
       snapshot.docs.forEach(doc => {
         coupons.set(doc.id, normalizeCoupon(doc.id, doc.data()));
       });
@@ -248,6 +257,91 @@ export class CouponService {
   }
 
   // ============ 유저 쿠폰 관련 ============
+
+  private static async loadUserCouponViews(
+    uid: string,
+    filter: CouponFilter,
+    limitCount: number,
+    queryLimitCount?: number,
+    sortByCreatedAt: boolean = false,
+  ): Promise<{ coupons: UserCouponView[]; records: UserCoupon[] }> {
+    const queryConstraints: QueryConstraint[] = [where('uid', '==', uid)];
+
+    if (filter.status && filter.status !== '전체') {
+      queryConstraints.push(where('status', '==', filter.status));
+    }
+
+    if (queryLimitCount) {
+      queryConstraints.push(orderBy('createdAt', 'desc'));
+      queryConstraints.push(limit(queryLimitCount));
+    }
+
+    const userCouponQuery = query(collection(db, 'user_coupons'), ...queryConstraints);
+    const userCouponsSnapshot = await getDocs(userCouponQuery);
+    const records = userCouponsSnapshot.docs.map((userCouponDoc) => {
+      const data = userCouponDoc.data();
+      return {
+        id: userCouponDoc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+      } as UserCoupon;
+    });
+    const visibleRecords = [...records];
+
+    if (sortByCreatedAt) {
+      visibleRecords.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    } else if (filter.sortBy) {
+      visibleRecords.sort((a, b) => {
+        const sortBy = filter.sortBy || 'issuedDate';
+        const sortOrder = filter.sortOrder || 'desc';
+        let aValue = 0;
+        let bValue = 0;
+
+        if (sortBy === 'issuedDate') {
+          aValue = new Date(a.issuedDate).getTime();
+          bValue = new Date(b.issuedDate).getTime();
+        } else if (sortBy === 'name') {
+          return 0;
+        } else {
+          const aRecord = a as unknown as Record<string, unknown>;
+          const bRecord = b as unknown as Record<string, unknown>;
+          aValue = Number(aRecord[sortBy]) || 0;
+          bValue = Number(bRecord[sortBy]) || 0;
+        }
+
+        return sortOrder === 'desc' ? bValue - aValue : aValue - bValue;
+      });
+    }
+
+    const couponMap = await this.getCouponsByIds(
+      visibleRecords.map((userCoupon) => userCoupon.couponId),
+    );
+    const coupons = visibleRecords.flatMap((userCoupon) => {
+      const coupon = couponMap.get(userCoupon.couponId);
+      if (!coupon || (filter.type && filter.type !== '전체' && coupon.type !== filter.type)) {
+        return [];
+      }
+      return [{ ...userCoupon, coupon }];
+    });
+
+    if (filter.sortBy === 'name') {
+      coupons.sort((a, b) => {
+        const comparison = a.coupon.name.localeCompare(b.coupon.name);
+        return filter.sortOrder === 'asc' ? comparison : -comparison;
+      });
+    }
+
+    return { coupons: coupons.slice(0, limitCount), records };
+  }
+
+  private static countUserCoupons(uid: string, status?: UserCoupon['status']) {
+    return getCountFromServer(query(
+      collection(db, 'user_coupons'),
+      where('uid', '==', uid),
+      ...(status ? [where('status', '==', status)] : []),
+    ));
+  }
   
   /**
    * 사용자의 쿠폰 목록 조회 (쿠폰 마스터 정보 포함)
@@ -258,94 +352,7 @@ export class CouponService {
     limitCount: number = 50
   ): Promise<UserCouponView[]> {
     try {
-      // 1. user_coupons 조회 (단순 쿼리로 수정)
-      let q = query(
-        collection(db, 'user_coupons'),
-        where('uid', '==', uid)
-      );
-
-      // 상태별 필터링이 있는 경우에만 추가 조건
-      if (filter.status && filter.status !== '전체') {
-        q = query(
-          collection(db, 'user_coupons'),
-          where('uid', '==', uid),
-          where('status', '==', filter.status)
-        );
-      }
-
-      const userCouponsSnapshot = await getDocs(q);
-      
-      let userCoupons = userCouponsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate() || new Date()
-      })) as UserCoupon[];
-
-      // 클라이언트 사이드에서 정렬 및 제한
-      if (filter.sortBy) {
-        userCoupons = userCoupons.sort((a, b) => {
-          const sortBy = filter.sortBy || 'issuedDate';
-          const sortOrder = filter.sortOrder || 'desc';
-          
-          let aValue = 0;
-          let bValue = 0;
-          
-          if (sortBy === 'issuedDate') {
-            aValue = new Date(a.issuedDate).getTime();
-            bValue = new Date(b.issuedDate).getTime();
-          } else if (sortBy === 'name') {
-            // 이름은 쿠폰 마스터에서 가져와야 하므로 나중에 처리
-            return 0;
-          } else {
-            const aRecord = a as unknown as Record<string, unknown>;
-            const bRecord = b as unknown as Record<string, unknown>;
-            aValue = Number(aRecord[sortBy]) || 0;
-            bValue = Number(bRecord[sortBy]) || 0;
-          }
-          
-          if (sortOrder === 'desc') {
-            return bValue - aValue;
-          } else {
-            return aValue - bValue;
-          }
-        });
-      }
-
-      // 제한 적용
-      userCoupons = userCoupons.slice(0, limitCount);
-
-      const couponMap = await this.getCouponsByIds(userCoupons.map(userCoupon => userCoupon.couponId));
-      const userCouponViews: UserCouponView[] = [];
-      
-      for (const userCoupon of userCoupons) {
-        const coupon = couponMap.get(userCoupon.couponId);
-        if (coupon) {
-          // 타입별 필터링
-          if (filter.type && filter.type !== '전체' && coupon.type !== filter.type) {
-            continue;
-          }
-          
-          userCouponViews.push({
-            ...userCoupon,
-            coupon
-          });
-        }
-      }
-
-      // 쿠폰 이름으로 정렬이 필요한 경우
-      if (filter.sortBy === 'name') {
-        userCouponViews.sort((a, b) => {
-          const sortOrder = filter.sortOrder || 'desc';
-          if (sortOrder === 'desc') {
-            return b.coupon.name.localeCompare(a.coupon.name);
-          } else {
-            return a.coupon.name.localeCompare(b.coupon.name);
-          }
-        });
-      }
-      
-      return userCouponViews;
+      return (await this.loadUserCouponViews(uid, filter, limitCount)).coupons;
     } catch (error) {
  console.error(' 사용자 쿠폰 목록 조회 실패:', error);
       throw new Error('쿠폰 목록을 불러오는데 실패했습니다.');
@@ -353,29 +360,52 @@ export class CouponService {
   }
 
   /**
-   * 사용자의 쿠폰 통계 조회
+   * 사용자의 쿠폰 목록과 통계를 같은 user_coupons snapshot에서 조회
    */
-  static async getUserCouponStats(uid: string): Promise<CouponStats> {
+  static async getUserCouponOverview(uid: string): Promise<UserCouponOverview> {
     try {
-      const q = query(
-        collection(db, 'user_coupons'),
-        where('uid', '==', uid)
+      const totalSnapshot = await this.countUserCoupons(uid);
+      const total = totalSnapshot.data().count;
+
+      const { coupons, records } = await this.loadUserCouponViews(
+        uid,
+        { sortBy: 'issuedDate', sortOrder: 'desc' },
+        50,
+        total > 50 ? 50 : undefined,
+        true,
       );
 
-      const querySnapshot = await getDocs(q);
-      const userCoupons = querySnapshot.docs.map(doc => doc.data()) as UserCoupon[];
+      if (total > 50) {
+        const [availableSnapshot, usedSnapshot, expiredSnapshot] = await Promise.all([
+          this.countUserCoupons(uid, '사용가능'),
+          this.countUserCoupons(uid, '사용완료'),
+          this.countUserCoupons(uid, '기간만료'),
+        ]);
+        return {
+          coupons,
+          stats: {
+            total,
+            available: availableSnapshot.data().count,
+            used: usedSnapshot.data().count,
+            expired: expiredSnapshot.data().count,
+          },
+          isTruncated: true,
+        };
+      }
 
-      const stats: CouponStats = {
-        total: userCoupons.length,
-        available: userCoupons.filter(c => c.status === '사용가능').length,
-        used: userCoupons.filter(c => c.status === '사용완료').length,
-        expired: userCoupons.filter(c => c.status === '기간만료').length
+      return {
+        coupons,
+        stats: {
+          total: records.length,
+          available: records.filter((coupon) => coupon.status === '사용가능').length,
+          used: records.filter((coupon) => coupon.status === '사용완료').length,
+          expired: records.filter((coupon) => coupon.status === '기간만료').length,
+        },
+        isTruncated: records.length > 50,
       };
-
-      return stats;
     } catch (error) {
- console.error('쿠폰 통계 조회 실패:', error);
-      throw new Error('쿠폰 통계를 불러오는데 실패했습니다.');
+      console.error('사용자 쿠폰 목록 조회 실패:', error);
+      throw new Error('쿠폰 목록을 불러오는데 실패했습니다.');
     }
   }
 
@@ -413,7 +443,7 @@ export class CouponService {
     try {
       const userCoupons = await this.getUserCoupons(uid, { 
         status: '사용가능' 
-      });
+      }, Number.MAX_SAFE_INTEGER);
 
       // 최소 주문 금액 조건 확인 및 만료일 확인
       const today = new Date();

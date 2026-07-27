@@ -3,9 +3,12 @@ import * as admin from "firebase-admin";
 import type { Response } from "express";
 import { verifyAuthContext, requireAdmin, AuthError } from "../utils/auth";
 import { applyNoStoreHeaders } from "../utils/http";
-
-const SIGNUP_BONUS_AMOUNT = 5000;
-const SIGNUP_BONUS_DESCRIPTION = "신규 회원가입 적립";
+import {
+  SIGNUP_BONUS_AMOUNT,
+  SIGNUP_BONUS_DESCRIPTION,
+  SIGNUP_BONUS_SOURCE,
+  isSignupBonusHistory,
+} from "../domain/signupBonus";
 
 export const points = onRequest(
   {
@@ -239,6 +242,35 @@ async function handleSignupBonus(userId: string, res: Response): Promise<void> {
       };
     }
 
+    const historyRef = userRef.collection("pointHistory");
+    const sourceHistory = await transaction.get(
+      historyRef.where("source", "==", SIGNUP_BONUS_SOURCE)
+    );
+    let legacyHistoryExists = sourceHistory.docs.some((historyDoc) => (
+      isSignupBonusHistory(historyDoc.data())
+    ));
+
+    if (!legacyHistoryExists) {
+      const descriptionHistory = await transaction.get(
+        historyRef.where("description", "==", SIGNUP_BONUS_DESCRIPTION)
+      );
+      legacyHistoryExists = descriptionHistory.docs.some((historyDoc) => (
+        isSignupBonusHistory(historyDoc.data())
+      ));
+    }
+
+    if (legacyHistoryExists) {
+      const now = admin.firestore.FieldValue.serverTimestamp();
+      transaction.update(userRef, {
+        signupBonusGrantedAt: now,
+        updatedAt: now,
+      });
+      return {
+        newBalance: currentBalance,
+        alreadyGranted: true,
+      };
+    }
+
     const newBalance = currentBalance + SIGNUP_BONUS_AMOUNT;
     const now = admin.firestore.FieldValue.serverTimestamp();
     transaction.update(userRef, {
@@ -246,7 +278,7 @@ async function handleSignupBonus(userId: string, res: Response): Promise<void> {
       signupBonusGrantedAt: now,
       updatedAt: now,
     });
-    transaction.set(userRef.collection("pointHistory").doc(), {
+    transaction.set(historyRef.doc(), {
       type: "earn",
       amount: SIGNUP_BONUS_AMOUNT,
       description: SIGNUP_BONUS_DESCRIPTION,
@@ -254,7 +286,7 @@ async function handleSignupBonus(userId: string, res: Response): Promise<void> {
       date: now,
       balanceAfter: newBalance,
       expired: false,
-      source: "signupBonus",
+      source: SIGNUP_BONUS_SOURCE,
     });
 
     return {
@@ -263,7 +295,10 @@ async function handleSignupBonus(userId: string, res: Response): Promise<void> {
     };
   });
 
-  res.status(200).json({ success: true, data: { ...result, userId } });
+  res.status(200).json({
+    success: true,
+    data: { ...result, bonusAmount: SIGNUP_BONUS_AMOUNT, userId },
+  });
 }
 
 async function handleUse(

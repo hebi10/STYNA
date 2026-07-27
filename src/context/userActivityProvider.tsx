@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from "react";
 import { HybridUserActivityService } from "@/shared/services/hybridUserActivityService";
 import { RecentProduct, WishlistItem } from "@/shared/types/userActivity";
 import { useAuth } from "./authProvider";
@@ -46,20 +46,61 @@ export function UserActivityProvider({ children }: { children: ReactNode }) {
   // UI 상태
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadGenerationRef = useRef(0);
+  const activeUserIdRef = useRef(user?.uid);
+  activeUserIdRef.current = user?.uid;
 
   // 사용자 변경시 데이터 로드
   useEffect(() => {
-    if (user?.uid) {
-      void HybridUserActivityService.getRecentProducts(user.uid)
-        .then(setRecentProducts)
-        .catch((err) => console.error('理쒓렐 蹂??곹뭹 濡쒕뱶 ?ㅽ뙣:', err));
-      void HybridUserActivityService.getWishlist(user.uid)
-        .then(setWishlistItems)
-        .catch((err) => console.error('李쒗븳 ?곹뭹 濡쒕뱶 ?ㅽ뙣:', err));
-    } else {
+    const userId = user?.uid;
+    const generation = ++loadGenerationRef.current;
+
+    if (!userId) {
       setRecentProducts([]);
       setWishlistItems([]);
+      setLoading(false);
+      setError(null);
+      return undefined;
     }
+
+    setLoading(true);
+    setError(null);
+
+    void Promise.allSettled([
+      HybridUserActivityService.getRecentProducts(userId),
+      HybridUserActivityService.getWishlist(userId),
+    ]).then(([recentResult, wishlistResult]) => {
+      if (
+        loadGenerationRef.current !== generation
+        || activeUserIdRef.current !== userId
+      ) {
+        return;
+      }
+
+      if (recentResult.status === 'fulfilled') {
+        setRecentProducts(recentResult.value);
+      }
+      if (wishlistResult.status === 'fulfilled') {
+        setWishlistItems(wishlistResult.value);
+      }
+
+      const rejectedResult = [recentResult, wishlistResult]
+        .find((result) => result.status === 'rejected');
+      if (rejectedResult?.status === 'rejected') {
+        const message = rejectedResult.reason instanceof Error
+          ? rejectedResult.reason.message
+          : '사용자 활동을 불러오는데 실패했습니다.';
+        setError(message);
+        console.error('사용자 활동 로드 실패:', rejectedResult.reason);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      if (loadGenerationRef.current === generation) {
+        loadGenerationRef.current += 1;
+      }
+    };
   }, [user?.uid]);
 
   // 최근 본 상품 추가
@@ -70,7 +111,12 @@ export function UserActivityProvider({ children }: { children: ReactNode }) {
       await HybridUserActivityService.addRecentProduct(user.uid, productId);
       
       // 로컬 상태 업데이트
-      void HybridUserActivityService.getRecentProducts(user.uid).then(setRecentProducts);
+      const userId = user.uid;
+      void HybridUserActivityService.getRecentProducts(userId).then((products) => {
+        if (activeUserIdRef.current === userId) {
+          setRecentProducts(products);
+        }
+      });
       
     } catch (err) {
       console.error('최근 본 상품 추가 실패:', err);
@@ -84,7 +130,9 @@ export function UserActivityProvider({ children }: { children: ReactNode }) {
     
     try {
       const products = await HybridUserActivityService.getRecentProducts(targetUserId);
-      setRecentProducts(products);
+      if (activeUserIdRef.current === targetUserId) {
+        setRecentProducts(products);
+      }
     } catch (err) {
       console.error('최근 본 상품 로드 실패:', err);
     }
@@ -100,7 +148,12 @@ export function UserActivityProvider({ children }: { children: ReactNode }) {
       await HybridUserActivityService.addToWishlist(user.uid, productId);
       
       // 로컬 상태 업데이트
-      void HybridUserActivityService.getWishlist(user.uid).then(setWishlistItems);
+      const userId = user.uid;
+      void HybridUserActivityService.getWishlist(userId).then((items) => {
+        if (activeUserIdRef.current === userId) {
+          setWishlistItems(items);
+        }
+      });
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '찜하기에 실패했습니다.';
@@ -137,7 +190,9 @@ export function UserActivityProvider({ children }: { children: ReactNode }) {
       setError(null);
 
       const items = await HybridUserActivityService.getWishlist(userId);
-      setWishlistItems(items);
+      if (activeUserIdRef.current === userId) {
+        setWishlistItems(items);
+      }
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '찜한 상품을 불러오는데 실패했습니다.';
@@ -155,7 +210,7 @@ export function UserActivityProvider({ children }: { children: ReactNode }) {
     try {
       setError(null);
       
-      await HybridUserActivityService.clearAllUserData(user.uid);
+      await HybridUserActivityService.clearRecentProducts(user.uid);
       
       // 로컬 상태 업데이트
       setRecentProducts([]);
@@ -175,7 +230,7 @@ export function UserActivityProvider({ children }: { children: ReactNode }) {
     try {
       setError(null);
       
-      await HybridUserActivityService.clearAllUserData(user.uid);
+      await HybridUserActivityService.clearWishlist(user.uid);
       
       // 로컬 상태 업데이트
       setWishlistItems([]);

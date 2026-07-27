@@ -1,5 +1,6 @@
 import PageHeader from "@/app/_components/PageHeader";
 import ReviewList from "./_components/ReviewList";
+import { ReviewProvider } from "@/context/reviewProvider";
 import styles from "./page.module.css";
 
 export default function ReviewsPage() {
@@ -15,7 +16,9 @@ export default function ReviewsPage() {
       />
       
       <div className={styles.content}>
-        <ReviewList />
+        <ReviewProvider>
+          <ReviewList />
+        </ReviewProvider>
       </div>
     </div>
   );

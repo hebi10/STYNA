@@ -3,6 +3,7 @@
 import { doc, getDoc, collection, query, orderBy, limit, getDocs, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '@/shared/libs/firebase/firebase';
+import { COMMERCE_POLICY } from '@/shared/constants/commercePolicy';
 import { 
   AddPointRequest, 
   UsePointRequest, 
@@ -26,6 +27,8 @@ type PointApiResult = ApiPayload & {
   newBalance?: number;
   usedAmount?: number;
   refundedAmount?: number;
+  alreadyGranted?: boolean;
+  bonusAmount?: number;
 };
 
 function getUnknownErrorMessage(error: unknown, fallback: string): string {
@@ -43,10 +46,10 @@ async function callPointsAPI(action: string, data?: object): Promise<PointApiRes
     body: JSON.stringify({ action, ...data }),
   });
 
-  const json = await res.json();
+  const json = await res.json().catch(() => null);
 
-  if (!json.success) {
-    throw new Error(json.error || '요청에 실패했습니다.');
+  if (!res.ok || !json?.success) {
+    throw new Error(json?.error || '요청에 실패했습니다.');
   }
 
   return (json.data ?? {}) as PointApiResult;
@@ -165,6 +168,14 @@ export class PointService {
    */
   static async addSignupPoint(): Promise<PointResponse> {
     const result = await callPointsAPI('signupBonus');
+    if (
+      result.bonusAmount !== COMMERCE_POLICY.signupBonusPoints
+      || typeof result.alreadyGranted !== 'boolean'
+      || typeof result.newBalance !== 'number'
+    ) {
+      throw new Error('회원가입 보너스 지급 결과를 확인할 수 없습니다.');
+    }
+
     return { success: true, newBalance: result.newBalance };
   }
 }

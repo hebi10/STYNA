@@ -72,6 +72,18 @@ describe('QnA detail actions', () => {
     expect(screen.queryByText('조회수 27')).toBeNull();
   });
 
+  test('does not promise that a waiting QnA will receive an operator response', async () => {
+    jest.mocked(QnAService.getQnAWithAccessCheck).mockResolvedValue({
+      success: true,
+      qna: qna(),
+    });
+    render(<QnADetailPage />);
+
+    expect(await screen.findByText('문의 기록의 현재 상태는 답변 대기입니다.')).toBeInTheDocument();
+    expect(screen.getByText('답변 여부와 시점은 보장하지 않습니다.')).toBeInTheDocument();
+    expect(screen.queryByText(/운영자가.*답변/)).not.toBeInTheDocument();
+  });
+
   test.each([
     'modalOverlay',
     'modal',

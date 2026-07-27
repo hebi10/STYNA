@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useProduct } from '@/context/productProvider';
+import { useHomeProducts } from '@/shared/hooks/useProducts';
 import ProductCard from '@/app/products/_components/ProductCard';
 import { Product } from '@/shared/types/product';
 import styles from './ProductSection.module.css';
@@ -78,13 +78,12 @@ function isMainCuratedProduct(product: Product) {
 
 function getOperatingMetadata(
   product: Product,
-  index: number,
   type: ProductSectionProps['type'],
 ) {
   const reviewCount = product.reviewCount ?? 0;
   const operationLabel =
-    type === 'recommended' || index === 0
-      ? 'MD추천'
+    type === 'recommended'
+      ? '추천'
       : product.isNew
         ? 'NEW'
         : product.isSale
@@ -93,10 +92,10 @@ function getOperatingMetadata(
   const shippingLabel = undefined;
   const reviewLabel = reviewCount >= 100 ? '리뷰 100+' : undefined;
   const mdComment = product.isSale
-    ? '이번 주만 적용되는 시즌 특가로 준비했습니다.'
+    ? '현재 상품에 등록된 할인가입니다.'
     : reviewCount >= 100
-      ? '실제 구매 후기가 많은 데일리 기본 아이템입니다.'
-      : '가볍게 입고 오래 손이 가는 소재와 핏을 기준으로 골랐습니다.';
+      ? '등록된 리뷰가 많은 상품입니다.'
+      : '현재 등록된 상품 정보와 리뷰를 확인해 보세요.';
 
   return { operationLabel, shippingLabel, reviewLabel, mdComment };
 }
@@ -130,12 +129,17 @@ export default function ProductSection({
   className = '',
 }: ProductSectionProps) {
   const {
-    recommendedProducts,
-    newProducts,
-    saleProducts,
-    bestSellerProducts,
-    loading,
-  } = useProduct();
+    data,
+    isLoading: loading,
+    isError,
+    refetch,
+  } = useHomeProducts();
+  const {
+    recommendedProducts = [],
+    newProducts = [],
+    saleProducts = [],
+    bestSellerProducts = [],
+  } = data ?? {};
 
   const getProducts = () => {
     switch (type) {
@@ -211,6 +215,24 @@ export default function ProductSection({
     );
   }
 
+  if (isError) {
+    return (
+      <section className={sectionClassName}>
+        {headerContent}
+        <div className={styles.errorState} role="alert">
+          <p>상품을 불러오지 못했습니다.</p>
+          <button
+            type="button"
+            className={styles.retryButton}
+            onClick={() => void refetch()}
+          >
+            다시 시도
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   if (products.length === 0) {
     return null;
   }
@@ -247,7 +269,7 @@ export default function ProductSection({
               image={product.mainImage || product.images[0]}
               stock={product.stock}
               badgePlacement={variant === 'ranking' ? 'belowRank' : 'default'}
-              {...getOperatingMetadata(product, index, type)}
+              {...getOperatingMetadata(product, type)}
             />
           </div>
         ))}

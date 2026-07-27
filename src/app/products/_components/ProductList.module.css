@@ -87,6 +87,7 @@
 }
 
 .retryButton {
+  min-height: 44px;
   padding: var(--spacing-sm) var(--spacing-lg);
   border: 1px solid var(--color-error);
   background: transparent;
@@ -150,6 +151,26 @@
   box-shadow: none;
 }
 
+.filterToggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: white;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.filterPanel {
+  display: grid;
+  gap: 1rem;
+}
+
 .searchSection {
   display: flex;
   gap: var(--spacing-md);
@@ -158,6 +179,7 @@
 
 .searchInput {
   flex: 1;
+  min-height: 44px;
   padding: var(--spacing-md);
   border: 1px solid var(--color-border);
   border-radius: 2px;
@@ -172,6 +194,7 @@
 }
 
 .searchButton {
+  min-height: 44px;
   padding: var(--spacing-md) var(--spacing-lg);
   background: var(--color-primary);
   color: white;
@@ -197,6 +220,7 @@
 
 .filterSelect,
 .sortSelect {
+  min-height: 44px;
   padding: var(--spacing-sm) var(--spacing-md);
   border: 1px solid var(--color-border);
   border-radius: 2px;
@@ -216,6 +240,7 @@
 
 .clearButton,
 .applyButton {
+  min-height: 44px;
   padding: var(--spacing-sm) var(--spacing-md);
   border: 1px solid var(--color-border);
   background: white;
@@ -260,6 +285,7 @@
 
 .priceInput {
   width: 120px;
+  min-height: 44px;
   padding: var(--spacing-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-sm);
@@ -290,6 +316,7 @@
 }
 
 .pageButton {
+  min-height: 44px;
   padding: var(--spacing-sm) var(--spacing-md);
   border: 1px solid var(--color-border);
   background: white;
@@ -297,7 +324,7 @@
   cursor: pointer;
   font-size: var(--font-size-sm);
   transition: all 0.2s ease;
-  min-width: 40px;
+  min-width: 44px;
   text-align: center;
 }
 
@@ -372,20 +399,42 @@
   }
 
   .stats {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-md);
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-bottom: 0;
   }
   
   .statItem {
-    padding: var(--spacing-md);
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-sm);
+    padding: 0.75rem;
+  }
+
+  .statItem:not(:first-child) {
+    display: none;
   }
   
   .statNumber {
-    font-size: var(--font-size-2xl);
+    margin-bottom: 0;
+    font-size: var(--font-size-lg);
   }
   
   .controls {
     gap: var(--spacing-md);
+  }
+
+  .filterToggle {
+    display: flex;
+    width: 100%;
+  }
+
+  .filterPanel {
+    display: none;
+  }
+
+  .filterPanelOpen {
+    display: grid;
   }
 
   .searchSection {
@@ -429,7 +478,8 @@
   }
 
   .pageButton {
-    min-width: 36px;
+    min-width: 44px;
+    min-height: 44px;
     padding: var(--spacing-xs) var(--spacing-sm);
   }
 }

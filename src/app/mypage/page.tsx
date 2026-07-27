@@ -2,7 +2,9 @@
 
 import React, { useEffect, useLayoutEffect } from 'react';
 import { useAuth } from '@/context/authProvider';
+import { useCoupon } from '@/context/couponProvider';
 import { useUserActivity } from '@/context/userActivityProvider';
+import { useOrderCount } from '@/shared/hooks/useOrders';
 import RecentProducts from './_components/RecentProducts';
 import WishlistProducts from './_components/WishlistProducts';
 import Link from 'next/link';
@@ -11,6 +13,21 @@ import styles from './page.module.css';
 export default function MyPage() {
   const { user } = useAuth();
   const { recentProducts, wishlistItems } = useUserActivity();
+  const {
+    data: orderCount,
+    isLoading: isOrderCountLoading,
+    isError: isOrderCountError,
+  } = useOrderCount(user?.uid || null);
+  const {
+    couponStats,
+    userCouponsReady,
+    loading: isCouponLoading,
+    error: couponError,
+  } = useCoupon();
+  const isCouponCountError = Boolean(user && !isCouponLoading && couponError);
+  const isCouponCountLoading = Boolean(
+    user && !isCouponCountError && (!userCouponsReady || isCouponLoading),
+  );
 
   // 마이페이지 접속 시 스크롤을 맨 위로 이동 (useLayoutEffect로 더 빠르게)
   useLayoutEffect(() => {
@@ -56,7 +73,9 @@ export default function MyPage() {
       <div className={styles.statsGrid}>
         <Link href="/mypage/order-list" className={styles.statCard}>
           <span className={styles.statLabel}>주문내역</span>
-          <strong className={styles.statNumber}>0</strong>
+          <strong className={styles.statNumber} aria-busy={isOrderCountLoading || undefined}>
+            {isOrderCountError ? '확인 실패' : isOrderCountLoading ? '-' : orderCount ?? 0}
+          </strong>
           <span className={styles.statDescription}>주문 현황과 상세 내역 확인</span>
         </Link>
 
@@ -74,7 +93,9 @@ export default function MyPage() {
 
         <Link href="/mypage/coupons" className={styles.statCard}>
           <span className={styles.statLabel}>보유 쿠폰</span>
-          <strong className={styles.statNumber}>0</strong>
+          <strong className={styles.statNumber} aria-busy={isCouponCountLoading || undefined}>
+            {isCouponCountError ? '확인 실패' : isCouponCountLoading ? '-' : couponStats?.available ?? 0}
+          </strong>
           <span className={styles.statDescription}>사용 가능한 혜택 확인</span>
         </Link>
       </div>

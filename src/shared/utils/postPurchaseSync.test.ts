@@ -1,7 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { cartKeys } from '@/shared/hooks/useCart';
-import { orderKeys } from '@/shared/hooks/useOrders';
-import { pointKeys } from '@/shared/hooks/usePoint';
+import { cartKeys, orderKeys, pointKeys } from '@/shared/hooks/queryKeys';
 import { refreshPostPurchaseState } from './postPurchaseSync';
 
 describe('refreshPostPurchaseState', () => {
@@ -17,11 +15,11 @@ describe('refreshPostPurchaseState', () => {
     });
 
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: cartKeys.list('user-1') });
-    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: cartKeys.count('user-1') });
-    expect(refetchQueries).toHaveBeenCalledWith({
+    expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: cartKeys.count('user-1'),
-      type: 'active',
+      refetchType: 'active',
     });
+    expect(refetchQueries).not.toHaveBeenCalled();
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: pointKeys.all('user-1') });
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: orderKeys.all('user-1') });
     expect(refreshUserCoupons).toHaveBeenCalledTimes(1);
@@ -30,7 +28,7 @@ describe('refreshPostPurchaseState', () => {
 
   test('attempts later refreshes when an earlier invalidation rejects', async () => {
     const invalidateQueries = jest.fn(({ queryKey }: { queryKey: readonly unknown[] }) =>
-      queryKey === cartKeys.list('user-1')
+      JSON.stringify(queryKey) === JSON.stringify(cartKeys.list('user-1'))
         ? Promise.reject(new Error('cart unavailable'))
         : Promise.resolve(),
     );

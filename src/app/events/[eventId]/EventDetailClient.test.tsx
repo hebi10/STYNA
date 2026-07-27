@@ -51,6 +51,14 @@ jest.mock('@/context/userActivityProvider', () => ({
   }),
 }));
 
+jest.mock('@/shared/hooks/useUserActivityQueries', () => ({
+  useWishlistActivity: () => ({
+    wishlistItems: [],
+    addToWishlist: jest.fn(),
+    removeFromWishlist: jest.fn(),
+  }),
+}));
+
 jest.mock('@/shared/hooks/useAuthUser', () => ({
   useAuthUser: () => ({ user: null, loading: false }),
 }));
@@ -74,7 +82,7 @@ jest.mock('@/shared/services/eventService', () => {
 
 jest.mock('@/shared/services/productService', () => ({
   ProductService: {
-    getProductById: jest.fn(),
+    getPublicProductById: jest.fn(),
     getProductsByCategory: jest.fn(),
     getSaleProducts: jest.fn(),
     getRecommendedProducts: jest.fn(),
@@ -144,6 +152,7 @@ const createEvent = (overrides: Partial<Event> = {}): Event => ({
   eventType: 'sale',
   eligibilityType: 'none',
   rewardType: 'none',
+  publicPolicyVerified: true,
   startDate: new Date('2026-07-01T00:00:00+09:00'),
   endDate: new Date('2026-07-31T23:59:59+09:00'),
   isActive: true,
@@ -215,7 +224,7 @@ describe('EventDetailClient commerce template', () => {
     });
 
     const products = [createProduct()];
-    jest.mocked(ProductService.getProductById).mockResolvedValue(products[0]);
+    jest.mocked(ProductService.getPublicProductById).mockResolvedValue(products[0]);
     jest.mocked(ProductService.getProductsByCategory).mockResolvedValue([]);
     jest.mocked(ProductService.getSaleProducts).mockResolvedValue(products);
     jest.mocked(ProductService.getRecommendedProducts).mockResolvedValue(products);
@@ -323,6 +332,25 @@ describe('EventDetailClient commerce template', () => {
     expect(JSON.stringify(getEventUiMeta(event))).not.toMatch(/보상|적립/);
   });
 
+  test('labels discountRate as display metadata instead of an applied order discount', async () => {
+    render(<EventDetailClient event={createEvent({ discountRate: 70 })} />);
+
+    expect((await screen.findAllByText('할인 표시율은 최대 70%입니다. 실제 가격은 상품별로 확인해주세요.')).length)
+      .toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('최대 70% 할인 혜택이 적용됩니다.')).not.toBeInTheDocument();
+  });
+
+  test('does not render unverified event marketing when called directly', () => {
+    render(<EventDetailClient event={createEvent({
+      title: '리뷰 적립금 2배',
+      description: '베스트 리뷰 1만원을 드립니다.',
+      publicPolicyVerified: false,
+    })} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('이벤트 공개 준비 중');
+    expect(screen.queryByText(/적립금 2배|1만원/)).not.toBeInTheDocument();
+  });
+
   test('shows coupon reward guidance only for rewardType coupon', async () => {
     render(<EventDetailClient event={createEvent({
       rewardType: 'coupon',
@@ -333,6 +361,19 @@ describe('EventDetailClient commerce template', () => {
     expect(await screen.findByText('테스트 상품 product-1')).toBeInTheDocument();
     expect(screen.getByText('참여 조건을 충족하면 이벤트 쿠폰이 지급됩니다.')).toBeInTheDocument();
     expect(screen.getByText('쿠폰 코드 EVENT-COUPON 사용이 가능합니다.')).toBeInTheDocument();
+  });
+
+  test('keeps manual coupon guidance neutral without claiming a staffed code channel', async () => {
+    const { container } = render(<EventDetailClient event={createEvent({
+      eventType: 'coupon',
+      couponType: 'manual',
+      rewardType: 'none',
+      discountRate: undefined,
+    })} />);
+
+    expect(await screen.findAllByRole('button', { name: '수동 쿠폰 안내 확인' })).toHaveLength(2);
+    expect(container.textContent).toContain('온라인 코드 발급은 제공하지 않습니다');
+    expect(container.textContent).not.toMatch(/고객센터.*코드|쿠폰 코드 문의/);
   });
 
   test('keeps already-participated copy neutral when no reward is configured', async () => {

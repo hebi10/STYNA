@@ -2,24 +2,21 @@
 
 import { usePointBalance } from "@/shared/hooks/usePoint";
 import styles from "../layout.module.css";
-import { useCoupon } from "@/context/couponProvider";
 
 interface ProfileSectionProps {
   userInfo: {
     name: string;
     email: string;
     membershipLevel: string;
-    orders: number;
+    orders: number | null | 'error';
     reviews: number;
-    coupons: number;
+    coupons: number | null | 'error';
   };
 }
 
 export default function ProfileSection({ userInfo }: ProfileSectionProps) {
   const { data: balanceData, isLoading: isBalanceLoading } = usePointBalance();
   const pointBalance = balanceData?.pointBalance || 0;
-  const { userCoupons } = useCoupon();
-  const availableCouponCount = userCoupons.filter(coupon => coupon.status === "사용가능").length;
 
   return (
     <div className={styles.profileSection}>
@@ -36,7 +33,12 @@ export default function ProfileSection({ userInfo }: ProfileSectionProps) {
       
       <div className={styles.profileStats}>
         <div className={styles.statItem}>
-          <div className={styles.statNumber}>{userInfo.orders}</div>
+          <div
+            className={styles.statNumber}
+            aria-busy={userInfo.orders === null ? true : undefined}
+          >
+            {userInfo.orders === 'error' ? '확인 실패' : userInfo.orders ?? '-'}
+          </div>
           <div className={styles.statLabel}>총 주문</div>
         </div>
         <div className={styles.statItem}>
@@ -52,7 +54,12 @@ export default function ProfileSection({ userInfo }: ProfileSectionProps) {
           <div className={styles.statLabel}>적립금</div>
         </div>
         <div className={styles.statItem}>
-          <div className={styles.statNumber}>{availableCouponCount}</div>
+          <div
+            className={styles.statNumber}
+            aria-busy={userInfo.coupons === null ? true : undefined}
+          >
+            {userInfo.coupons === 'error' ? '확인 실패' : userInfo.coupons ?? '-'}
+          </div>
           <div className={styles.statLabel}>쿠폰</div>
         </div>
       </div>

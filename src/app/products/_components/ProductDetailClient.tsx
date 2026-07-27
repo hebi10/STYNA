@@ -4,12 +4,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/shared/types/product';
-import { useProduct } from '@/context/productProvider';
 import { useAuth } from '@/context/authProvider';
-import { useUserActivity } from '@/context/userActivityProvider';
 import { useAddToCart } from '@/shared/hooks/useCart';
+import { useRelatedProducts } from '@/shared/hooks/useProducts';
+import {
+  useRecentProductTracking,
+  useWishlistActivity,
+} from '@/shared/hooks/useUserActivityQueries';
 import { getProductColorValue } from '@/shared/utils/productColor';
 import { getProductPricing } from '@/shared/utils/productPricing';
+import { calculateDeliveryFee } from '@/shared/utils/orderPricing';
 import {
   ProductIntentAction,
   ProductIntentDraft,
@@ -30,12 +34,9 @@ interface Props {
 export default function ProductDetailClient({ product }: Props) {
   const router = useRouter();
   const { user } = useAuth();
-  const { wishlistItems, addRecentProduct, addToWishlist, removeFromWishlist } = useUserActivity();
-  const { 
-    relatedProducts, 
-    loadRelatedProducts,
-    isInStock
-  } = useProduct();
+  const { wishlistItems, addToWishlist, removeFromWishlist } = useWishlistActivity();
+  const { addRecentProduct } = useRecentProductTracking();
+  const { data: relatedProducts = [] } = useRelatedProducts(product.id, 4);
 
   const addToCartMutation = useAddToCart();
 
@@ -139,19 +140,12 @@ export default function ProductDetailClient({ product }: Props) {
     };
   }, [activeTab, product.id]);
 
-  // 컴포넌트 마운트 시 상품 정보와 연관 상품 로드
+  // 컴포넌트 마운트 시 최근 본 상품에 기록
   useEffect(() => {
-    if (product.id) {
-      // 관련 상품 로드
-      loadRelatedProducts(product.id, 4);
-      
-      // 최근 본 상품에 추가 (로그인한 사용자만)
-      if (user?.uid) {
-        addRecentProduct(product.id);
-      }
-
+    if (product.id && user?.uid) {
+      void addRecentProduct(product.id);
     }
-  }, [product.id, loadRelatedProducts, addRecentProduct, user?.uid]);
+  }, [product.id, addRecentProduct, user?.uid]);
 
   const redirectToLoginWithIntent = (action: ProductIntentAction) => {
     const currentUrl = new URL(window.location.href);
@@ -206,7 +200,7 @@ export default function ProductDetailClient({ product }: Props) {
   const executeBuyNow = useCallback((intent: ProductIntentDraft) => {
     const productPricing = getProductPricing(product);
     const subtotal = productPricing.salePrice * intent.quantity;
-    const deliveryFee = subtotal >= 50000 ? 0 : 3000;
+    const deliveryFee = calculateDeliveryFee(subtotal, 'standard', false);
 
     const orderData = {
       items: [{
@@ -362,7 +356,7 @@ export default function ProductDetailClient({ product }: Props) {
   const pricing = getProductPricing(product);
   const displayPrice = pricing.salePrice;
 
-  const inStock = isInStock(product);
+  const inStock = product.stock > 0;
 
   const displayRating = product.rating || 0;
   const displayReviewCount = product.reviewCount ?? 0;
@@ -635,7 +629,7 @@ export default function ProductDetailClient({ product }: Props) {
             </div>
             <div className={styles.summaryItem}>
               <span className={styles.summaryLabel}>반품</span>
-              <span className={styles.summaryValue}>수령 후 7일 이내, 상품 상태에 따라 반품 신청 가능</span>
+              <span className={styles.summaryValue}>자동 반품 처리는 제공하지 않으며 가능 여부와 시점은 보장하지 않습니다.</span>
             </div>
             <div className={styles.summaryItem}>
               <span className={styles.summaryLabel}>재고</span>

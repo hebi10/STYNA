@@ -8,7 +8,7 @@ export default function Footer() {
       <div className={styles.container}>
         <div className={styles.grid}>
           <div className={styles.section}>
-            <h3>고객센터</h3>
+            <h3>도움말</h3>
             <div className={styles.linkList}>
               <Link href="/cs/faq" className={styles.link}>
                 자주 묻는 질문
@@ -32,7 +32,7 @@ export default function Footer() {
                 사업자 정보
               </Link>
               <Link href="/legal/terms" className={styles.link}>
-                이용약관
+                데모 이용 안내
               </Link>
               <Link href="/legal/privacy" className={styles.link}>
                 개인정보처리방침
@@ -68,7 +68,7 @@ export default function Footer() {
 
         <div className={styles.copyright}>
           <p>{SITE_INFO.demoNotice}</p>
-          <p>{SITE_INFO.supportEmail} · {SITE_INFO.supportPhone} · {SITE_INFO.supportHours}</p>
+          <p>포트폴리오 문의: {SITE_INFO.supportEmail} · 답변 시점은 보장하지 않습니다.</p>
           <strong>© {new Date().getFullYear()} {SITE_INFO.brandName}. All rights reserved.</strong>
         </div>
       </div>

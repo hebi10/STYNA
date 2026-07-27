@@ -101,12 +101,12 @@ describe('EventForm', () => {
     render(<EventForm event={baseEvent} isEdit />);
 
     expect(screen.getByText('혜택 이미지')).toBeInTheDocument();
-    expect(screen.getByText('MD 추천 이미지')).toBeInTheDocument();
+    expect(screen.getByText('스타일 제안 이미지')).toBeInTheDocument();
     expect(screen.getByText('상품 에디토리얼 이미지')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByAltText('혜택 이미지')).toHaveAttribute('src', '/benefit.webp');
-      expect(screen.getByAltText('MD 추천 이미지')).toHaveAttribute('src', '/styling.webp');
+      expect(screen.getByAltText('스타일 제안 이미지')).toHaveAttribute('src', '/styling.webp');
       expect(screen.getByAltText('상품 에디토리얼 이미지')).toHaveAttribute('src', '/product.webp');
     });
   });
@@ -250,7 +250,7 @@ describe('EventForm', () => {
     fireEvent.submit(container.querySelector('form') as HTMLFormElement);
 
     expect(window.alert).toHaveBeenCalledWith(
-      '쿠폰 보상에는 쿠폰 관리 문서 ID가 필요합니다.'
+      '쿠폰 보상에는 유효한 쿠폰 관리 문서 ID가 필요합니다.'
     );
     expect(EventService.createEvent).not.toHaveBeenCalled();
   });
@@ -299,6 +299,22 @@ describe('EventForm', () => {
       '구매 자격 이벤트에는 대상 상품 ID가 필요합니다.'
     );
     expect(EventService.updateEvent).not.toHaveBeenCalled();
+  });
+
+  test('does not classify spring preview as a review event', async () => {
+    jest.mocked(CategoryService.getCategories).mockResolvedValue([]);
+    render(<EventForm event={{
+      ...baseEvent,
+      id: 'event-2026-02-spring-preview',
+      eventType: 'new',
+      title: '스프링 프리뷰',
+      eligibilityType: undefined,
+    }} isEdit />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('카테고리를 불러오는 중...')).not.toBeInTheDocument();
+    });
+    expect(screen.getByLabelText('참여 자격')).toHaveValue('none');
   });
 
   test('omits stale conditional fields when editing an event to none', async () => {

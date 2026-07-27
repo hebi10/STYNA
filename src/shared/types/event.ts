@@ -23,6 +23,7 @@ export interface Event {
   eventType: EventType;
   eligibilityType?: EventEligibilityType;
   rewardType?: EventRewardType;
+  publicPolicyVerified?: boolean;
   couponType?: EventCouponType;
   startDate: Date;
   endDate: Date;
@@ -44,11 +45,11 @@ export interface EventParticipant {
   id: string;
   eventId: string;
   userId: string;
-  userName: string;
+  userName?: string;
   participatedAt: Date;
   couponUsed?: boolean;
-  rewardCouponId?: string;
-  userCouponId?: string;
+  rewardCouponId?: string | null;
+  userCouponId?: string | null;
 }
 
 export interface EventFilter {

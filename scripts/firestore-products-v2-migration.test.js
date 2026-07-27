@@ -136,7 +136,11 @@ test("runtime loader imports the Admin helper only when explicitly called", () =
   const loaderProbe = `
     const Module = require("module");
     const originalLoad = Module._load;
-    const sentinel = { admin: {}, db: {}, projectId: "injected" };
+    const sentinel = {
+      admin: { app: () => ({ options: { projectId: "injected" } }) },
+      db: {},
+      projectId: "injected"
+    };
     let helperLoads = 0;
     Module._load = function(request, parent, isMain) {
       if (request === "./util-firestore-admin" && parent.filename === ${JSON.stringify(runtimePath)}) {
@@ -150,8 +154,12 @@ test("runtime loader imports the Admin helper only when explicitly called", () =
     };
     const runtimeModule = require(${JSON.stringify(runtimePath)});
     if (helperLoads !== 0) throw new Error("helper loaded during import");
-    if (runtimeModule.loadFirestoreMigrationRuntime() !== sentinel) {
-      throw new Error("loader did not return the helper runtime");
+    const loaded = runtimeModule.loadFirestoreMigrationRuntime();
+    if (loaded.db !== sentinel.db || loaded.projectId !== "injected") {
+      throw new Error("loader did not preserve the verified helper target");
+    }
+    if (loaded.targetProjectVerified !== true) {
+      throw new Error("loader did not mark the target as verified");
     }
     if (helperLoads !== 1) throw new Error("helper load count: " + helperLoads);
   `;

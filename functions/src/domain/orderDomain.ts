@@ -1,5 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import type { Firestore } from "firebase-admin/firestore";
+import { COMMERCE_POLICY } from "../commercePolicy";
 import { isAvailableUserCouponStatus } from "./couponDomain";
 import { isExpiredOnKstDay, toKstDayKey } from "./kstDate";
 
@@ -36,10 +37,6 @@ interface CartItemSummary {
   quantity?: unknown;
   price?: unknown;
 }
-
-const DEFAULT_STANDARD_DELIVERY_FEE = 3000;
-const DEFAULT_EXPRESS_DELIVERY_FEE = 5000;
-const STANDARD_SHIPPING_FREE_AMOUNT = 50000;
 
 const VALID_PAYMENT_METHODS = new Set([
   "card",
@@ -317,14 +314,14 @@ export function calculateDeliveryFee(
   couponFreeShipping: boolean
 ): number {
   if (deliveryOption === "express") {
-    return DEFAULT_EXPRESS_DELIVERY_FEE;
+    return COMMERCE_POLICY.shipping.expressFee;
   }
 
-  if (totalAfterCoupon >= STANDARD_SHIPPING_FREE_AMOUNT || couponFreeShipping) {
+  if (totalAfterCoupon >= COMMERCE_POLICY.shipping.freeThreshold || couponFreeShipping) {
     return 0;
   }
 
-  return DEFAULT_STANDARD_DELIVERY_FEE;
+  return COMMERCE_POLICY.shipping.standardFee;
 }
 
 export function mapCartTotal(items: Array<Record<string, unknown> | CartItemSummary>): {

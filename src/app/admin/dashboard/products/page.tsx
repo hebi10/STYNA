@@ -14,6 +14,7 @@ export default function AdminProductsPage() {
   const { 
     products, 
     loading, 
+    error,
     loadProducts,
     updateProduct,
     deleteProduct
@@ -141,8 +142,7 @@ export default function AdminProductsPage() {
     try {
       console.log('상태 변경 시작:', { productId: product.id, newStatus });
       
-      const updatedProduct = { ...product, status: newStatus };
-      await updateProduct(product.id, updatedProduct);
+      await updateProduct(product.id, { status: newStatus });
       
       console.log('상태 변경 완료, 목록 새로고침 중...');
       
@@ -176,6 +176,19 @@ export default function AdminProductsPage() {
     );
   }
 
+  if (error && products.length === 0) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loading} role="alert">
+          <p>{error}</p>
+          <button type="button" className={styles.refreshButton} onClick={handleForceRefresh}>
+            다시 시도
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -197,6 +210,15 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
+      {error ? (
+        <div className={styles.errorBanner} role="alert">
+          <span>{error} 기존 목록을 표시하고 있습니다.</span>
+          <button type="button" className={styles.refreshButton} onClick={handleForceRefresh}>
+            다시 시도
+          </button>
+        </div>
+      ) : null}
+
       {/* 검색 및 필터 */}
       <div className={styles.filters}>
         <div className={styles.searchBox}>
@@ -204,7 +226,10 @@ export default function AdminProductsPage() {
             type="text"
             placeholder="상품명으로 검색..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             className={styles.searchInput}
           />
         </div>
@@ -212,7 +237,10 @@ export default function AdminProductsPage() {
         <div className={styles.filterBox}>
           <select
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value);
+              setCurrentPage(1);
+            }}
             className={styles.filterSelect}
           >
             <option value="">전체 카테고리</option>
@@ -225,7 +253,10 @@ export default function AdminProductsPage() {
           
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setCurrentPage(1);
+            }}
             className={styles.filterSelect}
           >
             <option value="">전체 상태</option>

@@ -250,6 +250,16 @@ export class HybridUserActivityService {
     }
   }
 
+  static async clearRecentProducts(userId: string): Promise<void> {
+    if (this.isUserLoggedIn(userId)) {
+      const recentCollection = collection(db, 'userRecentProducts');
+      const snapshot = await getDocs(query(recentCollection, where('userId', '==', userId)));
+      await Promise.all(snapshot.docs.map((document) => deleteDoc(document.ref)));
+    }
+
+    localStorage.removeItem(`${RECENT_PRODUCTS_KEY}_${userId}`);
+  }
+
   // ===========================================
   // 위시리스트 관리
   // ===========================================
@@ -419,6 +429,16 @@ export class HybridUserActivityService {
     }
   }
 
+  static async clearWishlist(userId: string): Promise<void> {
+    if (this.isUserLoggedIn(userId)) {
+      const wishlistCollection = collection(db, 'userWishlist');
+      const snapshot = await getDocs(query(wishlistCollection, where('userId', '==', userId)));
+      await Promise.all(snapshot.docs.map((document) => deleteDoc(document.ref)));
+    }
+
+    localStorage.removeItem(`${WISHLIST_KEY}_${userId}`);
+  }
+
   // 위시리스트에 있는지 확인 (하이브리드)
   static async isInWishlist(userId: string = 'anonymous', productId: string): Promise<boolean> {
     try {
@@ -463,35 +483,9 @@ export class HybridUserActivityService {
 
   // 전체 데이터 삭제
   static async clearAllUserData(userId: string): Promise<void> {
-    if (this.isUserLoggedIn(userId)) {
-      // Firebase 데이터 삭제
-      try {
-        const recentCollection = collection(db, 'userRecentProducts');
-        const wishlistCollection = collection(db, 'userWishlist');
-        
-        const [recentQuery, wishlistQuery] = await Promise.all([
-          getDocs(query(recentCollection, where('userId', '==', userId))),
-          getDocs(query(wishlistCollection, where('userId', '==', userId)))
-        ]);
-        
-        const deletePromises: Promise<void>[] = [];
-        
-        recentQuery.docs.forEach(doc => {
-          deletePromises.push(deleteDoc(doc.ref));
-        });
-        
-        wishlistQuery.docs.forEach(doc => {
-          deletePromises.push(deleteDoc(doc.ref));
-        });
-        
-        await Promise.all(deletePromises);
-      } catch (error) {
-        console.error('Firebase 데이터 삭제 실패:', error);
-      }
-    }
-    
-    // LocalStorage 데이터 삭제
-    localStorage.removeItem(`${RECENT_PRODUCTS_KEY}_${userId}`);
-    localStorage.removeItem(`${WISHLIST_KEY}_${userId}`);
+    await Promise.all([
+      this.clearRecentProducts(userId),
+      this.clearWishlist(userId),
+    ]);
   }
 }

@@ -7,7 +7,7 @@ export default function CSLayout({
 }) {
   return (
     <div>
-      <PageHeader title="고객센터" />
+      <PageHeader title="도움말" />
       {children}
     </div>
   );

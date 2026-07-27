@@ -9,7 +9,10 @@ const CACHE_CONTROL = 'public, max-age=31536000, immutable';
 const CONTENT_TYPE = 'image/webp';
 const EXPECTED_EVENT_COUNT = 22;
 const EXPECTED_OBJECT_COUNT = EXPECTED_EVENT_COUNT * 2;
+const MANIFEST_VERSION = '20260721';
+const LOCAL_OUTPUT_ROOT = 'public/events/2026-v3';
 const IMAGE_FIELDS = ['bannerImage', 'detailImage', 'thumbnailImage'];
+const EVENT_UPDATE_FIELDS = [...IMAGE_FIELDS, 'publicPolicyVerified'];
 
 function parseCommand(argv) {
   const [command = 'analyze'] = argv;
@@ -41,6 +44,7 @@ function buildEventUpdate(storagePlan, bucketName) {
     bannerImage: wideUrl,
     detailImage: wideUrl,
     thumbnailImage: createDownloadUrl(storagePlan.card, bucketName),
+    publicPolicyVerified: false,
   };
 }
 
@@ -59,8 +63,8 @@ function assertFirebaseTargetConsistency({ projectId, bucket }) {
 }
 
 function assertManifestContract(candidate) {
-  if (!candidate || candidate.version !== '20260714') {
-    throw new Error('이벤트 이미지 매니페스트 버전이 20260714가 아닙니다.');
+  if (!candidate || candidate.version !== MANIFEST_VERSION) {
+    throw new Error(`이벤트 이미지 매니페스트 버전이 ${MANIFEST_VERSION}가 아닙니다.`);
   }
 
   if (!Array.isArray(candidate.events) || candidate.events.length !== EXPECTED_EVENT_COUNT) {
@@ -77,8 +81,8 @@ function assertManifestContract(candidate) {
     }
     ids.add(event.id);
 
-    const expectedWide = `public/events/2026-v2/${event.id}-wide.webp`;
-    const expectedCard = `public/events/2026-v2/${event.id}-card.webp`;
+    const expectedWide = `${LOCAL_OUTPUT_ROOT}/${event.id}-${MANIFEST_VERSION}-wide.webp`;
+    const expectedCard = `${LOCAL_OUTPUT_ROOT}/${event.id}-${MANIFEST_VERSION}-card.webp`;
     if (event.wideOutput !== expectedWide || event.cardOutput !== expectedCard) {
       throw new Error(`이벤트 ${event.id}의 로컬 이미지 경로가 규칙과 다릅니다.`);
     }
@@ -126,30 +130,53 @@ function assertRequiredImageFields(data, eventId) {
 function pickCurrentImageFields(data, eventId) {
   assertRequiredImageFields(data, eventId);
   const hasDetailImage = Object.prototype.hasOwnProperty.call(data, 'detailImage');
+  const hasPublicPolicyVerified = Object.prototype.hasOwnProperty.call(
+    data,
+    'publicPolicyVerified',
+  );
 
   if (hasDetailImage && !isNonEmptyString(data.detailImage)) {
     throw new Error(`이벤트 ${eventId}의 기존 detailImage 필드를 백업할 수 없습니다.`);
+  }
+  if (hasPublicPolicyVerified && typeof data.publicPolicyVerified !== 'boolean') {
+    throw new Error(
+      `이벤트 ${eventId}의 기존 publicPolicyVerified 필드를 백업할 수 없습니다.`,
+    );
   }
 
   return {
     bannerImage: data.bannerImage,
     detailImage: hasDetailImage ? data.detailImage : null,
     thumbnailImage: data.thumbnailImage,
+    publicPolicyVerified: hasPublicPolicyVerified ? data.publicPolicyVerified : null,
   };
 }
 
 function pickBackupImageFields(data, eventId) {
   assertRequiredImageFields(data, eventId);
   const hasDetailImage = Object.prototype.hasOwnProperty.call(data, 'detailImage');
+  const hasPublicPolicyVerified = Object.prototype.hasOwnProperty.call(
+    data,
+    'publicPolicyVerified',
+  );
 
   if (!hasDetailImage || (data.detailImage !== null && !isNonEmptyString(data.detailImage))) {
     throw new Error(`이벤트 ${eventId}의 기존 detailImage 필드를 백업할 수 없습니다.`);
+  }
+  if (
+    !hasPublicPolicyVerified ||
+    (data.publicPolicyVerified !== null && typeof data.publicPolicyVerified !== 'boolean')
+  ) {
+    throw new Error(
+      `이벤트 ${eventId}의 기존 publicPolicyVerified 필드를 백업할 수 없습니다.`,
+    );
   }
 
   return {
     bannerImage: data.bannerImage,
     detailImage: data.detailImage,
     thumbnailImage: data.thumbnailImage,
+    publicPolicyVerified: data.publicPolicyVerified,
   };
 }
 
@@ -303,7 +330,7 @@ function assertStorageVerification(summary) {
 }
 
 function imageFieldsEqual(left, right) {
-  return IMAGE_FIELDS.every((field) => left?.[field] === right?.[field]);
+  return EVENT_UPDATE_FIELDS.every((field) => left?.[field] === right?.[field]);
 }
 
 function currentMatchesBackup(current, previous) {
@@ -314,11 +341,22 @@ function currentMatchesBackup(current, previous) {
     return false;
   }
 
-  if (previous.detailImage === null) {
-    return !Object.prototype.hasOwnProperty.call(current, 'detailImage');
+  const detailMatches =
+    previous.detailImage === null
+      ? !Object.prototype.hasOwnProperty.call(current, 'detailImage')
+      : current?.detailImage === previous.detailImage;
+  if (!detailMatches) {
+    return false;
   }
 
-  return current?.detailImage === previous.detailImage;
+  if (previous.publicPolicyVerified === null) {
+    return !Object.prototype.hasOwnProperty.call(current, 'publicPolicyVerified');
+  }
+
+  return (
+    Object.prototype.hasOwnProperty.call(current, 'publicPolicyVerified') &&
+    current.publicPolicyVerified === previous.publicPolicyVerified
+  );
 }
 
 function classifyExistingBackupState({ candidate, docs, backup, bucketName }) {
@@ -472,9 +510,7 @@ async function rollbackEventUpdates({
   const refsById = new Map(
     getEventRefs(db, candidate).map((ref, index) => [candidate.events[index].id, ref]),
   );
-  const batch = db.batch();
-
-  for (const event of backup.events) {
+  const updates = backup.events.map((event) => {
     const update = pickBackupImageFields(event, event.id);
     if (update.detailImage === null) {
       if (deleteSentinel === undefined) {
@@ -482,7 +518,20 @@ async function rollbackEventUpdates({
       }
       update.detailImage = deleteSentinel;
     }
-    batch.update(refsById.get(event.id), update);
+    if (update.publicPolicyVerified === null) {
+      if (deleteSentinel === undefined) {
+        throw new Error(
+          'publicPolicyVerified 누락 복원을 위한 Firestore delete sentinel이 없습니다.',
+        );
+      }
+      update.publicPolicyVerified = deleteSentinel;
+    }
+    return { id: event.id, update };
+  });
+  const batch = db.batch();
+
+  for (const { id, update } of updates) {
+    batch.update(refsById.get(id), update);
   }
   await batch.commit();
 
@@ -529,7 +578,7 @@ async function verifyEventUpdates({
       bucketName,
     );
     const data = doc.data();
-    const valid = IMAGE_FIELDS.every((field) => data[field] === expected[field]);
+    const valid = EVENT_UPDATE_FIELDS.every((field) => data[field] === expected[field]);
     if (valid) {
       validDocuments += 1;
     }

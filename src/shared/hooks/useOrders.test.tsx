@@ -2,11 +2,12 @@ import { createElement, type ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OrderService } from '@/shared/services/orderService';
-import { orderKeys, useOrders } from './useOrders';
+import { orderKeys, useOrderCount, useOrders } from './useOrders';
 
 jest.mock('@/shared/services/orderService', () => ({
   OrderService: {
     getUserOrders: jest.fn(),
+    getUserOrderCount: jest.fn(),
   },
 }));
 
@@ -30,6 +31,7 @@ describe('useOrders', () => {
   test('uses a user prefix that invalidates every order list for that user', () => {
     expect(orderKeys.all('user-1')).toEqual(['orders', 'user-1']);
     expect(orderKeys.list('user-1', 50)).toEqual(['orders', 'user-1', 'list', 50]);
+    expect(orderKeys.count('user-1')).toEqual(['orders', 'user-1', 'count']);
   });
 
   test('loads the requested user order list through React Query', async () => {
@@ -51,5 +53,16 @@ describe('useOrders', () => {
 
     expect(result.current.fetchStatus).toBe('idle');
     expect(OrderService.getUserOrders).not.toHaveBeenCalled();
+  });
+
+  test('loads an untruncated user order count through a separate aggregate query', async () => {
+    jest.mocked(OrderService.getUserOrderCount).mockResolvedValue(73);
+
+    const { result } = renderHook(() => useOrderCount('user-1'), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.data).toBe(73));
+    expect(OrderService.getUserOrderCount).toHaveBeenCalledWith('user-1');
   });
 });

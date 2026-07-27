@@ -76,12 +76,27 @@ function parseEligibilityType(value: unknown): EventEligibilityType | null {
     : null;
 }
 
-function normalizeTargetProducts(value: unknown): string[] | null {
-  if (!Array.isArray(value)) {
+function isValidFirestoreDocumentId(value: unknown): value is string {
+  return typeof value === "string"
+    && value.length > 0
+    && value.trim() === value
+    && value !== "."
+    && value !== ".."
+    && !value.includes("/")
+    && !/^__.*__$/.test(value)
+    && Buffer.byteLength(value, "utf8") <= 1500;
+}
+
+function parseTargetProducts(value: unknown): string[] | null {
+  if (
+    !Array.isArray(value)
+    || value.length === 0
+    || !value.every(isValidFirestoreDocumentId)
+  ) {
     return null;
   }
 
-  return Array.from(new Set(value.map(toTrimmedString).filter(Boolean)));
+  return Array.from(new Set(value));
 }
 
 function isEligiblePurchaseStatus(status: unknown): boolean {
@@ -130,7 +145,7 @@ export async function assertEventEligibility(
 
   const normalizedTargets = input.targetProducts === undefined || input.targetProducts === null
     ? null
-    : normalizeTargetProducts(input.targetProducts);
+    : parseTargetProducts(input.targetProducts);
   if (eligibilityType === "none") {
     if (input.targetProducts !== undefined) {
       throw new EventEligibilityError("event_misconfigured");

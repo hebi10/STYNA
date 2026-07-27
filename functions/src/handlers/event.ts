@@ -47,21 +47,33 @@ function toCount(value: unknown): number {
 }
 
 function getRewardCouponId(eventData: Record<string, unknown>): string | null {
-  const rewardType = ensureString(eventData.rewardType);
-  const rewardCouponId = ensureString(eventData.rewardCouponId);
+  const rewardType = eventData.rewardType;
+  const rewardCouponId = eventData.rewardCouponId;
   const hasRewardCouponId = Object.prototype.hasOwnProperty.call(eventData, "rewardCouponId");
 
   if (rewardType !== "none" && rewardType !== "coupon") {
     throw new EventEligibilityError("event_misconfigured");
   }
-  if (rewardType === "coupon" && !rewardCouponId) {
-    throw new EventEligibilityError("event_misconfigured");
+  if (rewardType === "coupon") {
+    if (
+      typeof rewardCouponId !== "string"
+      || !rewardCouponId
+      || rewardCouponId.trim() !== rewardCouponId
+      || rewardCouponId === "."
+      || rewardCouponId === ".."
+      || rewardCouponId.includes("/")
+      || /^__.*__$/.test(rewardCouponId)
+      || Buffer.byteLength(rewardCouponId, "utf8") > 1500
+    ) {
+      throw new EventEligibilityError("event_misconfigured");
+    }
+    return rewardCouponId;
   }
-  if (rewardType === "none" && hasRewardCouponId) {
+  if (hasRewardCouponId) {
     throw new EventEligibilityError("event_misconfigured");
   }
 
-  return rewardType === "coupon" ? rewardCouponId : null;
+  return null;
 }
 
 export const event = onRequest(
@@ -113,6 +125,10 @@ export const event = onRequest(
           };
         }
 
+        if (eventData.publicPolicyVerified !== true) {
+          throw new EventParticipationError(403, "event_inactive", "비활성화된 이벤트입니다.");
+        }
+
         const now = new Date();
         const startDate = toDate(eventData.startDate);
         const endDate = toDate(eventData.endDate);
@@ -141,16 +157,27 @@ export const event = onRequest(
           eligibilityType: eventData.eligibilityType,
           targetProducts: eventData.targetProducts,
         });
-        const reward = rewardCouponId
-          ? await issueUserCouponInTransaction(transaction, db, { userId, couponId: rewardCouponId })
-          : null;
+        let reward = null;
+        if (rewardCouponId) {
+          try {
+            reward = await issueUserCouponInTransaction(transaction, db, {
+              userId,
+              couponId: rewardCouponId,
+            });
+          } catch (error) {
+            if (error instanceof CouponIssuanceError) {
+              throw new EventEligibilityError("event_misconfigured");
+            }
+            throw error;
+          }
+        }
 
         transaction.set(participantRef, {
           eventId,
           userId,
           participatedAt: FieldValue.serverTimestamp(),
-          rewardCouponId,
-          userCouponId: reward?.userCouponId || null,
+          ...(rewardCouponId ? { rewardCouponId } : {}),
+          ...(reward?.userCouponId ? { userCouponId: reward.userCouponId } : {}),
           couponUsed: false,
         });
         transaction.update(eventRef, {

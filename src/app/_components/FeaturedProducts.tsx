@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { FeaturedProductService } from '@/shared/services/featuredProductService';
-import { Product } from '@/shared/types/product';
+import { productKeys } from '@/shared/hooks/queryKeys';
 import ProductCard from '@/app/products/_components/ProductCard';
 import styles from './FeaturedProducts.module.css';
 
@@ -24,95 +24,77 @@ export default function FeaturedProducts({
   sectionClassName = '',
   viewAllLabel = '전체 보기',
 }: FeaturedProductsProps) {
-  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState({
-    title: '추천 셀렉션',
-    subtitle: '메인에서 먼저 보여드리는 편집 상품입니다.',
-    isActive: true,
+  const {
+    data: section,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: productKeys.featured(),
+    queryFn: () => FeaturedProductService.getFeaturedSection(),
+    staleTime: 5 * 60 * 1000,
   });
-
-  useEffect(() => {
-    loadFeaturedProducts();
-  }, []);
-
-  const loadFeaturedProducts = async () => {
-    try {
-      setLoading(true);
-
-      const [products, configData] = await Promise.all([
-        FeaturedProductService.getFeaturedProducts(),
-        FeaturedProductService.getFeaturedProductConfig(),
-      ]);
-
-      setFeaturedProducts(products);
-
-      if (configData) {
-        setConfig({
-          title: configData.title || '추천 셀렉션',
-          subtitle:
-            configData.subtitle || '메인에서 먼저 보여드리는 편집 상품입니다.',
-          isActive: configData.isActive,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to load featured products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!config.isActive) {
-    return null;
-  }
 
   const sectionClassNameCombined = [styles.section, sectionClassName]
     .filter(Boolean)
     .join(' ');
-  const resolvedTitle = title || config.title;
-  const resolvedSubtitle = subtitle || config.subtitle;
 
-  const headerContent = (
-    <div className={styles.header}>
-      <div className={styles.copyBlock}>
-        {eyebrow && <span className={styles.eyebrow}>{eyebrow}</span>}
-        <h2 className={styles.title}>{resolvedTitle}</h2>
-        <p className={styles.subtitle}>{resolvedSubtitle}</p>
-      </div>
+  if (isLoading) {
+    return (
+      <section className={sectionClassNameCombined} aria-label="추천 상품 불러오는 중">
+        <div className={styles.container}>
+          <div className={styles.loading} role="status">추천 상품을 불러오는 중입니다.</div>
+        </div>
+      </section>
+    );
+  }
 
-      <div className={styles.headerSide}>
-        {description && <p className={styles.description}>{description}</p>}
-        <Link href="/recommend" className={styles.viewAllButton}>
-          {viewAllLabel}
-        </Link>
-      </div>
-    </div>
-  );
-
-  if (loading) {
+  if (isError) {
     return (
       <section className={sectionClassNameCombined}>
         <div className={styles.container}>
-          {headerContent}
-          <div className={styles.loading}>
-            <div className={styles.spinner}></div>
+          <div className={styles.errorState} role="alert">
+            <p>추천 상품을 불러오지 못했습니다.</p>
+            <button
+              type="button"
+              className={styles.retryButton}
+              onClick={() => void refetch()}
+            >
+              다시 시도
+            </button>
           </div>
         </div>
       </section>
     );
   }
 
-  if (featuredProducts.length === 0) {
+  if (!section?.config.isActive || section.products.length === 0) {
     return null;
   }
+
+  const resolvedTitle = title || section.config.title;
+  const resolvedSubtitle = subtitle || section.config.subtitle;
+  const resolvedDescription = description || section.config.description;
 
   return (
     <section className={sectionClassNameCombined}>
       <div className={styles.container}>
-        {headerContent}
+        <div className={styles.header}>
+          <div className={styles.copyBlock}>
+            {eyebrow ? <span className={styles.eyebrow}>{eyebrow}</span> : null}
+            <h2 className={styles.title}>{resolvedTitle}</h2>
+            {resolvedSubtitle ? <p className={styles.subtitle}>{resolvedSubtitle}</p> : null}
+          </div>
+          <div className={styles.headerSide}>
+            {resolvedDescription ? <p className={styles.description}>{resolvedDescription}</p> : null}
+            <Link href="/recommend" className={styles.viewAllButton}>
+              {viewAllLabel}
+            </Link>
+          </div>
+        </div>
 
         <div className={styles.productGrid}>
-          {featuredProducts.map((product) => (
+          {section.products.map((product) => (
             <ProductCard
               key={product.id}
               id={product.id}

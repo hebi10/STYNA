@@ -1,6 +1,6 @@
 # Dead and Duplicate Code Cleanup Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 사용자에게 연결된 빈 기능과 끊어진 액션을 제거하고, 실제로 참조되지 않는 컴포넌트와 중복 추천 설정 계열을 정리하면서 운영용 비공개 코드를 보존한다.
 
@@ -50,7 +50,7 @@
 - Consumes: `SidebarMenu({ activeTab, logout })`, `/mypage/qa`
 - Produces: 구현된 메뉴만 포함하고 상담 내역을 `/mypage/qa`로 통합한 마이페이지 내비게이션
 
-- [ ] **Step 1: 구현된 문의 링크와 빈 메뉴 부재를 검증하는 실패 테스트 작성**
+- [x] **Step 1: 구현된 문의 링크와 빈 메뉴 부재를 검증하는 실패 테스트 작성**
 
 `src/app/mypage/_components/SidebarMenu.test.tsx`에 다음 테스트를 추가한다.
 
@@ -83,13 +83,13 @@ describe('public project surface', () => {
 });
 ```
 
-- [ ] **Step 2: 테스트가 현재 빈 메뉴 때문에 실패하는지 확인**
+- [x] **Step 2: 테스트가 현재 빈 메뉴 때문에 실패하는지 확인**
 
 Run: `npm test -- --runInBand src/app/mypage/_components/SidebarMenu.test.tsx scripts/project-surface-audit.test.js`
 
 Expected: 빈 메뉴 링크와 세 빈 라우트 파일이 존재해 FAIL.
 
-- [ ] **Step 3: 빈 메뉴와 active tab 매핑 제거**
+- [x] **Step 3: 빈 메뉴와 active tab 매핑 제거**
 
 `SidebarMenu.tsx`에서 `/mypage/counsel`, `/mypage/restock` Link 블록을 삭제한다. `layout.tsx`의 `tabMap`은 다음 항목만 유지한다.
 
@@ -108,11 +108,11 @@ const tabMap = {
 
 `src/app/mypage/counsel/page.tsx`, `src/app/mypage/restock/page.tsx`, `src/app/mypage/withdrawal/page.tsx`를 삭제한다.
 
-- [ ] **Step 4: 마이페이지 문서에 통합 정책 기록**
+- [x] **Step 4: 마이페이지 문서에 통합 정책 기록**
 
 `docs/mypage-ui.md`에 “상담 내역은 `/mypage/qa` 문의 관리로 통합했고 백엔드가 없는 재입고 알림과 동작 없는 회원 탈퇴 빈 라우트는 제거했다”는 짧은 항목을 추가한다.
 
-- [ ] **Step 5: 관련 테스트와 참조 검증**
+- [x] **Step 5: 관련 테스트와 참조 검증**
 
 Run: `npm test -- --runInBand src/app/mypage/_components/SidebarMenu.test.tsx src/app/mypage/layout.test.tsx scripts/project-surface-audit.test.js`
 
@@ -134,7 +134,7 @@ Expected: 과거 경로를 설명하는 문서 기록 외 런타임 참조 없�
 - Consumes: 로그인 화면의 기존 `/auth/find-password` 링크
 - Produces: 실제로 동작하는 비밀번호 재설정만 제공하는 인증 복구 표면
 
-- [ ] **Step 1: 동작 없는 인증 라우트 부재를 검증하는 실패 테스트 작성**
+- [x] **Step 1: 동작 없는 인증 라우트 부재를 검증하는 실패 테스트 작성**
 
 ```js
 test('does not ship the actionless find-email route', () => {
@@ -144,21 +144,21 @@ test('does not ship the actionless find-email route', () => {
 });
 ```
 
-- [ ] **Step 2: 라우트 파일 존재로 테스트가 실패하는지 확인**
+- [x] **Step 2: 라우트 파일 존재로 테스트가 실패하는지 확인**
 
 Run: `npm test -- --runInBand scripts/project-surface-audit.test.js -t "find-email"`
 
 Expected: `exists(...)`가 `true`라서 FAIL.
 
-- [ ] **Step 3: 이메일 찾기 라우트와 전용 스타일 삭제**
+- [x] **Step 3: 이메일 찾기 라우트와 전용 스타일 삭제**
 
 `src/app/auth/find-email/page.tsx`, `src/app/auth/find-email/page.module.css`를 삭제한다. 로그인 화면의 `/auth/find-password` 링크는 유지한다.
 
-- [ ] **Step 4: 인증 문서에서 삭제된 파일과 정책 정리**
+- [x] **Step 4: 인증 문서에서 삭제된 파일과 정책 정리**
 
 `docs/auth-ui.md`의 대상 파일에서 find-email 두 파일을 제거하고, 실제 이메일 찾기 백엔드가 없어 경로를 제거했다는 기록을 추가한다.
 
-- [ ] **Step 5: 인증 표면 테스트 실행**
+- [x] **Step 5: 인증 표면 테스트 실행**
 
 Run: `npm test -- --runInBand scripts/project-surface-audit.test.js src/app/auth/login/page.test.tsx`
 
@@ -176,7 +176,7 @@ Expected: 두 테스트 파일 PASS.
 - Consumes: `SiteContentService.getOfflineStores()`, `getOfflineServices()`, `getOfflineInfo()`
 - Produces: 가상 데이터임을 명시하고 존재하지 않는 상세·길찾기 액션을 제공하지 않는 매장 목록
 
-- [ ] **Step 1: 데모 고지와 액션 부재를 검증하는 실패 테스트 작성**
+- [x] **Step 1: 데모 고지와 액션 부재를 검증하는 실패 테스트 작성**
 
 ```tsx
 import { render, screen, waitFor } from '@testing-library/react';
@@ -220,13 +220,13 @@ test('labels sample stores and does not render unavailable actions', async () =>
 });
 ```
 
-- [ ] **Step 2: 기존 상세·길찾기 액션 때문에 테스트가 실패하는지 확인**
+- [x] **Step 2: 기존 상세·길찾기 액션 때문에 테스트가 실패하는지 확인**
 
 Run: `npm test -- --runInBand src/app/support/offline/page.test.tsx`
 
 Expected: 데모 고지 부재 또는 상세·길찾기 액션 존재로 FAIL.
 
-- [ ] **Step 3: 끊어진 액션을 제거하고 데모 고지 추가**
+- [x] **Step 3: 끊어진 액션을 제거하고 데모 고지 추가**
 
 `page.tsx`에서 `next/link` import와 `storeActions` 블록을 제거한다. 설명은 다음 문구로 교체한다.
 
@@ -238,11 +238,11 @@ Expected: 데모 고지 부재 또는 상세·길찾기 액션 존재로 FAIL.
 
 `page.module.css`에서 `.storeActions`, `.actionButton`, `.primaryAction`, `.secondaryAction` 및 해당 hover 규칙을 삭제한다.
 
-- [ ] **Step 4: 정적 콘텐츠 문서에 가상 데이터 정책 기록**
+- [x] **Step 4: 정적 콘텐츠 문서에 가상 데이터 정책 기록**
 
 `docs/static-content.md`의 오프라인 콘텐츠 설명에 “예시 데이터이며 상세·길찾기 기능은 제공하지 않는다”는 정책을 추가한다.
 
-- [ ] **Step 5: 오프라인 화면 테스트 실행**
+- [x] **Step 5: 오프라인 화면 테스트 실행**
 
 Run: `npm test -- --runInBand src/app/support/offline/page.test.tsx src/shared/services/siteContentService.test.ts`
 
@@ -260,7 +260,7 @@ Expected: 두 테스트 파일 PASS.
 - Consumes: 기존 사용자 조회·상태 변경·역할 변경·포인트·CSV 기능
 - Produces: 로그인할 수 없는 Firestore 사용자 문서를 만들지 않는 관리자 사용자 화면
 
-- [ ] **Step 1: Firestore-only 사용자 생성 부재를 검증하는 실패 테스트 추가**
+- [x] **Step 1: Firestore-only 사용자 생성 부재를 검증하는 실패 테스트 추가**
 
 `scripts/project-surface-audit.test.js`의 describe 안에 추가한다.
 
@@ -271,13 +271,13 @@ test('does not expose Firestore-only admin user creation', () => {
 });
 ```
 
-- [ ] **Step 2: 현재 핸들러와 서비스 메서드 때문에 실패하는지 확인**
+- [x] **Step 2: 현재 핸들러와 서비스 메서드 때문에 실패하는지 확인**
 
 Run: `npm test -- --runInBand scripts/project-surface-audit.test.js -t "admin user creation"`
 
 Expected: 두 문자열이 존재해 FAIL.
 
-- [ ] **Step 3: 사용자 추가 핸들러·버튼·빈 상태 CTA 제거**
+- [x] **Step 3: 사용자 추가 핸들러·버튼·빈 상태 CTA 제거**
 
 `src/app/admin/dashboard/users/page.tsx`에서 `handleAddUser`, 상단 `사용자 추가` 버튼, 빈 상태의 `첫 번째 사용자 추가` 버튼을 제거한다. 빈 상태 안내는 다음처럼 실제 가능한 행동만 설명한다.
 
@@ -286,11 +286,11 @@ Expected: 두 문자열이 존재해 FAIL.
 <p>가입한 사용자가 없거나 현재 검색 조건에 맞는 사용자가 없습니다.</p>
 ```
 
-- [ ] **Step 4: 서비스 메서드와 사용하지 않는 import·mock 제거**
+- [x] **Step 4: 서비스 메서드와 사용하지 않는 import·mock 제거**
 
 `AdminUserService.createUser` 전체를 삭제하고 `firebase/firestore` import에서 `addDoc`를 제거한다. `adminUserService.test.ts`에서 `addDoc` import, mock과 reset도 제거한다.
 
-- [ ] **Step 5: 관리자 사용자 관련 테스트와 타입 검사**
+- [x] **Step 5: 관리자 사용자 관련 테스트와 타입 검사**
 
 Run: `npm test -- --runInBand scripts/project-surface-audit.test.js src/shared/services/adminUserService.test.ts`
 
@@ -313,7 +313,7 @@ Expected: `createUser` 또는 `handleAddUser` 잔여 참조 없이 PASS.
 - Consumes: 현재 홈의 `DynamicCategorySection`, `ProductSection`
 - Produces: 과거 홈 구성의 미사용 컴포넌트와 테스트 mock이 없는 실제 홈 표면
 
-- [ ] **Step 1: 미사용 컴포넌트 부재를 검증하는 실패 테스트 추가**
+- [x] **Step 1: 미사용 컴포넌트 부재를 검증하는 실패 테스트 추가**
 
 ```js
 test('does not keep the detached category product tabs implementation', () => {
@@ -323,21 +323,21 @@ test('does not keep the detached category product tabs implementation', () => {
 });
 ```
 
-- [ ] **Step 2: 현재 파일과 mock 때문에 테스트가 실패하는지 확인**
+- [x] **Step 2: 현재 파일과 mock 때문에 테스트가 실패하는지 확인**
 
 Run: `npm test -- --runInBand scripts/project-surface-audit.test.js -t "category product tabs"`
 
 Expected: 컴포넌트·스타일 파일과 page test mock이 존재해 FAIL.
 
-- [ ] **Step 3: 컴포넌트·스타일·죽은 mock 제거**
+- [x] **Step 3: 컴포넌트·스타일·죽은 mock 제거**
 
 두 CategoryProductTabs 파일을 삭제하고 `src/app/page.test.tsx`에서 `jest.mock('./_components/CategoryProductTabs', ...)` 블록을 제거한다. 현재 홈의 `DynamicCategorySection`과 `ProductSection`은 변경하지 않는다.
 
-- [ ] **Step 4: 과거 문서 기록을 현재 상태로 보정**
+- [x] **Step 4: 과거 문서 기록을 현재 상태로 보정**
 
 `docs/main-ranking-ui.md`에 CategoryProductTabs가 후속 홈 편집 개편에서 미사용 상태가 되어 제거됐고 현재 카테고리는 `DynamicCategorySection`이 담당한다는 기록을 추가한다.
 
-- [ ] **Step 5: 홈 구성과 표면 테스트 실행**
+- [x] **Step 5: 홈 구성과 표면 테스트 실행**
 
 Run: `npm test -- --runInBand scripts/project-surface-audit.test.js src/app/page.test.tsx`
 
@@ -354,7 +354,7 @@ Expected: 두 테스트 파일 PASS.
 - Consumes: 상품 상세의 현재 리뷰 UI와 `ProductReviews` 흐름
 - Produces: 레거시 카테고리 상품 문서를 직접 갱신하는 미사용 쓰기 유틸과 오래된 mock이 없는 상품 상세 테스트
 
-- [ ] **Step 1: 미사용 유틸과 테스트 mock 부재를 검증하는 실패 테스트 추가**
+- [x] **Step 1: 미사용 유틸과 테스트 mock 부재를 검증하는 실패 테스트 추가**
 
 ```js
 test('does not keep the detached legacy review sync utility', () => {
@@ -364,13 +364,13 @@ test('does not keep the detached legacy review sync utility', () => {
 });
 ```
 
-- [ ] **Step 2: 현재 유틸과 mock 때문에 테스트가 실패하는지 확인**
+- [x] **Step 2: 현재 유틸과 mock 때문에 테스트가 실패하는지 확인**
 
 Run: `npm test -- --runInBand scripts/project-surface-audit.test.js -t "legacy review sync"`
 
 Expected: 유틸 파일과 테스트 import/mock이 존재해 FAIL.
 
-- [ ] **Step 3: 레거시 쓰기 유틸과 stale 테스트 코드 제거**
+- [x] **Step 3: 레거시 쓰기 유틸과 stale 테스트 코드 제거**
 
 `src/shared/utils/syncProductReviews.ts`를 삭제한다. `ProductDetailClient.test.tsx`에서 다음 세 부분을 제거한다.
 
@@ -384,7 +384,7 @@ jest.mock('@/shared/utils/syncProductReviews', () => ({
 // 테스트 본문의 expect(getProductReviewStats).not.toHaveBeenCalled();
 ```
 
-- [ ] **Step 4: 상품 상세 테스트와 참조 검사**
+- [x] **Step 4: 상품 상세 테스트와 참조 검사**
 
 Run: `npm test -- --runInBand scripts/project-surface-audit.test.js src/app/products/_components/ProductDetailClient.test.tsx`
 
@@ -412,7 +412,7 @@ Expected: 런타임과 테스트 참조 없음.
 - Consumes: 유지할 `FeaturedProductService`, `/admin/featured-products`, `FeaturedProducts`
 - Produces: 추천 설정 데이터 모델을 `featuredProducts/mainPageFeatured` 하나로 제한한 코드 표면
 
-- [ ] **Step 1: 중복 계열 부재와 유지 계열 존재를 검증하는 실패 테스트 추가**
+- [x] **Step 1: 중복 계열 부재와 유지 계열 존재를 검증하는 실패 테스트 추가**
 
 ```js
 test('keeps one featured-product system and removes recommendationSettings', () => {
@@ -434,13 +434,13 @@ test('keeps one featured-product system and removes recommendationSettings', () 
 });
 ```
 
-- [ ] **Step 2: 중복 라우트·서비스·시드·규칙 때문에 실패하는지 확인**
+- [x] **Step 2: 중복 라우트·서비스·시드·규칙 때문에 실패하는지 확인**
 
 Run: `npm test -- --runInBand scripts/project-surface-audit.test.js -t "one featured-product system"`
 
 Expected: `recommendationSettings` 계열이 존재해 FAIL.
 
-- [ ] **Step 3: 중복 관리자 화면과 서비스 API 제거**
+- [x] **Step 3: 중복 관리자 화면과 서비스 API 제거**
 
 `src/app/admin/recommendations/page.tsx`, `page.module.css`를 삭제한다. `siteContentService.ts`에서 `RecommendationSettingContent`, `getRecommendationSettings`, `saveRecommendationSetting`을 삭제하고 더 이상 필요 없는 `setDoc`, `Timestamp` import를 제거한다.
 
@@ -448,7 +448,7 @@ Expected: `recommendationSettings` 계열이 존재해 FAIL.
 
 `src/app/page.test.tsx`의 `FeaturedProducts` mock은 현재 홈에서 해당 컴포넌트를 import하지 않아 실행되지 않으므로 제거한다. `FeaturedProducts.tsx`와 `FeaturedProductService` 자체는 후속 홈 큐레이션 작업을 위해 유지한다.
 
-- [ ] **Step 4: 중복 시드와 Firestore 규칙 제거**
+- [x] **Step 4: 중복 시드와 Firestore 규칙 제거**
 
 `scripts/static-content-data.js`에서 `recommendationSettings` 배열과 export를 제거한다. `scripts/seed-static-content.js`에서 해당 import와 `upsertCollection("recommendationSettings", recommendationSettings)` 호출을 제거한다.
 
@@ -460,11 +460,11 @@ match /recommendationSettings/{settingId} {
 }
 ```
 
-- [ ] **Step 5: 정적 콘텐츠 문서를 단일 추천 모델로 수정**
+- [x] **Step 5: 정적 콘텐츠 문서를 단일 추천 모델로 수정**
 
 `docs/static-content.md`에서 `recommendationSettings` 범위와 보안 규칙 설명을 제거하고, 추천 상품은 `FeaturedProductService`와 `/admin/featured-products`에서 관리하며 홈 연결은 후속 성능·큐레이션 단계에서 수행한다고 기록한다.
 
-- [ ] **Step 6: 중복 정리 관련 테스트 실행**
+- [x] **Step 6: 중복 정리 관련 테스트 실행**
 
 Run: `npm test -- --runInBand scripts/project-surface-audit.test.js src/shared/services/siteContentService.test.ts src/app/page.test.tsx`
 
@@ -484,13 +484,13 @@ Expected: 삭제된 타입·메서드·라우트 참조 없이 PASS.
 - Consumes: Tasks 1–7의 정리 결과
 - Produces: 다음 보안 단계가 시작할 수 있는 테스트 통과 기준선
 
-- [ ] **Step 1: 삭제 대상과 보존 대상 참조 감사**
+- [x] **Step 1: 삭제 대상과 보존 대상 참조 감사**
 
 Run: `rg -n "/mypage/(counsel|restock|withdrawal)|/auth/find-email|handleAddUser|static async createUser|CategoryProductTabs|syncProductReviews|getProductReviewStats|recommendationSettings|/admin/recommendations" src scripts functions firestore.rules docs`
 
 Expected: 설계·계획·과거 변경 기록을 제외한 런타임 참조 없음. `FeaturedProductService`, `/admin/featured-products`, `FeaturedProducts`는 존재.
 
-- [ ] **Step 2: 전체 정적 검사 실행**
+- [x] **Step 2: 전체 정적 검사 실행**
 
 Run: `npm run typecheck`
 
@@ -500,19 +500,19 @@ Run: `npm run lint -- --max-warnings=0`
 
 Expected: PASS, warnings 0.
 
-- [ ] **Step 3: 전체 Jest 실행**
+- [x] **Step 3: 전체 Jest 실행**
 
 Run: `npm test -- --runInBand`
 
 Expected: 모든 suite와 test PASS.
 
-- [ ] **Step 4: 프로덕션 빌드 실행**
+- [x] **Step 4: 프로덕션 빌드 실행**
 
 Run: `npm run build`
 
 Expected: Next.js production build exit 0. 삭제한 `/auth/find-email`, `/mypage/counsel`, `/mypage/restock`, `/mypage/withdrawal`, `/admin/recommendations`가 route 목록에 없음.
 
-- [ ] **Step 5: 변경 범위와 사용자 파일 보존 확인**
+- [x] **Step 5: 변경 범위와 사용자 파일 보존 확인**
 
 Run: `git diff --check`
 

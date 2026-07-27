@@ -61,6 +61,12 @@
 ## 남은 작업
 - 사용자 대상 공개 API 목록 확정 시 `API_PUBLIC_CACHE_RULES`에 개별 엔드포인트 등록 및 revalidate 값 조정.
 
+## 2026-07-21 도움말 챗봇 경계
+
+- 과거 `실시간 상담`, `상담원 연결` 표기는 도움말 챗봇과 직접 질문하기로 교체했다.
+- 직접 질문은 현재 세션에서 규칙 기반 또는 설정된 provider 답변만 제공하며, 사람 상담원에게 접수되거나 답변 SLA가 생기지 않는다.
+- 예전 명령 문자열은 기존 입력 호환을 위한 alias로만 인식하고, 사람 연결이 제공되지 않는다는 안내로 종료한다.
+
 ## 2026-06-12 로컬 API 프록시 보강
 - Firebase Hosting rewrite에만 있던 `/api/points`, `/api/coupon`, `/api/admin/users`, `/api/qna/verify-secret`를 로컬 Next dev에서도 동작하도록 App Router API route로 추가했다.
 - 네 라우트는 `src/app/api/_lib/functionProxy.ts`의 공통 no-store 프록시를 사용해 인증 헤더와 JSON body를 대응 Cloud Function으로 전달한다.

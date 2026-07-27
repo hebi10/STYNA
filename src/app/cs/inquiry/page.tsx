@@ -95,7 +95,7 @@ export default function InquiryPage() {
         formData
       );
       
-      alert('문의가 등록되었습니다. 빠른 시일 내에 답변드리겠습니다.');
+      alert('문의가 저장되었습니다. 문의 내역에서 상태를 확인해 주세요.');
       setFormData({ category: 'order', title: '', content: '' });
       
       // 문의 내역 탭으로 이동하고 데이터 새로고침
@@ -180,7 +180,7 @@ export default function InquiryPage() {
       {activeTab === 'write' && (
         <div className={styles.inquiryForm}>
           <div className={styles.formNote}>
-            문의하신 내용은 마이페이지에서도 확인하실 수 있으며, 답변은 영업일 기준 1-2일 내에 등록됩니다.
+            문의 내용은 Firebase에 저장되어 마이페이지에서도 확인할 수 있습니다. 답변 여부와 시점은 보장하지 않습니다.
           </div>
           
           <form onSubmit={handleSubmit}>

@@ -61,10 +61,11 @@ export function buildDemoDataNotice(): string {
 export function buildChatPolicyPrompt(): string {
   return [
     formatShippingPolicy(),
-    `고객센터 운영시간은 ${formatSupportHours()}입니다.`,
+    `화면에 표시된 ${formatSupportHours()}은 포트폴리오 UI 구성용 참고 시간입니다.`,
+    '실제 사람 상담 연결이나 응답 시점을 약속하지 말고, 1:1 문의는 기록 저장 기능으로만 안내하세요.',
     formatSignupBenefit(),
     '선택한 결제 방식은 데모 주문 기록에만 사용되며 실제 승인·청구가 발생하지 않습니다.',
     `입력한 정보와 주문 기록은 ${COMMERCE_POLICY.demo.dataStore}에 저장될 수 있습니다.`,
-    '여기에 없는 혜택, 출고 일정, 결제수단은 추정하거나 약속하지 마세요.',
+    '여기에 없는 혜택, 출고 일정, 결제수단, 고객지원 SLA는 추정하거나 약속하지 마세요.',
   ].join('\n');
 }

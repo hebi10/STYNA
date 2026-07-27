@@ -77,4 +77,6 @@
 - Functions 공통 인증은 revoked token 검증과 활성 사용자 문서를 함께 확인한다. `inactive`, `banned`, `deleted`, 사용자 문서 부재를 403으로, 유효하지 않거나 폐기된 token을 401로 거부한다.
 - 리뷰 작성자는 자신의 리뷰 본문·평점·이미지 등 편집 필드만 수정할 수 있다. `productId`, `userId`, `createdAt` 변경과 임의 필드 추가는 Firestore 규칙에서 차단한다.
 - 리뷰 생성은 클라이언트 Firestore 쓰기를 허용하지 않고 `/api/review` Function에서만 처리한다. Function은 로그인 계정, 주문 소유권, 배송 완료(또는 구매 확정) 상태, 주문 상품·사이즈·색상 일치를 transaction으로 검증하며 같은 주문 상품 옵션에는 결정적 문서 ID로 1회만 생성한다. 기존 레거시 리뷰의 공개 조회와 작성자 수정·삭제 권한은 유지한다.
+- 리뷰 수정은 작성자와 엄격 관리자 모두 `rating` 정수 1~5, `isRecommended` boolean을 유지해야 한다. `productId`, `userId`, `createdAt`은 변경할 수 없고 aggregate 필드는 삭제할 수 없다.
+- 최상위 및 레거시 중첩 상품 문서는 `status == "active"`인 경우에만 공개 읽기를 허용한다. 엄격 관리자는 draft·inactive·상태 누락 문서를 포함한 전체 상품을 읽을 수 있다.
 - `npm run test:rules`는 Firestore·Storage Emulator에서 이 권한 행렬을 검증한다. 로컬 실행에는 Java 런타임이 필요하다.

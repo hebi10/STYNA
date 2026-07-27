@@ -345,11 +345,30 @@ service cloud.firestore {
           request.resource.data.status in ['waiting', 'answered', 'closed']);
     }
 
+    function hasValidReviewAggregateFields(data) {
+      return data.keys().hasAll([
+          'productId',
+          'userId',
+          'rating',
+          'isRecommended',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.rating is int &&
+        data.rating >= 1 &&
+        data.rating <= 5 &&
+        data.isRecommended is bool;
+    }
+
+    function preservesReviewIdentity() {
+      return request.resource.data.userId == resource.data.userId &&
+        request.resource.data.productId == resource.data.productId &&
+        request.resource.data.createdAt == resource.data.createdAt;
+    }
+
     function isValidReviewOwnerUpdate() {
       return isActiveOwner(resource.data.userId) &&
-        request.resource.data.userId == resource.data.userId &&
-        request.resource.data.productId == resource.data.productId &&
-        request.resource.data.createdAt == resource.data.createdAt &&
+        preservesReviewIdentity() &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'userName',
           'rating',
@@ -365,19 +384,81 @@ service cloud.firestore {
         ]);
     }
 
+    function preservesServerOwnedProductReviewStats() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'rating',
+        'reviewCount',
+        'reviewSummary',
+        'reviewStatsEventTime',
+        'reviewStatsRunToken',
+        'reviewStatsUpdatedAt',
+        'reviewStatsVersion'
+      ]);
+    }
+
+    function hasSafeInitialProductReviewStats(data) {
+      let summary = data.get('reviewSummary', {});
+      let distribution = summary.get('ratingDistribution', {});
+      return data.keys().hasAll(['rating', 'reviewCount', 'reviewSummary']) &&
+        !data.keys().hasAny([
+          'reviewStatsEventTime',
+          'reviewStatsRunToken',
+          'reviewStatsUpdatedAt',
+          'reviewStatsVersion'
+        ]) &&
+        data.rating == 0 &&
+        data.reviewCount == 0 &&
+        summary is map &&
+        summary.keys().hasOnly([
+          'schemaVersion',
+          'totalReviews',
+          'averageRating',
+          'recommendedCount',
+          'recommendationRate',
+          'ratingDistribution'
+        ]) &&
+        summary.keys().hasAll([
+          'schemaVersion',
+          'totalReviews',
+          'averageRating',
+          'recommendedCount',
+          'recommendationRate',
+          'ratingDistribution'
+        ]) &&
+        summary.schemaVersion == 1 &&
+        summary.totalReviews == 0 &&
+        summary.averageRating == 0 &&
+        summary.recommendedCount == 0 &&
+        summary.recommendationRate == 0 &&
+        distribution is map &&
+        distribution.keys().hasOnly(['1', '2', '3', '4', '5']) &&
+        distribution.keys().hasAll(['1', '2', '3', '4', '5']) &&
+        distribution.get('1', -1) == 0 &&
+        distribution.get('2', -1) == 0 &&
+        distribution.get('3', -1) == 0 &&
+        distribution.get('4', -1) == 0 &&
+        distribution.get('5', -1) == 0;
+    }
+
     match /categories/{categoryId} {
       allow read: if true;
       allow write: if isAdmin();
 
       match /products/{productId} {
-        allow read: if true;
-        allow write: if isAdmin();
+        allow read: if isAdmin() ||
+          resource.data.get('status', '') == 'active';
+        allow create: if isAdmin() && hasSafeInitialProductReviewStats(request.resource.data);
+        allow delete: if isAdmin();
+        allow update: if isAdmin() && preservesServerOwnedProductReviewStats();
       }
     }
 
     match /products/{productId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read: if isAdmin() ||
+        resource.data.get('status', '') == 'active';
+      allow create: if isAdmin() && hasSafeInitialProductReviewStats(request.resource.data);
+      allow delete: if isAdmin();
+      allow update: if isAdmin() && preservesServerOwnedProductReviewStats();
     }
 
     match /categoryOrder/{configId} {
@@ -391,7 +472,9 @@ service cloud.firestore {
     }
 
     match /events/{eventId} {
-      allow read: if true;
+      allow read: if isStrictAdmin() ||
+        (resource.data.get('publicPolicyVerified', false) == true &&
+          resource.data.get('isActive', false) == true);
       allow write: if isAdmin();
     }
 
@@ -469,7 +552,9 @@ service cloud.firestore {
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if false;
-      allow update: if isAdmin() || isValidReviewOwnerUpdate();
+      allow update: if hasValidReviewAggregateFields(request.resource.data) &&
+        preservesReviewIdentity() &&
+        (isAdmin() || isValidReviewOwnerUpdate());
       allow delete: if isAdmin() || isActiveOwner(resource.data.userId);
     }
 

@@ -5,13 +5,16 @@ import type { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import PointService from '@/shared/services/pointService';
 import { PointHistory, AddPointRequest, UsePointRequest, RefundPointRequest } from '@/shared/types/point';
 import { useAuth } from '@/context/authProvider';
+import { pointKeys } from './queryKeys';
+
+export { pointKeys } from './queryKeys';
 
 // 포인트 잔액 조회 Hook
 export const usePointBalance = () => {
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['pointBalance', user?.uid],
+    queryKey: pointKeys.balance(user?.uid || ''),
     queryFn: () => PointService.getPointBalance(user!.uid),
     enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5분
@@ -25,7 +28,6 @@ export const usePointHistory = (limit: number = 50) => {
   const [allHistory, setAllHistory] = useState<PointHistory[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
   
   // ref로 로딩 상태 관리
   const isLoadingMoreRef = useRef(false);
@@ -36,20 +38,19 @@ export const usePointHistory = (limit: number = 50) => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['pointHistory', user?.uid, limit],
+    queryKey: pointKeys.history(user?.uid || '', limit),
     queryFn: () => PointService.getPointHistory(user!.uid, limit),
     enabled: !!user,
   });
 
   useEffect(() => {
-    if (data?.success && data.history && !isInitialized) {
+    if (data?.success && data.history) {
  console.log(' 포인트 내역 초기 로드:', data.history.length);
       setAllHistory(data.history);
       setLastDoc(data.lastDoc);
       setHasMore(data.hasMore);
-      setIsInitialized(true);
     }
-  }, [data, isInitialized]);
+  }, [data]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || isLoadingMoreRef.current || !lastDoc) {
@@ -77,12 +78,16 @@ export const usePointHistory = (limit: number = 50) => {
     }
   }, [hasMore, lastDoc, user, limit]);
 
-  const reset = useCallback(() => {
+  const reset = useCallback(async () => {
     setAllHistory([]);
     setLastDoc(null);
     setHasMore(true);
-    setIsInitialized(false);
-    refetch();
+    const result = await refetch();
+    if (result.data?.success) {
+      setAllHistory(result.data.history);
+      setLastDoc(result.data.lastDoc);
+      setHasMore(result.data.hasMore);
+    }
   }, [refetch]);
 
   return {
@@ -105,8 +110,7 @@ export const useAddPoint = () => {
     mutationFn: (data: AddPointRequest) => PointService.addPoint(data),
     onSuccess: () => {
       // 포인트 잔액과 내역 캐시 무효화
-      queryClient.invalidateQueries({ queryKey: ['pointBalance', user?.uid] });
-      queryClient.invalidateQueries({ queryKey: ['pointHistory', user?.uid] });
+      queryClient.invalidateQueries({ queryKey: pointKeys.all(user?.uid || '') });
     },
   });
 };
@@ -119,8 +123,7 @@ export const useUsePoint = () => {
   return useMutation({
     mutationFn: (data: UsePointRequest) => PointService.spendPoint(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pointBalance', user?.uid] });
-      queryClient.invalidateQueries({ queryKey: ['pointHistory', user?.uid] });
+      queryClient.invalidateQueries({ queryKey: pointKeys.all(user?.uid || '') });
     },
   });
 };
@@ -133,8 +136,7 @@ export const useRefundPoint = () => {
   return useMutation({
     mutationFn: (data: RefundPointRequest) => PointService.refundPoint(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pointBalance', user?.uid] });
-      queryClient.invalidateQueries({ queryKey: ['pointHistory', user?.uid] });
+      queryClient.invalidateQueries({ queryKey: pointKeys.all(user?.uid || '') });
     },
   });
 };

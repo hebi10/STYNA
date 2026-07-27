@@ -41,7 +41,7 @@ export default function AdminEventList() {
   const loadEvents = async () => {
     try {
       setLoading(true);
-      const eventsData = await EventService.getEvents();
+      const eventsData = await EventService.getAdminEvents();
       setEvents(eventsData);
     } catch (error) {
       console.error('Error loading events:', error);
@@ -314,7 +314,7 @@ export default function AdminEventList() {
                 ) : null}
                 {event.discountAmount && event.discountAmount > 0 ? (
                   <div className={styles.eventBenefit}>
-                    적립금: {event.discountAmount.toLocaleString()}원
+                    할인 표시 금액: {event.discountAmount.toLocaleString()}원
                   </div>
                 ) : null}
                 {event.couponCode && (

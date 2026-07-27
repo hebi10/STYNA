@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { useCategories } from '@/context/categoryProvider';
+import { CategoryProvider } from '@/context/categoryProvider';
 import styles from './page.module.css';
 
-export default function CategoriesPage() {
+function CategoriesContent() {
   const { categories, loading, error } = useCategories();
 
   if (loading) {
@@ -82,5 +83,13 @@ export default function CategoriesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function CategoriesPage() {
+  return (
+    <CategoryProvider>
+      <CategoriesContent />
+    </CategoryProvider>
   );
 }

@@ -46,7 +46,7 @@ export function EventProvider({ children }: EventProviderProps) {
     setError(null);
 
     try {
-      const eventsData = await EventService.getEvents();
+      const eventsData = await EventService.getPublicEvents({ isActive: true });
       setEvents(eventsData);
     } catch (error) {
       console.error('Error loading events:', error);

@@ -102,6 +102,7 @@ describe('DynamicCategorySection', () => {
 
     await waitFor(() => expect(screen.getByText('상의')).toBeInTheDocument());
     expect(screen.queryByAltText('상의')).not.toBeInTheDocument();
-    expect(screen.getByText('매일 입기 좋은 기본 상의')).toBeInTheDocument();
+    expect(screen.getByText('현재 등록된 기본 상의 상품')).toBeInTheDocument();
+    expect(screen.queryByText('오래 걸어도 편한 데일리 슈즈')).not.toBeInTheDocument();
   });
 });

@@ -1,506 +1,193 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ProductService } from "@/shared/services/productService";
-import { Product, ProductFilter, ProductSort } from "@/shared/types/product";
+import { productKeys } from "@/shared/hooks/queryKeys";
+import type { Product } from "@/shared/types/product";
 
 interface ProductContextType {
-  // 상태
   products: Product[];
-  filteredProducts: Product[];
-  currentProduct: Product | null;
-  relatedProducts: Product[];
-  recommendedProducts: Product[];
-  newProducts: Product[];
-  saleProducts: Product[];
-  bestSellerProducts: Product[];
-  searchResults: Product[];
-  sortedProducts: Product[];
-  
-  // 필터 및 정렬 상태
-  categories: string[];
-  brands: string[];
-  priceRange: { min: number; max: number };
-  currentFilter: ProductFilter;
-  currentSort: ProductSort;
-  
-  // UI 상태
   loading: boolean;
   error: string | null;
-  searchQuery: string;
-  
-  // 액션
   loadProducts: (forceReload?: boolean) => Promise<void>;
-  getAllProducts: () => Promise<void>; // admin 페이지에서 사용
-  getProductById: (productId: string) => Promise<Product | null>; // 단일 상품 반환
-  loadProductById: (productId: string) => Promise<void>;
-  getProductsByCategory: (categoryId: string) => Promise<Product[]>; // 카테고리별 상품 조회
-  searchProducts: (query: string) => Promise<void>;
-  clearSearch: () => void;
-  filterProducts: (filter: ProductFilter) => Promise<void>;
-  sortProducts: (sort: ProductSort) => Promise<void>;
-  clearFilters: () => void;
-  loadRelatedProducts: (productId: string, limit?: number) => Promise<void>;
-  loadHomePageData: () => Promise<void>;
-  
-  // 헬퍼 함수
-  calculateDiscountPrice: (price: number, saleRate?: number) => number;
-  isInStock: (product: Product) => boolean;
-  calculateAverageRating: (products: Product[]) => number;
-  
-  // 관리자 액션
-  createProduct: (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Product>;
-  updateProduct: (productId: string, updates: Partial<Omit<Product, 'id' | 'createdAt'>>) => Promise<Product>;
+  getProductById: (productId: string) => Promise<Product | null>;
+  createProduct: (
+    product: Omit<Product, "id" | "createdAt" | "updatedAt">,
+  ) => Promise<Product>;
+  updateProduct: (
+    productId: string,
+    updates: Partial<Omit<Product, "id" | "createdAt">>,
+  ) => Promise<Product>;
   deleteProduct: (productId: string) => Promise<void>;
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
-export function useProduct() {
+function normalizeProduct(product: Product): Product {
+  const images = product.images ?? [];
+  const mainImage = product.mainImage && images.includes(product.mainImage)
+    ? product.mainImage
+    : images[0];
+
+  return {
+    ...product,
+    images,
+    mainImage,
+  };
+}
+
+export function useProduct(): ProductContextType {
   const context = useContext(ProductContext);
-  if (context === undefined) {
-    throw new Error('useProduct must be used within a ProductProvider');
+  if (!context) {
+    throw new Error("useProduct must be used within a ProductProvider");
   }
   return context;
 }
 
 export function ProductProvider({ children }: { children: ReactNode }) {
-  // 상태
+  const queryClient = useQueryClient();
   const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
-  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
-  const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
-  const [newProducts, setNewProducts] = useState<Product[]>([]);
-  const [saleProducts, setSaleProducts] = useState<Product[]>([]);
-  const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
-  const [searchResults, setSearchResults] = useState<Product[]>([]);
-  const [sortedProducts, setSortedProducts] = useState<Product[]>([]);
-  
-  // 필터 및 정렬 상태
-  const [categories, setCategories] = useState<string[]>([]);
-  const [brands, setBrands] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 0 });
-  const [currentFilter, setCurrentFilter] = useState<ProductFilter>({});
-  const [currentSort, setCurrentSort] = useState<ProductSort>({ field: 'createdAt', order: 'desc' });
-  
-  // UI 상태
-  const [loading, setLoading] = useState(false);
+  const [pendingOperations, setPendingOperations] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const lastFetchTimeRef = useRef(0);
-  const isLoadingRef = useRef(false);
+  const loadingPromiseRef = useRef<Promise<void> | null>(null);
+  const mutationGenerationRef = useRef(0);
 
-  // 상품 데이터 정규화 (mainImage가 없으면 첫 번째 이미지로 설정)
-  const normalizeProduct = useCallback((product: Product): Product => {
-    let mainImage = product.mainImage;
-    
-    // mainImage가 없거나 images 배열에 없으면 첫 번째 이미지를 사용
-    if (!mainImage || !product.images?.includes(mainImage)) {
-      mainImage = product.images && product.images.length > 0 ? product.images[0] : undefined;
-    }
-    
-    const normalizedProduct = {
-      ...product,
-      mainImage,
-      images: product.images || [] // images 배열이 없으면 빈 배열
-    };
-    
-    return normalizedProduct;
+  const beginOperation = useCallback(() => {
+    setPendingOperations((count) => count + 1);
   }, []);
 
-  // 모든 상품 로드 (10초 디바운스 적용 + 중복 요청 방지)
-  const loadProducts = useCallback(async (forceReload: boolean = false) => {
+  const endOperation = useCallback(() => {
+    setPendingOperations((count) => Math.max(0, count - 1));
+  }, []);
+
+  const loadProducts = useCallback(async (forceReload = false): Promise<void> => {
     const now = Date.now();
-    const CACHE_DURATION = 10000; // 10초
-    
-    // 이미 로딩 중이면 무시
-    if (isLoadingRef.current) {
- console.log('⏳ 이미 로딩 중입니다. 중복 요청을 무시합니다.');
-      return;
+    const cacheDuration = 10_000;
+
+    if (loadingPromiseRef.current) {
+      return loadingPromiseRef.current;
     }
-    
-    // 강제 새로고침이 아니고 캐시 기간 내라면 로딩하지 않음
-    if (!forceReload && now - lastFetchTimeRef.current < CACHE_DURATION) {
- console.log('⏰ 캐시된 데이터 사용 중... 남은 시간:', Math.ceil((CACHE_DURATION - (now - lastFetchTimeRef.current)) / 1000), '초');
+
+    if (!forceReload && now - lastFetchTimeRef.current < cacheDuration) {
       return;
     }
 
-    try {
-      isLoadingRef.current = true;
-      setLoading(true);
+    const mutationGeneration = mutationGenerationRef.current;
+    const request = (async () => {
+      beginOperation();
       setError(null);
-      
-      const [allProducts, categories, brands] = await Promise.all([
-        ProductService.getAllProducts(),
-        ProductService.getCategories(),
-        ProductService.getBrands()
-      ]);
-      
-      // 상품 정규화
-      const normalizedProducts = allProducts.map(normalizeProduct);
-      
-      setProducts(normalizedProducts);
-      setFilteredProducts(normalizedProducts);
-      setCategories(categories);
-      setBrands(brands);
-      
-      // 가격 범위 설정
-      const range = ProductService.getPriceRange(allProducts);
-      setPriceRange(range);
-      
-      // 마지막 fetch 시간 업데이트
-      lastFetchTimeRef.current = now;
+      try {
+        const allProducts = await ProductService.getAllProducts();
+        if (mutationGenerationRef.current === mutationGeneration) {
+          setProducts(allProducts.map(normalizeProduct));
+          lastFetchTimeRef.current = Date.now();
+        }
+      } catch (error) {
+        if (mutationGenerationRef.current === mutationGeneration) {
+          setError("상품 목록을 불러오지 못했습니다.");
+          console.error("상품 조회 실패:", error);
+        }
+      } finally {
+        endOperation();
+        loadingPromiseRef.current = null;
+      }
+    })();
 
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '상품을 불러오는데 실패했습니다.';
-      setError(errorMessage);
- console.error('상품 조회 실패:', err);
-    } finally {
-      isLoadingRef.current = false;
-      setLoading(false);
-    }
-  }, [normalizeProduct]);
+    loadingPromiseRef.current = request;
+    return request;
+  }, [beginOperation, endOperation]);
 
-  // 단일 상품 로드
-  const loadProductById = useCallback(async (productId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // 모든 카테고리에서 상품을 찾아야 하므로 getAllProducts에서 필터링
-      const allProducts = await ProductService.getAllProducts();
-      const product = allProducts.find((p: Product) => p.id === productId);
-      
-      setCurrentProduct(product ? normalizeProduct(product) : null);
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '상품을 불러오는데 실패했습니다.';
-      setError(errorMessage);
- console.error('상품 조회 실패:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [normalizeProduct]);
-
-  // 단일 상품 조회 (Product 반환)
   const getProductById = useCallback(async (productId: string): Promise<Product | null> => {
-    try {
-      // 현재 products 배열에서 먼저 찾기
-      const existingProduct = products.find(p => p.id === productId);
-      if (existingProduct) {
- console.log(' products 배열에서 찾음:', existingProduct.name);
-        return normalizeProduct(existingProduct);
-      }
-      
-      // 새로운 getProductById 메서드 사용
-      const product = await ProductService.getProductById(productId);
-      
-      if (product) {
-        return normalizeProduct(product);
-      } else {
- console.log(' 상품을 찾을 수 없음');
-        return null;
-      }
-
-    } catch (err) {
- console.error('상품 조회 실패:', err);
-      return null;
-    }
-  }, [products, normalizeProduct]);
-
-  // 카테고리별 상품 조회
-  const getProductsByCategory = useCallback(async (categoryId: string): Promise<Product[]> => {
-    try {
-      const products = await ProductService.getProductsByCategory(categoryId);
-      return products.map(normalizeProduct);
-    } catch (err) {
- console.error('카테고리별 상품 조회 실패:', err);
-      return [];
-    }
-  }, [normalizeProduct]);
-
-  // 상품 검색
-  const searchProducts = useCallback(async (query: string) => {
-    setSearchQuery(query);
-    
-    if (!query.trim()) {
-      setSearchResults([]);
-      setFilteredProducts(products);
-      return;
+    const cachedProduct = products.find((product) => product.id === productId);
+    if (cachedProduct) {
+      return cachedProduct;
     }
 
-    try {
-      setLoading(true);
-      setError(null);
-
-      const searchResults = await ProductService.searchProducts(query);
-      setSearchResults(searchResults);
-      setFilteredProducts(searchResults);
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '검색에 실패했습니다.';
-      setError(errorMessage);
- console.error('상품 검색 실패:', err);
-    } finally {
-      setLoading(false);
-    }
+    const product = await ProductService.getProductById(productId);
+    return product ? normalizeProduct(product) : null;
   }, [products]);
 
-  // 검색 결과 초기화
-  const clearSearch = useCallback(() => {
-    setSearchResults([]);
-    setSearchQuery('');
-    setFilteredProducts(products);
-  }, [products]);
-
-  // 상품 필터링
-  const filterProducts = useCallback(async (filter: ProductFilter) => {
+  const createProduct = useCallback(async (
+    product: Omit<Product, "id" | "createdAt" | "updatedAt">,
+  ): Promise<Product> => {
+    beginOperation();
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-
-      const filtered = await ProductService.getFilteredProducts(filter);
-      setFilteredProducts(filtered);
-      setCurrentFilter(filter);
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '필터링에 실패했습니다.';
-      setError(errorMessage);
- console.error('상품 필터링 실패:', err);
+      const createdProduct = normalizeProduct(await ProductService.createProduct(product));
+      mutationGenerationRef.current += 1;
+      setProducts((currentProducts) => [...currentProducts, createdProduct]);
+      void queryClient.invalidateQueries({ queryKey: productKeys.all });
+      return createdProduct;
+    } catch (operationError) {
+      setError("상품을 생성하지 못했습니다.");
+      throw operationError;
     } finally {
-      setLoading(false);
+      endOperation();
     }
-  }, []);
+  }, [beginOperation, endOperation, queryClient]);
 
-  // 상품 정렬
-  const sortProducts = useCallback(async (sort: ProductSort) => {
+  const updateProduct = useCallback(async (
+    productId: string,
+    updates: Partial<Omit<Product, "id" | "createdAt">>,
+  ): Promise<Product> => {
+    beginOperation();
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-
-      const sorted = await ProductService.getSortedProducts(filteredProducts, sort);
-      setSortedProducts(sorted);
-      setCurrentSort(sort);
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '정렬에 실패했습니다.';
-      setError(errorMessage);
- console.error('상품 정렬 실패:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [filteredProducts]);
-
-  // 필터 초기화
-  const clearFilters = useCallback(() => {
-    setCurrentFilter({});
-    setFilteredProducts(products);
-    setSortedProducts([]);
-    setSearchQuery('');
-    setSearchResults([]);
-  }, [products]);
-
-  // 관련 상품 로드
-  const loadRelatedProducts = useCallback(async (productId: string, limit: number = 4) => {
-    try {
-      setError(null);
-
-      const related = await ProductService.getRelatedProducts(productId, limit);
-      setRelatedProducts(related);
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '관련 상품을 불러오는데 실패했습니다.';
-      setError(errorMessage);
- console.error('관련 상품 조회 실패:', err);
-    }
-  }, []);
-
-  // 홈페이지 데이터 로드
-  const loadHomePageData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const [homePageProducts, categories, brands] = await Promise.all([
-        ProductService.getHomePageProducts(),
-        ProductService.getCategories(),
-        ProductService.getBrands()
-      ]);
-
-      setRecommendedProducts(homePageProducts.recommendedProducts);
-      setNewProducts(homePageProducts.newProducts);
-      setSaleProducts(homePageProducts.saleProducts);
-      setBestSellerProducts(homePageProducts.bestSellerProducts);
-      setCategories(categories);
-      setBrands(brands);
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '홈페이지 데이터를 불러오는데 실패했습니다.';
-      setError(errorMessage);
- console.error('홈페이지 데이터 로드 실패:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // 헬퍼 함수들
-  const calculateDiscountPrice = useCallback((price: number, saleRate?: number) => {
-    if (!saleRate) return price;
-    return Math.round(price * (1 - saleRate / 100));
-  }, []);
-
-  const isInStock = useCallback((product: Product) => {
-    return product.stock > 0;
-  }, []);
-
-  const calculateAverageRating = useCallback((products: Product[]) => {
-    if (products.length === 0) return 0;
-    const total = products.reduce((sum, product) => sum + product.rating, 0);
-    return Math.round((total / products.length) * 10) / 10;
-  }, []);
-
-  // 관리자 액션들
-  const createProduct = useCallback(async (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const newProduct = await ProductService.createProduct(product);
-      
-      // 상품 목록 업데이트
-      setProducts(prev => [...prev, newProduct]);
-      setFilteredProducts(prev => [...prev, newProduct]);
-
-      return newProduct;
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '상품 생성에 실패했습니다.';
-      setError(errorMessage);
- console.error('상품 생성 실패:', err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const updateProduct = useCallback(async (productId: string, updates: Partial<Omit<Product, 'id' | 'createdAt'>>) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const updatedProduct = await ProductService.updateProduct(productId, updates);
-
-      // 상품 목록 업데이트
-      setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
-      setFilteredProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
-      
-      // 현재 상품이 업데이트된 상품이면 갱신
-      if (currentProduct?.id === productId) {
-        setCurrentProduct(updatedProduct);
-      }
-
+      const updatedProduct = normalizeProduct(
+        await ProductService.updateProduct(productId, updates),
+      );
+      mutationGenerationRef.current += 1;
+      setProducts((currentProducts) => currentProducts.map((product) => (
+        product.id === productId ? updatedProduct : product
+      )));
+      void queryClient.invalidateQueries({ queryKey: productKeys.all });
       return updatedProduct;
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '상품 수정에 실패했습니다.';
-      setError(errorMessage);
- console.error('상품 수정 실패:', err);
-      throw err;
+    } catch (operationError) {
+      setError("상품을 수정하지 못했습니다.");
+      throw operationError;
     } finally {
-      setLoading(false);
+      endOperation();
     }
-  }, [currentProduct]);
+  }, [beginOperation, endOperation, queryClient]);
 
-  const deleteProduct = useCallback(async (productId: string) => {
+  const deleteProduct = useCallback(async (productId: string): Promise<void> => {
+    beginOperation();
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-
       await ProductService.deleteProduct(productId);
-
-      // 상품 목록에서 제거
-      setProducts(prev => prev.filter(p => p.id !== productId));
-      setFilteredProducts(prev => prev.filter(p => p.id !== productId));
-      
-      // 현재 상품이 삭제된 상품이면 초기화
-      if (currentProduct?.id === productId) {
-        setCurrentProduct(null);
-      }
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '상품 삭제에 실패했습니다.';
-      setError(errorMessage);
- console.error('상품 삭제 실패:', err);
-      throw err;
+      mutationGenerationRef.current += 1;
+      setProducts((currentProducts) => currentProducts.filter((product) => (
+        product.id !== productId
+      )));
+      void queryClient.invalidateQueries({ queryKey: productKeys.all });
+    } catch (operationError) {
+      setError("상품을 삭제하지 못했습니다.");
+      throw operationError;
     } finally {
-      setLoading(false);
+      endOperation();
     }
-  }, [currentProduct]);
-
-  // 관리자용 전체 상품 로드 (캐시 무시하고 강제 로드)
-  const getAllProducts = useCallback(async () => {
-    return loadProducts(true);
-  }, [loadProducts]);
-
-  // 초기 데이터 로드 (한번만 실행)
-  useEffect(() => {
-    loadProducts(true); // 초기 로드는 강제로 실행
-    loadHomePageData(); // 홈페이지 데이터도 함께 로드
-  }, [loadProducts, loadHomePageData]);
-
-  const value: ProductContextType = {
-    // 상태
-    products,
-    filteredProducts,
-    currentProduct,
-    relatedProducts,
-    recommendedProducts,
-    newProducts,
-    saleProducts,
-    bestSellerProducts,
-    searchResults,
-    sortedProducts,
-    
-    // 필터 및 정렬 상태
-    categories,
-    brands,
-    priceRange,
-    currentFilter,
-    currentSort,
-    
-    // UI 상태
-    loading,
-    error,
-    searchQuery,
-    
-    // 액션
-    loadProducts,
-    getAllProducts,
-    getProductById,
-    loadProductById,
-    getProductsByCategory,
-    searchProducts,
-    clearSearch,
-    filterProducts,
-    sortProducts,
-    clearFilters,
-    loadRelatedProducts,
-    loadHomePageData,
-    
-    // 헬퍼 함수
-    calculateDiscountPrice,
-    isInStock,
-    calculateAverageRating,
-    
-    // 관리자 액션
-    createProduct,
-    updateProduct,
-    deleteProduct,
-  };
+  }, [beginOperation, endOperation, queryClient]);
 
   return (
-    <ProductContext.Provider value={value}>
+    <ProductContext.Provider value={{
+      products,
+      loading: pendingOperations > 0,
+      error,
+      loadProducts,
+      getProductById,
+      createProduct,
+      updateProduct,
+      deleteProduct,
+    }}>
       {children}
     </ProductContext.Provider>
   );

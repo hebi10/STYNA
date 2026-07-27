@@ -13,6 +13,33 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "redirects": [
+      {
+        "source": "/events/2026{,/**}",
+        "destination": "/events/",
+        "type": 302
+      },
+      {
+        "source": "/events/2026-v2{,/**}",
+        "destination": "/events/",
+        "type": 302
+      },
+      {
+        "source": "/events/2026-v3{,/**}",
+        "destination": "/events/",
+        "type": 302
+      },
+      {
+        "source": "/events/2026-editorial/*-20260715-*.webp",
+        "destination": "/events/",
+        "type": 302
+      },
+      {
+        "source": "/events/2026-editorial/*-20260721-*.webp",
+        "destination": "/events/",
+        "type": 302
+      }
+    ],
     "rewrites": [
       {
         "source": "/api/points",

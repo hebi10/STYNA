@@ -258,7 +258,7 @@ function DashboardContent() {
                   qna/ · status 인덱스
                 </span>
                 <span className={styles.trend}>
-                  SLA: 24시간 이내 답변
+                  문의 상태 기준 집계
                 </span>
               </div>
             </div>

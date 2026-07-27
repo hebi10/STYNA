@@ -22,6 +22,7 @@ import {
   hasStrictAdminAccess,
 } from "../shared/utils/authAccess";
 import { getAuthGuardRedirect } from "../shared/utils/authRouteGuard";
+import { useSignupBonusReconciliation } from "../shared/hooks/useSignupBonusReconciliation";
 
 interface AuthContextType {
   user: User | null;
@@ -214,6 +215,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading: userDataLoading,
     error: userDataError,
   } = useUserData(user?.uid || "");
+
+  useSignupBonusReconciliation({
+    userId: user?.uid || null,
+    userData,
+    enabled: !loading
+      && !userDataLoading
+      && !userDataError
+      && !isLoginValidating
+      && !isLoginValidatingRef.current
+      && !isProvisioning
+      && !isProvisioningRef.current,
+  });
 
   useEffect(() => {
     const guardRedirect = getAuthGuardRedirect({

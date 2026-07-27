@@ -27,7 +27,7 @@ const VERTICAL_DETAIL_CONSTRAINTS = Object.freeze([
 const ROLE_VERTICAL_FLOWS = Object.freeze({
   benefit: Object.freeze([
     '상단 캠페인 오프닝',
-    '중단 핵심 혜택',
+    '중단 핵심 안내',
     '하단 기간/참여 안내',
   ]),
   styling: Object.freeze([
@@ -76,6 +76,9 @@ function getOutputPath(image) {
 function validateManifestContract(input) {
   if (!Array.isArray(input?.events) || input.events.length !== 22) {
     throw new Error('이벤트 22개가 필요합니다.');
+  }
+  if (input.version !== sourceManifest.version) {
+    throw new Error('원본 이벤트 매니페스트와 버전이 일치하지 않습니다.');
   }
   if (
     input.target?.width !== TARGET.width ||
@@ -131,7 +134,7 @@ function validateManifestContract(input) {
   for (const event of input.events) {
     for (const image of event.images) {
       const expectedOutput =
-        `public/events/2026-editorial/${event.id}-20260715-${image.role}.webp`;
+        `public/events/2026-editorial/${event.id}-${input.version}-${image.role}.webp`;
       if (image.output !== expectedOutput) {
         throw new Error('에디토리얼 출력 경로가 계약과 일치하지 않습니다.');
       }

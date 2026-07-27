@@ -18,6 +18,7 @@ export { qna } from "./handlers/qna";
 export { order } from "./handlers/order";
 export { event } from "./handlers/event";
 export { review } from "./handlers/review";
+export { syncReviewProductStats } from "./triggers/reviewStats";
 
 // ── 크론 ──
 export { expirePoints } from "./cron/expirePoints";

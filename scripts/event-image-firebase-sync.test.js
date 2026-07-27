@@ -9,17 +9,18 @@ const {
   redactSensitiveMessage,
   rollbackEventUpdates,
   uploadEventImages,
+  verifyEventUpdates,
 } = require('./event-image-firebase-sync');
 
 function createManifest(eventCount = 22) {
   return {
-    version: '20260714',
+    version: '20260721',
     events: Array.from({ length: eventCount }, (_, index) => {
       const id = `event-${String(index + 1).padStart(2, '0')}`;
       return {
         id,
-        wideOutput: `public/events/2026-v2/${id}-wide.webp`,
-        cardOutput: `public/events/2026-v2/${id}-card.webp`,
+        wideOutput: `public/events/2026-v3/${id}-20260721-wide.webp`,
+        cardOutput: `public/events/2026-v3/${id}-20260721-card.webp`,
       };
     }),
   };
@@ -48,6 +49,7 @@ function createBackup(manifest) {
       bannerImage: `old-banner-${event.id}`,
       detailImage: `old-detail-${event.id}`,
       thumbnailImage: `old-thumbnail-${event.id}`,
+      publicPolicyVerified: true,
     })),
   };
 }
@@ -75,14 +77,17 @@ function createFirestoreFixture(manifest, dataById, commit = jest.fn().mockResol
 
 function createOldDataById(backup) {
   return new Map(
-    backup.events.map((event) => [
-      event.id,
-      {
+    backup.events.map((event) => {
+      const data = {
         bannerImage: event.bannerImage,
-        detailImage: event.detailImage,
         thumbnailImage: event.thumbnailImage,
-      },
-    ]),
+      };
+      if (event.detailImage !== null) data.detailImage = event.detailImage;
+      if (event.publicPolicyVerified !== null) {
+        data.publicPolicyVerified = event.publicPolicyVerified;
+      }
+      return [event.id, data];
+    }),
   );
 }
 
@@ -161,26 +166,49 @@ test('checks project and bucket consistency before any storage or firestore acce
   expect(db.batch).not.toHaveBeenCalled();
 });
 
-test('maps one event to two storage objects and three firestore fields', () => {
+test('maps one event to two storage objects and four firestore fields', () => {
   const event = {
     id: 'event-1',
-    wideOutput: 'public/events/2026-v2/event-1-wide.webp',
-    cardOutput: 'public/events/2026-v2/event-1-card.webp',
+    wideOutput: 'public/events/2026-v3/event-1-20260721-wide.webp',
+    cardOutput: 'public/events/2026-v3/event-1-20260721-card.webp',
   };
-  const plan = buildStoragePlan(event, '20260714');
+  const plan = buildStoragePlan(event, '20260721');
 
   expect(plan).toEqual({
-    wide: 'events/banner/event-1-20260714-wide.webp',
-    card: 'events/thumbnail/event-1-20260714-card.webp',
+    wide: 'events/banner/event-1-20260721-wide.webp',
+    card: 'events/thumbnail/event-1-20260721-card.webp',
   });
   expect(buildEventUpdate(plan, 'bucket.example')).toEqual({
     bannerImage:
-      'https://firebasestorage.googleapis.com/v0/b/bucket.example/o/events%2Fbanner%2Fevent-1-20260714-wide.webp?alt=media',
+      'https://firebasestorage.googleapis.com/v0/b/bucket.example/o/events%2Fbanner%2Fevent-1-20260721-wide.webp?alt=media',
     detailImage:
-      'https://firebasestorage.googleapis.com/v0/b/bucket.example/o/events%2Fbanner%2Fevent-1-20260714-wide.webp?alt=media',
+      'https://firebasestorage.googleapis.com/v0/b/bucket.example/o/events%2Fbanner%2Fevent-1-20260721-wide.webp?alt=media',
     thumbnailImage:
-      'https://firebasestorage.googleapis.com/v0/b/bucket.example/o/events%2Fthumbnail%2Fevent-1-20260714-card.webp?alt=media',
+      'https://firebasestorage.googleapis.com/v0/b/bucket.example/o/events%2Fthumbnail%2Fevent-1-20260721-card.webp?alt=media',
+    publicPolicyVerified: false,
   });
+});
+
+test('does not verify updated documents when the public policy flag is re-enabled', async () => {
+  const manifest = createManifest();
+  const dataById = createNewDataById(manifest, 'bucket-example.firebasestorage.app');
+  dataById.get(manifest.events[0].id).publicPolicyVerified = true;
+  const { db } = createFirestoreFixture(manifest, dataById);
+  const fetchImpl = jest.fn().mockResolvedValue({
+    ok: true,
+    headers: { get: jest.fn(() => 'image/webp') },
+    body: { cancel: jest.fn().mockResolvedValue(undefined) },
+  });
+
+  const result = await verifyEventUpdates({
+    manifest,
+    db,
+    bucketName: 'bucket-example.firebasestorage.app',
+    fetchImpl,
+  });
+
+  expect(result).toEqual({ events: 22, validDocuments: 21, reachableImages: 44 });
+  expect(fetchImpl).toHaveBeenCalledTimes(44);
 });
 
 test('rejects unknown commands', () => {
@@ -228,9 +256,9 @@ test('uploads all 44 local files with immutable WebP metadata', async () => {
   expect(bucket.upload).toHaveBeenCalledTimes(44);
   expect(bucket.upload).toHaveBeenNthCalledWith(
     1,
-    expect.stringMatching(/event-01-wide\.webp$/),
+    expect.stringMatching(/event-01-20260721-wide\.webp$/),
     {
-      destination: 'events/banner/event-01-20260714-wide.webp',
+      destination: 'events/banner/event-01-20260721-wide.webp',
       resumable: false,
       preconditionOpts: {
         ifGenerationMatch: 0,
@@ -333,7 +361,7 @@ test.each([
   expect(writeFile).not.toHaveBeenCalled();
 });
 
-test('backs up three fields and commits all 22 firestore updates once', async () => {
+test('backs up image fields and the public policy flag, then commits all 22 updates once', async () => {
   const manifest = createManifest();
   const bucket = createVerifiedBucket();
   const refs = manifest.events.map((event) => ({ id: event.id }));
@@ -345,6 +373,7 @@ test('backs up three fields and commits all 22 firestore updates once', async ()
       bannerImage: `old-banner-${event.id}`,
       detailImage: `old-detail-${event.id}`,
       thumbnailImage: `old-thumbnail-${event.id}`,
+      publicPolicyVerified: true,
       title: '보존되어야 하는 필드',
     }),
   }));
@@ -376,22 +405,24 @@ test('backs up three fields and commits all 22 firestore updates once', async ()
   expect(backupPath).toBe('C:/temp/event-backup.json');
   expect(writeOptions).toEqual({ encoding: 'utf8', flag: 'wx' });
   const backup = JSON.parse(backupJson);
-  expect(backup.version).toBe('20260714');
+  expect(backup.version).toBe('20260721');
   expect(backup.events).toHaveLength(22);
   expect(backup.events[0]).toEqual({
     id: 'event-01',
     bannerImage: 'old-banner-event-01',
     detailImage: 'old-detail-event-01',
     thumbnailImage: 'old-thumbnail-event-01',
+    publicPolicyVerified: true,
   });
   expect(update).toHaveBeenCalledTimes(22);
   expect(update.mock.calls[0][1]).toEqual({
     bannerImage:
-      'https://firebasestorage.googleapis.com/v0/b/bucket-example.firebasestorage.app/o/events%2Fbanner%2Fevent-01-20260714-wide.webp?alt=media',
+      'https://firebasestorage.googleapis.com/v0/b/bucket-example.firebasestorage.app/o/events%2Fbanner%2Fevent-01-20260721-wide.webp?alt=media',
     detailImage:
-      'https://firebasestorage.googleapis.com/v0/b/bucket-example.firebasestorage.app/o/events%2Fbanner%2Fevent-01-20260714-wide.webp?alt=media',
+      'https://firebasestorage.googleapis.com/v0/b/bucket-example.firebasestorage.app/o/events%2Fbanner%2Fevent-01-20260721-wide.webp?alt=media',
     thumbnailImage:
-      'https://firebasestorage.googleapis.com/v0/b/bucket-example.firebasestorage.app/o/events%2Fthumbnail%2Fevent-01-20260714-card.webp?alt=media',
+      'https://firebasestorage.googleapis.com/v0/b/bucket-example.firebasestorage.app/o/events%2Fthumbnail%2Fevent-01-20260721-card.webp?alt=media',
+    publicPolicyVerified: false,
   });
   expect(commit).toHaveBeenCalledTimes(1);
   expect(result).toEqual({ updated: 22, batchCommitted: true });
@@ -424,9 +455,95 @@ test('serializes an absent current detailImage as null and commits apply', async
     bannerImage: 'old-banner-event-01',
     detailImage: null,
     thumbnailImage: 'old-thumbnail-event-01',
+    publicPolicyVerified: true,
   });
   expect(commit).toHaveBeenCalledTimes(1);
   expect(result).toEqual({ updated: 22, batchCommitted: true });
+});
+
+test('serializes an absent publicPolicyVerified field as null before apply resets it', async () => {
+  const manifest = createManifest();
+  const bucket = createVerifiedBucket();
+  const backup = createBackup(manifest);
+  const dataById = createOldDataById(backup);
+  for (const data of dataById.values()) {
+    delete data.publicPolicyVerified;
+  }
+  const { db, update, commit } = createFirestoreFixture(manifest, dataById);
+  const missingBackup = Object.assign(new Error('missing'), { code: 'ENOENT' });
+  const readFile = jest.fn().mockRejectedValue(missingBackup);
+  const writeFile = jest.fn().mockResolvedValue(undefined);
+
+  const result = await applyEventUpdates({
+    manifest,
+    bucket,
+    db,
+    projectId: 'bucket-example',
+    backupPath: 'C:/temp/event-backup.json',
+    readFile,
+    writeFile,
+  });
+
+  const savedBackup = JSON.parse(writeFile.mock.calls[0][1]);
+  expect(savedBackup.events[0].publicPolicyVerified).toBeNull();
+  expect(update.mock.calls[0][1].publicPolicyVerified).toBe(false);
+  expect(commit).toHaveBeenCalledTimes(1);
+  expect(result).toEqual({ updated: 22, batchCommitted: true });
+});
+
+test('preserves a false publicPolicyVerified field in the pre-apply backup', async () => {
+  const manifest = createManifest();
+  const bucket = createVerifiedBucket();
+  const backup = createBackup(manifest);
+  const dataById = createOldDataById(backup);
+  for (const data of dataById.values()) {
+    data.publicPolicyVerified = false;
+  }
+  const { db, commit } = createFirestoreFixture(manifest, dataById);
+  const missingBackup = Object.assign(new Error('missing'), { code: 'ENOENT' });
+  const readFile = jest.fn().mockRejectedValue(missingBackup);
+  const writeFile = jest.fn().mockResolvedValue(undefined);
+
+  await applyEventUpdates({
+    manifest,
+    bucket,
+    db,
+    projectId: 'bucket-example',
+    backupPath: 'C:/temp/event-backup.json',
+    readFile,
+    writeFile,
+  });
+
+  const savedBackup = JSON.parse(writeFile.mock.calls[0][1]);
+  expect(savedBackup.events[0].publicPolicyVerified).toBe(false);
+  expect(commit).toHaveBeenCalledTimes(1);
+});
+
+test('rejects an invalid current publicPolicyVerified value before writing a backup', async () => {
+  const manifest = createManifest();
+  const bucket = createVerifiedBucket();
+  const backup = createBackup(manifest);
+  const dataById = createOldDataById(backup);
+  dataById.get(manifest.events[0].id).publicPolicyVerified = 'true';
+  const { db } = createFirestoreFixture(manifest, dataById);
+  const missingBackup = Object.assign(new Error('missing'), { code: 'ENOENT' });
+  const readFile = jest.fn().mockRejectedValue(missingBackup);
+  const writeFile = jest.fn();
+
+  await expect(
+    applyEventUpdates({
+      manifest,
+      bucket,
+      db,
+      projectId: 'bucket-example',
+      backupPath: 'C:/temp/event-backup.json',
+      readFile,
+      writeFile,
+    }),
+  ).rejects.toThrow('기존 publicPolicyVerified 필드를 백업할 수 없습니다');
+
+  expect(writeFile).not.toHaveBeenCalled();
+  expect(db.batch).not.toHaveBeenCalled();
 });
 
 test('rejects an explicit null current detailImage instead of treating it as absent', async () => {
@@ -510,6 +627,33 @@ test('resumes all-old state when backup detailImage is null and current fields a
   expect(result).toEqual({ updated: 22, batchCommitted: true, recovery: 'resumed' });
 });
 
+test('resumes all-old state when the backed-up public policy flag was absent', async () => {
+  const manifest = createManifest();
+  const bucket = createVerifiedBucket();
+  const backup = createBackup(manifest);
+  for (const event of backup.events) {
+    event.publicPolicyVerified = null;
+  }
+  const dataById = createOldDataById(backup);
+  const { db, commit } = createFirestoreFixture(manifest, dataById);
+  const readFile = jest.fn().mockResolvedValue(JSON.stringify(backup));
+  const writeFile = jest.fn();
+
+  const result = await applyEventUpdates({
+    manifest,
+    bucket,
+    db,
+    projectId: 'bucket-example',
+    backupPath: 'C:/temp/event-backup.json',
+    readFile,
+    writeFile,
+  });
+
+  expect(writeFile).not.toHaveBeenCalled();
+  expect(commit).toHaveBeenCalledTimes(1);
+  expect(result).toEqual({ updated: 22, batchCommitted: true, recovery: 'resumed' });
+});
+
 test('treats all-new documents as success without overwriting backup or recommitting', async () => {
   const manifest = createManifest();
   const bucket = createVerifiedBucket();
@@ -546,6 +690,10 @@ test.each([
       ...dataById.get(manifest.events[0].id),
       bannerImage: 'unexpected-third-value',
     });
+  }],
+  ['policy-flag mismatch', (manifest, backup, dataById) => {
+    backup.events[0].publicPolicyVerified = null;
+    dataById.get(manifest.events[0].id).publicPolicyVerified = false;
   }],
 ])('stops apply for %s document state when a backup already exists', async (_, mutate) => {
   const manifest = createManifest();
@@ -681,7 +829,7 @@ test('accepts all-new state without recommitting after a commit response is lost
   expect(result).toEqual({ updated: 22, batchCommitted: true, recovery: 'already-applied' });
 });
 
-test('rolls back only the three backed-up fields without touching storage', async () => {
+test('rolls back only the backed-up image fields and policy flag without touching storage', async () => {
   const manifest = createManifest();
   const refs = manifest.events.map((event) => ({ id: event.id }));
   const backup = {
@@ -691,6 +839,7 @@ test('rolls back only the three backed-up fields without touching storage', asyn
       bannerImage: `old-banner-${event.id}`,
       detailImage: `old-detail-${event.id}`,
       thumbnailImage: `old-thumbnail-${event.id}`,
+      publicPolicyVerified: true,
       ignored: '이 필드는 복원하면 안 됨',
     })),
   };
@@ -716,6 +865,7 @@ test('rolls back only the three backed-up fields without touching storage', asyn
     bannerImage: 'old-banner-event-01',
     detailImage: 'old-detail-event-01',
     thumbnailImage: 'old-thumbnail-event-01',
+    publicPolicyVerified: true,
   });
   expect(commit).toHaveBeenCalledTimes(1);
   expect(result).toEqual({ restored: 22, batchCommitted: true });
@@ -742,6 +892,63 @@ test('converts null backup detailImage to an injected firestore delete sentinel 
     bannerImage: 'old-banner-event-01',
     detailImage: deleteSentinel,
     thumbnailImage: 'old-thumbnail-event-01',
+    publicPolicyVerified: true,
+  });
+  expect(commit).toHaveBeenCalledTimes(1);
+  expect(result).toEqual({ restored: 22, batchCommitted: true });
+});
+
+test('restores a false publicPolicyVerified value exactly on rollback', async () => {
+  const manifest = createManifest();
+  const backup = createBackup(manifest);
+  for (const event of backup.events) {
+    event.publicPolicyVerified = false;
+  }
+  const dataById = createOldDataById(createBackup(manifest));
+  const { db, update, commit } = createFirestoreFixture(manifest, dataById);
+  const readFile = jest.fn().mockResolvedValue(JSON.stringify(backup));
+
+  const result = await rollbackEventUpdates({
+    manifest,
+    db,
+    backupPath: 'C:/temp/event-backup.json',
+    readFile,
+  });
+
+  expect(update.mock.calls[0][1]).toEqual({
+    bannerImage: 'old-banner-event-01',
+    detailImage: 'old-detail-event-01',
+    thumbnailImage: 'old-thumbnail-event-01',
+    publicPolicyVerified: false,
+  });
+  expect(commit).toHaveBeenCalledTimes(1);
+  expect(result).toEqual({ restored: 22, batchCommitted: true });
+});
+
+test('deletes publicPolicyVerified on rollback when the field was previously absent', async () => {
+  const manifest = createManifest();
+  const backup = createBackup(manifest);
+  for (const event of backup.events) {
+    event.publicPolicyVerified = null;
+  }
+  const dataById = createOldDataById(createBackup(manifest));
+  const { db, update, commit } = createFirestoreFixture(manifest, dataById);
+  const readFile = jest.fn().mockResolvedValue(JSON.stringify(backup));
+  const deleteSentinel = { operation: 'delete-field' };
+
+  const result = await rollbackEventUpdates({
+    manifest,
+    db,
+    backupPath: 'C:/temp/event-backup.json',
+    readFile,
+    deleteSentinel,
+  });
+
+  expect(update.mock.calls[0][1]).toEqual({
+    bannerImage: 'old-banner-event-01',
+    detailImage: 'old-detail-event-01',
+    thumbnailImage: 'old-thumbnail-event-01',
+    publicPolicyVerified: deleteSentinel,
   });
   expect(commit).toHaveBeenCalledTimes(1);
   expect(result).toEqual({ restored: 22, batchCommitted: true });
@@ -752,6 +959,8 @@ test.each([
   ['empty detailImage', (event) => { event.detailImage = ''; }],
   ['whitespace detailImage', (event) => { event.detailImage = '   '; }],
   ['non-string detailImage', (event) => { event.detailImage = 42; }],
+  ['missing publicPolicyVerified', (event) => delete event.publicPolicyVerified],
+  ['non-boolean publicPolicyVerified', (event) => { event.publicPolicyVerified = 'false'; }],
   ['missing bannerImage', (event) => delete event.bannerImage],
   ['null bannerImage', (event) => { event.bannerImage = null; }],
   ['empty bannerImage', (event) => { event.bannerImage = ''; }],

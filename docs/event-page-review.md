@@ -39,7 +39,7 @@
 - 2026-06-05: `getEventDisplayImages()`를 추가해 누락 이미지, `/images/events/*`, `/api/placeholder/*`, 과거 준비중 업로드 이미지를 이벤트 타입별 editorial 자산으로 치환한다. 정상 CDN/업로드 이미지는 보존한다.
 - 2026-06-05: 목록 대표 배너와 카드 이미지를 `getEventDisplayImages()` 기준으로 렌더링하고, 상세 배너는 단일 대형 이미지 대신 이미지 + 혜택 요약 패널의 에디토리얼 기획전형 블록으로 재구성했다.
 - 2026-06-05: mock 이벤트 기간과 이미지 경로를 현재 사용 가능한 `/main/hero_editorial_*` 자산으로 맞춰 Firestore fallback 상황에서도 종료된 2024 이벤트나 깨진 이미지가 보이지 않게 했다.
-- 2026-06-05: 모바일에서 쇼핑 안내 버튼은 768px 이하에서 숨기고, 채팅 버튼은 640px 이하에서 짧은 `상담` 버튼으로 줄여 이벤트/상세 하단 CTA를 덜 압박하도록 조정했다. `/auth/*`에서는 기존처럼 플로팅 UI가 렌더링되지 않는다.
+- 2026-06-05: 모바일에서 쇼핑 안내 버튼은 768px 이하에서 숨기고, 도움말 챗봇 버튼은 640px 이하에서 짧은 `챗봇` 버튼으로 줄여 이벤트/상세 하단 CTA를 덜 압박하도록 조정했다. `/auth/*`에서는 기존처럼 플로팅 UI가 렌더링되지 않는다.
 - 2026-06-05: 2026년 1월~8월 월별 2~3개씩 총 20개 이벤트 카탈로그를 임시 로컬 데이터로 추가했다.
 - 2026-06-05: 이벤트별 전신 모델컷 source 20개와 한글 이벤트 문구가 들어간 `banner.webp`/`thumb.webp` 40개를 `public/events/2026/`에 생성했다. 생성용 일회성 스크립트는 저장소 정리 과정에서 제거했다.
 - 2026-06-05: 모델컷이 잘리는 문제를 줄이기 위해 목록/상세 배너 이미지는 `object-position: right center` 기준으로 보정했고, 최종 이벤트 배너는 UI 컨테이너와 맞는 `1600x820` 비율로 생성한다.
@@ -67,8 +67,8 @@
 ## 2026-06-05 템플릿 느낌/모바일 디자인 보정
 - 이벤트 `featuredEyebrow`와 상세 eyebrow의 영문 장식 문구를 한국어 쇼핑 문맥으로 교체했다.
 - 640px 이하 이벤트 목록에서 대표 배너와 카드 높이, 어두운 오버레이를 낮춰 검은 프로모션 카드 반복감을 줄였다.
-- 모바일 이벤트 목록에서는 실시간 상담 플로팅 버튼을 숨겨 첫 이벤트 카드 CTA를 가리지 않게 했다.
-- 390px 화면 확인 기준 `/events`에서 상담/개발 도구 버튼 미노출, 수평 오버플로우 없음.
+- 모바일 이벤트 목록에서는 도움말 챗봇 플로팅 버튼을 숨겨 첫 이벤트 카드 CTA를 가리지 않게 했다.
+- 390px 화면 확인 기준 `/events`에서 챗봇/개발 도구 버튼 미노출, 수평 오버플로우 없음.
 
 ## 2026-06-05 대표 이벤트 이미지 분리 보정
 - 목록 대표 히어로가 문구 합성 `bannerImage`를 배경으로 쓰면서 UI 제목과 이미지 내 텍스트가 겹치는 문제가 있었다.
@@ -83,7 +83,7 @@
 - `src/shared/utils/eventHtml.test.ts`로 스크립트 제거, 허용 태그 보존, 위험 링크 제거를 검증했다.
 
 ## 2026-06-30 메인 배너 이벤트 연결
-- 메인 상단 배너는 `미드이어 세일`, `바캉스 쿠폰팩`, `쿨터치 데일리 세일` 상세로 연결한다.
+- 메인 상단 배너는 `미드이어 세일`, `바캉스 스타일 안내`, `쿨터치 데일리 세일` 상세로 연결한다.
 - 메인 배너 이미지는 텍스트 없는 모델/배경 이미지로 생성하고, 이벤트 카피는 `MainBanner` UI에서 별도로 렌더링한다.
 
 ## 2026-06-30 이벤트 페이지 폰트 보정
@@ -102,7 +102,62 @@
 - 참여 문서는 `{eventId}_{uid}` 결정적 ID를 사용하며, 중복 클릭·재시도는 참여자 수나 보상 쿠폰을 중복 생성하지 않는다.
 - 자동 지급 쿠폰 이벤트는 관리자 화면에서 `rewardCouponId`를 설정해야 한다. 참여 transaction은 이벤트 상태·기간·정원·쿠폰 발급 가능 여부를 함께 검증한 뒤 참여와 쿠폰을 원자적으로 기록한다.
 
-## 2026-07-15 이벤트 이미지 전면 교체
+## 2026-07-21 이벤트 자격·보상 계약
+
+- `src/shared/types/event.ts`는 `EventEligibilityType = 'none' | 'purchase' | 'delivered' | 'review'`, `EventRewardType = 'none' | 'coupon'`을 정의한다. `eligibilityType`과 `rewardType`은 기존 Firestore 문서 읽기 호환을 위해 타입상 optional이지만, 새 관리자 입력과 서버 참여 판정에서는 유효 값이 없으면 fail-closed한다.
+- `purchase | delivered | review` 자격은 trim·중복 제거된 `targetProducts`가 필요하다. `coupon` 보상은 `rewardCouponId`가 필요하며, `none` 보상은 stale coupon ID를 남기지 않는다.
+- `functions/src/domain/purchaseEvidence.ts`의 `isDeliveredOrderStatus()`, `getOrderProducts()`, `orderHasTargetProduct()`, `buildReviewDocumentId()`가 구매·배송·리뷰 증거 계약을 공유한다.
+- `assertEventEligibility()`는 본인 주문과 대상 상품을 확인한다. `purchase`는 취소·반품·교환 상태를 제외하고, `delivered`는 배송 완료·구매 확정만 허용하며, `review`는 같은 주문·상품·size/color의 `verifiedPurchase: true` 결정적 review 문서까지 요구한다.
+- `functions/src/handlers/event.ts`의 참여 transaction은 이벤트/참여 문서를 읽고 기간·활성·중복·정원·자격·쿠폰 발급 가능성을 확인한 다음 보상 쿠폰, participant 문서와 `participantCount`를 한 transaction에서 기록한다. 자격 또는 쿠폰 발급이 실패하면 참여와 count도 남지 않는다.
+- 자격 오류는 `event_misconfigured`, `ineligible_purchase`, `ineligible_delivered`, `ineligible_review`의 stable code를 반환한다. 클라이언트 `getEventParticipationErrorMessage()`는 code를 재선택·구매·배송·리뷰 안내로 매핑한다.
+
+## 2026-07-21 legacy dry-run과 수동 gate
+
+- `scripts/event-eligibility-migration.js`의 `planEventEligibilityPatch(event)`는 입력을 수정하지 않고 `patch`, `reasons`, `requiresManualTargetProducts`, `deleteFields`를 반환한다. `deleteFields`는 자격/보상과 맞지 않는 legacy `targetProducts` 또는 `rewardCouponId`를 proposed cleanup으로 표시한다.
+- CLI는 import-safe `analyze` dry-run만 제공하고 write API나 실행 옵션을 구현하지 않았다. 실제 DB migration은 이 문서 작업에서 수행하지 않았다.
+- dry-run 결과가 `requiresManualConfiguration: false`여도 `patch`와 `deleteFields`가 있으면 제안된 정규화 변경을 반영해야 한다. `requiresManualTargetProducts: true`인 이벤트는 대상 상품 ID까지 명시적으로 보정해야 한다.
+- 최신 read-only 분석 결과는 `manualTargetProductCount=4`, `manualPublicPolicyVerificationCount=22`, `manualConfigurationCount=22`다. 이 gate와 제안 patch를 모두 해소하기 전에는 향후 migration execute나 배포를 진행하면 안 된다.
+
+## 2026-07-21 이벤트 공개 정책 gate
+
+- `firestore.rules`는 이벤트 문서 읽기를 `publicPolicyVerified: true`인 공개 문서 또는 활성 계정·Auth claim·사용자 문서 role을 모두 만족하는 strict admin으로 제한한다. 검증 값이 없거나 `false`이면 직접 문서 읽기와 목록 쿼리 모두 실패한다.
+- 공개 화면은 `EventService.getPublicEvents()`와 `getPublicEventById()`만 사용한다. 관리자 목록·상세·대시보드는 인증된 브라우저 컨텍스트에서 `getAdminEvents()`, `getAdminEventById()`, `getAdminActiveEvents()`를 사용하므로 검증 전 문서도 운영자가 수정할 수 있다.
+- 목록·상세 컴포넌트, 상세 메타데이터와 `/api/event/participate` Function도 `publicPolicyVerified === true`를 별도로 확인해 원본 제목·설명·이미지 또는 참여 경로가 우회 노출되지 않게 한다.
+- 관리자 폼은 공개 검증 체크 자체를 제외한 내용·자격·보상·이미지 변경 시 검증 값을 `false`로 되돌린다. 이미지 Firebase sync의 `apply`도 이미지 URL과 `publicPolicyVerified: false`를 같은 batch에 기록한다.
+- 현재 Firestore 22개 이벤트는 검증 값이 없거나 `false`라 공개 목록과 상세에서 모두 숨겨진다. 이번 작업에서는 DB migration, 공개 값 변경, seed 또는 deploy를 실행하지 않았다.
+
+## 2026-07-21 정책 정합 이미지 준비 상태
+
+- 새 매니페스트 버전은 `20260721`이다. 와이드·카드 44개는 `public/events/2026-v3/*-20260721-*.webp`, 상세 에디토리얼 66개는 `public/events/2026-editorial/*-20260721-*.webp`의 새 immutable 경로를 사용한다.
+- 정책에 없는 쿠폰·포인트·리뷰 보상·사람 상담·MD 추천·실적 주장을 제거한 프롬프트와 업로드/검증/복구 도구만 준비했다. 기대 파일은 총 110개지만 현재 로컬 생성 파일은 **0개**이며 업로드와 Firestore `apply`도 실행하지 않았다.
+- `npm run event-images:firebase:analyze`는 안전하게 실패하며 `events=22 localAssets=0`을 보고한다. 2026-07-15의 기존 44개 이미지는 파일·Storage 배포 이력일 뿐 현재 정책 검증 근거가 아니며, 새 이미지 검수와 이벤트별 수동 정책 확인 전에는 다시 공개하면 안 된다.
+- sync 도구의 backup/rollback은 각 이벤트의 기존 이미지 필드와 `publicPolicyVerified`의 미존재·`false`·`true` 상태를 구분해 복원한다. Storage 객체는 immutable 신규 경로만 사용하며 기존 객체를 삭제하거나 덮어쓰지 않는다.
+- `public/events/2026` 80개, `public/events/2026-v2` 44개와 `public/events/2026-editorial`의 `20260715` 파일 24개는 Firestore Rules와 무관한 Firebase Hosting 정적 경로다. 기존 배포에서는 직접 URL이 계속 응답하므로 `firebase.json`에 이 세 레거시 패턴을 `/events/`로 보내는 임시 `302` redirect를 추가했다.
+- 생성 예정인 `2026-v3`와 `20260721` editorial 경로도 정책 검증 전 노출을 막기 위해 같은 임시 redirect를 둔다. 새 110개 이미지 검수와 이벤트 22건의 수동 검증이 끝난 뒤 승인된 패턴만 redirect에서 제거하고 Hosting을 배포해야 한다. 이번 작업에서는 배포하지 않았으므로 현재 원격 정적 URL 차단은 아직 반영되지 않았다.
+- Firebase Storage의 기존 `events/**` 객체는 Hosting redirect 대상이 아니다. 로컬 `storage.rules`는 현재 legacy와 `20260721`을 포함한 모든 이벤트 객체의 원시 공개 읽기를 막고 strict admin만 읽도록 fail-closed했다. 110개 시각 검수와 22건 정책 승인이 모두 끝난 뒤 승인 경로만 별도 Rules 변경으로 공개해야 한다.
+- bulk sync가 만드는 URL은 download token이 없으므로 위 Rules 공개 전에는 읽을 수 없다. 반면 관리자 폼의 `getDownloadURL()` 업로드는 token URL을 생성하므로 그 URL이 유출되면 Rules의 원시 공개 읽기와 별개로 접근할 수 있다. 검증 취소·이미지 교체 시 Firestore 공개 값 reset뿐 아니라 기존 token 폐기 또는 객체 정리 절차가 필요하다.
+- 이번 작업에서는 Storage Rules 배포, 기존 객체 삭제·token 폐기 또는 Hosting 배포를 실행하지 않았다. 따라서 현재 원격 legacy Hosting/Storage URL은 새 로컬 gate를 배포하기 전까지 계속 노출되는 미해결 운영 위험이다.
+
+## 미구현 확장성 위험
+
+- `assertEventEligibility()`는 자격 판정을 위해 해당 사용자의 주문 전체를 transaction 안에서 읽는다. 임의 limit으로 오래된 유효 주문을 누락시키지 않기 위한 현재 계약이지만, 주문량이 많은 사용자의 read 비용과 transaction 한도가 커질 수 있다.
+- 사용자별 eligibility projection 또는 상품·상태별 증거 index로 전환하는 최적화는 이번 범위에서 구현하지 않았다.
+
+## 2026-07-21 로컬 공개 화면 QA
+
+- production build를 로컬로 실행해 1440×900과 390×844에서 `/events`를 확인했다. 공개 검증된 이벤트가 없으므로 `진행 중인 이벤트가 없습니다`라는 안전한 빈 상태만 표시됐고, 기존 이벤트 제목·혜택·이미지는 노출되지 않았다.
+- 두 viewport 모두 가로 오버플로가 0이었고 브라우저 console error는 없었다. 모바일 필터와 메뉴도 정상 노출됐다.
+- 회원가입, 법적 안내, FAQ·공지, 가상 매장, 비로그인 체크아웃까지 함께 확인했으며 정책에 없는 첫 구매 할인·포인트 적립·당일 출고·MD 추천·사람 상담 보장 문구는 발견되지 않았다.
+- QA 중 주문 제출, Firebase write, seed, migration, 배포는 수행하지 않았다.
+
+## 2026-07-21 목록 접근성 구조
+
+- 이벤트 목록에는 페이지를 설명하는 유일한 `h1`을 제공하고, 각 카드의 행사명은 이미지와 별개인 `h2`, 혜택 설명은 본문 텍스트로 렌더링한다.
+- 이벤트 유형 필터는 현재 선택을 `aria-pressed`로, 페이지 번호는 현재 페이지를 `aria-current="page"`로 전달한다.
+- 공개 정책 gate와 기존 4열·2열·1열 레이아웃은 유지한다.
+
+## 2026-07-15 레거시 이벤트 이미지 배포 기록 (현재 공개 검증 만료)
+- 아래 내용은 당시 배포 기록이다. 이미지 안에 현재 정책과 맞지 않는 혜택·지원 문구가 확인되어 2026-07-21부터 공개 검증 근거로 사용할 수 없다.
 - Firestore 이벤트 22개에 맞춰 와이드 22개와 카드 22개, 총 44개 WebP 이미지를 새로 제작했다. 모든 이미지에 행사명과 혜택 한글 문구를 직접 포함했다.
 - 여성·남성·혼성 그룹과 제품 단독 컷을 섞고 계절, 장소, 포즈, 팔레트를 분산해 이벤트별 시각 반복을 줄였다.
 - 와이드는 `1600x820`, 카드는 `1000x1250`으로 정규화했다. Storage에는 `events/banner/{id}-20260714-wide.webp`, `events/thumbnail/{id}-20260714-card.webp` 경로로 신규 객체만 추가했으며 기존 객체는 삭제하지 않았다.
@@ -110,7 +165,7 @@
 - 업로드 도구는 Firestore 프로젝트와 Storage 버킷의 일치를 로컬 파일 접근 전에 확인하고, 생성 전용 조건으로 같은 immutable 경로의 기존 객체 덮어쓰기를 차단한다.
 - 목록 대표와 상세 상단은 데스크톱에서 와이드, 모바일에서 카드 이미지를 선택한다. 목록 카드도 카드 이미지를 사용하며, 이미지에 이미 포함된 행사명·혜택과 겹치던 제목·설명·할인 오버레이는 제거하고 접근 가능한 링크 이름은 유지했다.
 - 목록 카드의 기간과 CTA는 이미지 아래 별도 영역에 배치해 이미지에 포함된 하단 한글 혜택 문구를 가리지 않는다.
-- 정규화 검증은 44/44, Storage 검증은 44/44, Firestore 문서 검증은 22/22, 이미지 HTTP 응답은 44/44 통과했다.
+- 당시 정규화 검증은 44/44, Storage 검증은 44/44, Firestore 문서 검증은 22/22, 이미지 HTTP 응답은 44/44 통과했다. 이는 현재 문구 정책 검증 완료를 의미하지 않는다.
 
 ## 2026-07-15 이벤트 상세 커머스 템플릿 리뉴얼
 - 상세 흐름을 `캠페인 이미지 → 제목·기간 → 핵심 혜택/CTA → 관련 상품 → 3개 안내 영역 → 후속 링크` 순서로 교체했다. 이미지에 이미 포함된 행사명·할인 문구를 UI로 다시 덮지 않는다.

@@ -1,18 +1,39 @@
 ﻿'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Product, ProductSort } from '@/shared/types/product';
-import { ProductQueryInput, ProductService } from '@/shared/services/productService';
-import { getDefaultCategoryNames } from '@/shared/utils/categoryUtils';
+import {
+  normalizeProductSearchTerm,
+  ProductPageCursor,
+  ProductQueryInput,
+  ProductService,
+} from '@/shared/services/productService';
+import { useCategoriesWithNames } from '@/shared/hooks/useProducts';
 import ProductCard from './ProductCard';
 import styles from './ProductList.module.css';
 
 const ITEMS_PER_PAGE = 12;
 const DEFAULT_PRICE_MAX = 1_000_000;
-const categoryNames = getDefaultCategoryNames();
+type PageCursor = ProductPageCursor | null;
 
-type PageCursor = QueryDocumentSnapshot<DocumentData> | null;
+interface ProductListProps {
+  initialCategory?: string;
+  lockCategory?: boolean;
+}
+
+function parsePriceParam(value: string | null, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+}
+
+function parseSortParam(value: string | null): ProductSort {
+  const option = sortOptions.find((item) => item.value === value);
+  if (!option) return { field: 'createdAt', order: 'desc' };
+  const [field, order] = option.value.split('-') as [ProductSort['field'], ProductSort['order']];
+  return { field, order };
+}
 
 const sortOptions: Array<{ value: string; label: string }> = [
   { value: 'createdAt-desc', label: '최신순' },
@@ -22,25 +43,42 @@ const sortOptions: Array<{ value: string; label: string }> = [
   { value: 'name-asc', label: '이름순' },
 ];
 
-export default function ProductList() {
+export default function ProductList({ initialCategory = '', lockCategory = false }: ProductListProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { data: categories = [] } = useCategoriesWithNames();
+  const currentUrlQuery = searchParams?.toString() || '';
+  const initialSearchKeyword = normalizeProductSearchTerm(searchParams?.get('q') || '');
+  const initialMinPrice = parsePriceParam(searchParams?.get('minPrice') || null, 0);
+  const initialMaxPrice = Math.max(
+    initialMinPrice,
+    parsePriceParam(searchParams?.get('maxPrice') || null, DEFAULT_PRICE_MAX),
+  );
   const [items, setItems] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [searchInput, setSearchInput] = useState('');
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [category, setCategory] = useState('');
-  const [sort, setSort] = useState<ProductSort>({ field: 'createdAt', order: 'desc' });
-  const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(DEFAULT_PRICE_MAX);
-  const [minPriceInput, setMinPriceInput] = useState(0);
-  const [maxPriceInput, setMaxPriceInput] = useState(DEFAULT_PRICE_MAX);
+  const [searchInput, setSearchInput] = useState(initialSearchKeyword);
+  const [searchKeyword, setSearchKeyword] = useState(initialSearchKeyword);
+  const [category, setCategory] = useState(
+    initialCategory || searchParams?.get('category') || '',
+  );
+  const [sort, setSort] = useState<ProductSort>(() => parseSortParam(searchParams?.get('sort') || null));
+  const [minPrice, setMinPrice] = useState(initialMinPrice);
+  const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
+  const [minPriceInput, setMinPriceInput] = useState(initialMinPrice);
+  const [maxPriceInput, setMaxPriceInput] = useState(initialMaxPrice);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [cursorStack, setCursorStack] = useState<Record<number, PageCursor>>({ 1: null });
   const [hasMoreByPage, setHasMoreByPage] = useState<Record<number, boolean>>({});
   const [cacheByPage, setCacheByPage] = useState<Record<number, Product[]>>({});
+  const requestGenerationRef = useRef(0);
+  const lastObservedUrlQueryRef = useRef(currentUrlQuery);
+  const pendingUrlQueryRef = useRef<string | null>(null);
+  const restoringFromUrlRef = useRef(false);
 
   const queryInput = useMemo(
     (): ProductQueryInput => ({
@@ -54,6 +92,15 @@ export default function ProductList() {
     }),
     [category, searchKeyword, minPrice, maxPrice, sort]
   );
+  const querySignature = useMemo(
+    () => JSON.stringify(queryInput),
+    [queryInput],
+  );
+  const activeQuerySignatureRef = useRef(querySignature);
+
+  useEffect(() => {
+    activeQuerySignatureRef.current = querySignature;
+  }, [querySignature]);
 
   const resetPagination = useCallback(() => {
     setCurrentPage(1);
@@ -67,10 +114,19 @@ export default function ProductList() {
       return;
     }
 
+    const requestGeneration = ++requestGenerationRef.current;
+    const requestSignature = querySignature;
+    if (forceLoad && page === 1) {
+      setCursorStack({ 1: null });
+      setHasMoreByPage({});
+      setCacheByPage({});
+    }
     const cached = cacheByPage[page];
     if (!forceLoad && cached) {
       setItems(cached);
       setCurrentPage(page);
+      setError(null);
+      setLoading(false);
       return;
     }
 
@@ -84,6 +140,13 @@ export default function ProductList() {
         startAfterDoc,
       });
 
+      if (
+        requestGenerationRef.current !== requestGeneration ||
+        activeQuerySignatureRef.current !== requestSignature
+      ) {
+        return;
+      }
+
       setItems(result.items);
       setCurrentPage(page);
       setHasMoreByPage((prev) => ({ ...prev, [page]: result.hasMore }));
@@ -95,30 +158,89 @@ export default function ProductList() {
         setCursorStack((prev) => ({ ...prev, [page + 1]: null }));
       }
     } catch (err) {
+      if (
+        requestGenerationRef.current !== requestGeneration ||
+        activeQuerySignatureRef.current !== requestSignature
+      ) {
+        return;
+      }
       console.error('상품 목록 조회 실패:', err);
       setError(err instanceof Error ? err.message : '상품 목록을 불러오지 못했습니다.');
     } finally {
-      setLoading(false);
+      if (
+        requestGenerationRef.current === requestGeneration &&
+        activeQuerySignatureRef.current === requestSignature
+      ) {
+        setLoading(false);
+      }
     }
-  }, [cacheByPage, cursorStack, queryInput]);
-
-  const loadCategories = useCallback(async () => {
-    try {
-      const categoryList = await ProductService.getCategories();
-      setCategories(categoryList);
-    } catch {
-      setCategories([]);
-    }
-  }, []);
+  }, [cacheByPage, cursorStack, queryInput, querySignature]);
 
   useEffect(() => {
-    loadCategories();
-  }, [loadCategories]);
+    if (lastObservedUrlQueryRef.current === currentUrlQuery) {
+      return;
+    }
+
+    lastObservedUrlQueryRef.current = currentUrlQuery;
+    if (pendingUrlQueryRef.current === currentUrlQuery) {
+      pendingUrlQueryRef.current = null;
+      return;
+    }
+    pendingUrlQueryRef.current = null;
+    restoringFromUrlRef.current = true;
+
+    const nextParams = new URLSearchParams(currentUrlQuery);
+    const nextSearchKeyword = normalizeProductSearchTerm(nextParams.get('q') || '');
+    const nextMinPrice = parsePriceParam(nextParams.get('minPrice'), 0);
+    const nextMaxPrice = Math.max(
+      nextMinPrice,
+      parsePriceParam(nextParams.get('maxPrice'), DEFAULT_PRICE_MAX),
+    );
+
+    setSearchInput(nextSearchKeyword);
+    setSearchKeyword(nextSearchKeyword);
+    setCategory(lockCategory ? initialCategory : nextParams.get('category') || '');
+    setSort(parseSortParam(nextParams.get('sort')));
+    setMinPrice(nextMinPrice);
+    setMaxPrice(nextMaxPrice);
+    setMinPriceInput(nextMinPrice);
+    setMaxPriceInput(nextMaxPrice);
+    resetPagination();
+  }, [currentUrlQuery, initialCategory, lockCategory, resetPagination]);
+
+  useEffect(() => {
+    if (restoringFromUrlRef.current) {
+      restoringFromUrlRef.current = false;
+      return;
+    }
+
+    const nextParams = new URLSearchParams(currentUrlQuery);
+    const setOrDelete = (key: string, value: string, shouldKeep: boolean) => {
+      if (shouldKeep) nextParams.set(key, value);
+      else nextParams.delete(key);
+    };
+
+    setOrDelete('q', searchKeyword, Boolean(searchKeyword));
+    setOrDelete('category', category, !lockCategory && Boolean(category));
+    const sortValue = `${sort.field}-${sort.order}`;
+    setOrDelete('sort', sortValue, sortValue !== 'createdAt-desc');
+    setOrDelete('minPrice', String(minPrice), minPrice > 0);
+    setOrDelete('maxPrice', String(maxPrice), maxPrice < DEFAULT_PRICE_MAX);
+
+    const nextQuery = nextParams.toString();
+    if (nextQuery !== currentUrlQuery) {
+      pendingUrlQueryRef.current = nextQuery;
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  }, [category, currentUrlQuery, lockCategory, maxPrice, minPrice, pathname, router, searchKeyword, sort]);
 
   useEffect(() => {
     let isActive = true;
+    const requestGeneration = ++requestGenerationRef.current;
+    const requestSignature = querySignature;
 
     resetPagination();
+    setItems([]);
 
     const loadFirstPage = async () => {
       setLoading(true);
@@ -130,7 +252,11 @@ export default function ProductList() {
           startAfterDoc: null,
         });
 
-        if (!isActive) return;
+        if (
+          !isActive ||
+          requestGenerationRef.current !== requestGeneration ||
+          activeQuerySignatureRef.current !== requestSignature
+        ) return;
 
         setItems(result.items);
         setCurrentPage(1);
@@ -138,11 +264,19 @@ export default function ProductList() {
         setCacheByPage({ 1: result.items });
         setCursorStack({ 1: null, 2: result.nextCursor || null });
       } catch (err) {
-        if (!isActive) return;
+        if (
+          !isActive ||
+          requestGenerationRef.current !== requestGeneration ||
+          activeQuerySignatureRef.current !== requestSignature
+        ) return;
         console.error('상품 목록 조회 실패:', err);
         setError(err instanceof Error ? err.message : '상품 목록을 불러오지 못했습니다.');
       } finally {
-        if (isActive) {
+        if (
+          isActive &&
+          requestGenerationRef.current === requestGeneration &&
+          activeQuerySignatureRef.current === requestSignature
+        ) {
           setLoading(false);
         }
       }
@@ -153,10 +287,12 @@ export default function ProductList() {
     return () => {
       isActive = false;
     };
-  }, [queryInput, resetPagination]);
+  }, [queryInput, querySignature, resetPagination]);
 
   const handleSearch = () => {
-    setSearchKeyword(searchInput.trim());
+    const normalizedSearch = normalizeProductSearchTerm(searchInput);
+    setSearchInput(normalizedSearch);
+    setSearchKeyword(normalizedSearch);
   };
 
   const handleSortChange = (value: string) => {
@@ -176,7 +312,7 @@ export default function ProductList() {
   const clearFilters = () => {
     setSearchInput('');
     setSearchKeyword('');
-    setCategory('');
+    setCategory(lockCategory ? initialCategory : '');
     setSort({ field: 'createdAt', order: 'desc' });
     setMinPrice(0);
     setMaxPrice(DEFAULT_PRICE_MAX);
@@ -198,11 +334,11 @@ export default function ProductList() {
 
   const resultCountText = items.length === 0
     ? '검색 결과가 없습니다.'
-    : `총 ${items.length}개 상품`;
+    : `현재 페이지 ${items.length}개 상품`;
 
   if (loading && currentPage === 1 && items.length === 0) {
     return (
-      <div className={styles.loading} role="status" aria-live="polite">
+      <div className={styles.loading} role="status" aria-live="polite" aria-busy="true">
         <div className={styles.spinner}></div>
         <p>상품 목록을 불러오는 중입니다...</p>
         <div className={styles.loadingGrid}>
@@ -230,7 +366,7 @@ export default function ProductList() {
   }
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} aria-busy={loading}>
       <div className={styles.stats}>
         <div className={styles.statItem}>
           <div className={styles.statNumber}>{items.length}</div>
@@ -262,50 +398,69 @@ export default function ProductList() {
           </button>
         </div>
 
-        <div className={styles.filters}>
-          <select aria-label="카테고리 필터" value={category} onChange={(event) => setCategory(event.target.value)} className={styles.filterSelect}>
-            <option value="">전체 카테고리</option>
-            {categories.map((categoryId) => (
-              <option key={categoryId} value={categoryId}>
-                {categoryNames[categoryId] || categoryId}
-              </option>
-            ))}
-          </select>
-
-          <select aria-label="정렬 기준" value={`${sort.field}-${sort.order}`} onChange={(event) => handleSortChange(event.target.value)} className={styles.sortSelect}>
-            {sortOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-
-          <button onClick={clearFilters} className={styles.clearButton} type="button">
-            필터 초기화
-          </button>
-        </div>
-      </div>
-
-      <div className={styles.priceFilter}>
-        <label>가격</label>
-        <input
-          type="number"
-          aria-label="최소 가격"
-          value={minPriceInput}
-          onChange={(event) => setMinPriceInput(Number(event.target.value))}
-          className={styles.priceInput}
-        />
-        <span>~</span>
-        <input
-          type="number"
-          aria-label="최대 가격"
-          value={maxPriceInput}
-          onChange={(event) => setMaxPriceInput(Number(event.target.value))}
-          className={styles.priceInput}
-        />
-        <button onClick={applyPriceFilter} className={styles.applyButton} type="button">
-          적용
+        <button
+          className={styles.filterToggle}
+          type="button"
+          aria-expanded={isFiltersOpen}
+          aria-controls="product-filter-panel"
+          onClick={() => setIsFiltersOpen((isOpen) => !isOpen)}
+        >
+          {isFiltersOpen ? '상품 필터 닫기' : '상품 필터 열기'}
         </button>
+
+        <div
+          id="product-filter-panel"
+          className={`${styles.filterPanel} ${isFiltersOpen ? styles.filterPanelOpen : ''}`}
+          role="region"
+          aria-label="상품 필터"
+        >
+          <div className={styles.filters}>
+            {!lockCategory ? (
+              <select aria-label="카테고리 필터" value={category} onChange={(event) => setCategory(event.target.value)} className={styles.filterSelect}>
+                <option value="">전체 카테고리</option>
+                {categories.map((categoryOption) => (
+                  <option key={categoryOption.id} value={categoryOption.id}>
+                    {categoryOption.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+
+            <select aria-label="정렬 기준" value={`${sort.field}-${sort.order}`} onChange={(event) => handleSortChange(event.target.value)} className={styles.sortSelect}>
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            <button onClick={clearFilters} className={styles.clearButton} type="button">
+              필터 초기화
+            </button>
+          </div>
+
+          <div className={styles.priceFilter}>
+            <label>가격</label>
+            <input
+              type="number"
+              aria-label="최소 가격"
+              value={minPriceInput}
+              onChange={(event) => setMinPriceInput(Number(event.target.value))}
+              className={styles.priceInput}
+            />
+            <span>~</span>
+            <input
+              type="number"
+              aria-label="최대 가격"
+              value={maxPriceInput}
+              onChange={(event) => setMaxPriceInput(Number(event.target.value))}
+              className={styles.priceInput}
+            />
+            <button onClick={applyPriceFilter} className={styles.applyButton} type="button">
+              적용
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className={styles.productGrid}>

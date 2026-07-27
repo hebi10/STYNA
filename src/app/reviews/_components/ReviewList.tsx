@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useReview } from '@/context/reviewProvider';
-import { useProduct } from '@/context/productProvider';
+import { useProductsByIds } from '@/shared/hooks/useProducts';
 import Link from 'next/link';
 import Button from '@/app/_components/Button';
 import { formatDate } from '@/shared/utils/dateFormat';
@@ -21,51 +21,14 @@ export default function ReviewList() {
     loadAllReviews 
   } = useReview();
   
-  const { getProductById } = useProduct();
-  
   const [ratingFilter, setRatingFilter] = useState<number | undefined>();
   const [sortBy, setSortBy] = useState<'latest' | 'rating' | 'helpful'>('latest');
-  const [productInfo, setProductInfo] = useState<{ [key: string]: { name: string; mainImage?: string } }>({});
+  const productQuery = useProductsByIds(allReviews.map((review) => review.productId));
 
   useEffect(() => {
     console.log('리뷰 목록 로딩 시작 - ratingFilter:', ratingFilter, 'sortBy:', sortBy);
     loadAllReviews(1, ratingFilter, sortBy);
   }, [ratingFilter, sortBy, loadAllReviews]);
-
-  // 상품 정보를 가져오는 함수
-  useEffect(() => {
-    const loadProductInfo = async () => {
-      console.log('상품 정보 로딩 시작 - 리뷰 개수:', allReviews.length);
-      const uniqueProductIds = [...new Set(allReviews.map(review => review.productId))];
-      console.log('로드할 상품 ID 목록:', uniqueProductIds);
-      
-      const productData: { [key: string]: { name: string; mainImage?: string } } = {};
-      
-      for (const productId of uniqueProductIds) {
-        try {
-          const product = await getProductById(productId);
-          if (product) {
-            productData[productId] = {
-              name: product.name,
-              mainImage: product.mainImage
-            };
-            console.log('상품 정보 로드 완료:', product.name);
-          } else {
-            console.log('상품을 찾을 수 없음:', productId);
-          }
-        } catch (error) {
-          console.error(`상품 ${productId} 정보 로드 실패:`, error);
-        }
-      }
-      
-      setProductInfo(productData);
-      console.log('모든 상품 정보 로딩 완료:', Object.keys(productData).length, '개');
-    };
-
-    if (allReviews.length > 0) {
-      loadProductInfo();
-    }
-  }, [allReviews, getProductById]);
 
   const renderStars = (rating: number) => {
     return '★'.repeat(rating) + '☆'.repeat(5 - rating);
@@ -203,7 +166,13 @@ export default function ReviewList() {
           <div className={styles.empty}>등록된 리뷰가 없습니다.</div>
         ) : (
           allReviews.map((review) => {
-            const product = productInfo[review.productId];
+            const product = productQuery.productsById.get(review.productId);
+            const productLabel = product?.name
+              ?? (productQuery.failedIds.includes(review.productId)
+                ? '상품 정보 확인 실패'
+                : productQuery.isLoading
+                  ? '상품 정보 불러오는 중'
+                  : '판매 종료 상품');
 
             return (
             <div key={review.id} className={styles.reviewItem}>
@@ -223,7 +192,7 @@ export default function ReviewList() {
                     href={`/products/${review.productId}`}
                     className={styles.productName}
                   >
-                    {product?.name || '상품 정보 로딩 중...'}
+                    {productLabel}
                   </Link>
                   {(review.size || review.color) && (
                     <div className={styles.productOptions}>

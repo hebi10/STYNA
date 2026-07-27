@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { ProductProvider } from '@/context/productProvider';
 
 interface AdminDashboardLayoutProps {
   children: ReactNode;
@@ -10,11 +11,13 @@ export default function AdminDashboardLayout({
   products
 }: AdminDashboardLayoutProps) {
   return (
-    <div className="admin-dashboard-layout">
-      <div className="dashboard-main">
-        {children}
-        {products}
+    <ProductProvider>
+      <div className="admin-dashboard-layout">
+        <div className="dashboard-main">
+          {children}
+          {products}
+        </div>
       </div>
-    </div>
+    </ProductProvider>
   );
 }

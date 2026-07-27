@@ -6,70 +6,53 @@ interface SidebarMenuProps {
   logout: () => void;
 }
 
+const menuItems = [
+  { activeTab: 'overview', href: '/mypage', label: '나의 쇼핑 현황' },
+  { activeTab: 'orders', href: '/mypage/order-list', label: '주문내역' },
+  { activeTab: 'reviews', href: '/mypage/qa', label: '문의관리' },
+  { activeTab: 'wishlist', href: '/mypage/recently-viewed', label: '최근본상품' },
+  { activeTab: 'favorite', href: '/mypage/wishlist', label: '찜한상품' },
+  { activeTab: 'coupons', href: '/mypage/coupons', label: '쿠폰관리' },
+  { activeTab: 'point', href: '/mypage/point', label: '적립금' },
+  { activeTab: 'profile', href: '/mypage/info-edit', label: '회원정보수정' },
+];
+
 export default function SidebarMenu({ activeTab, logout }: SidebarMenuProps) {
+  const renderMenuLinks = () => menuItems.map((item) => {
+    const isActive = activeTab === item.activeTab;
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`${styles.menuItem} ${isActive ? styles.active : ''}`}
+        aria-current={isActive ? 'page' : undefined}
+      >
+        {item.label}
+      </Link>
+    );
+  });
+
   return (
-    <div className={styles.sidebar}>
-      <div className={styles.sidebarCard}>
-        <h3 className={styles.sidebarTitle}>마이메뉴</h3>
-        <nav className={styles.sidebarMenu}>
-          <Link
-            href="/mypage"
-            className={`${styles.menuItem} ${activeTab === 'overview' ? styles.active : ''}`}
-            aria-current={activeTab === 'overview' ? 'page' : undefined}
-          >
-            나의 쇼핑 현황
-          </Link>
-          <Link 
-            href="/mypage/order-list" 
-            className={`${styles.menuItem} ${activeTab === 'orders' ? styles.active : ''}`}
-            aria-current={activeTab === 'orders' ? 'page' : undefined}
-          >
-            주문내역
-          </Link>
-          <Link 
-            href="/mypage/qa" 
-            className={`${styles.menuItem} ${activeTab === 'reviews' ? styles.active : ''}`}
-          >
-            문의관리
-          </Link>
-          <Link 
-            href="/mypage/recently-viewed" 
-            className={`${styles.menuItem} ${activeTab === 'wishlist' ? styles.active : ''}`}
-          >
-            최근본상품
-          </Link>
-          <Link 
-            href="/mypage/wishlist" 
-            className={`${styles.menuItem} ${activeTab === 'favorite' ? styles.active : ''}`}
-          >
-            찜한상품
-          </Link>
-          <Link 
-            href="/mypage/coupons" 
-            className={`${styles.menuItem} ${activeTab === 'coupons' ? styles.active : ''}`}
-          >
-            쿠폰관리
-          </Link>
-          <Link 
-            href="/mypage/point" 
-            className={`${styles.menuItem} ${activeTab === 'point' ? styles.active : ''}`}
-          >
-            적립금
-          </Link>
-          <Link 
-            href="/mypage/info-edit" 
-            className={`${styles.menuItem} ${activeTab === 'profile' ? styles.active : ''}`}
-          >
-            회원정보수정
-          </Link>
-          <button
-            className={styles.menuItem}
-            onClick={logout}
-          >
-            로그아웃
-          </button>
-        </nav>
+    <>
+      <div className={styles.sidebar}>
+        <div className={styles.sidebarCard}>
+          <h3 className={styles.sidebarTitle}>마이메뉴</h3>
+          <nav className={styles.sidebarMenu} aria-label="마이페이지 메뉴">
+            {renderMenuLinks()}
+            <button className={styles.menuItem} type="button" onClick={logout}>
+              로그아웃
+            </button>
+          </nav>
+        </div>
       </div>
-    </div>
+
+      <nav className={styles.mobileMenu} aria-label="마이페이지 모바일 메뉴">
+        {renderMenuLinks()}
+        <button className={styles.menuItem} type="button" onClick={logout}>
+          로그아웃
+        </button>
+      </nav>
+    </>
   );
 }

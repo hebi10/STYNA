@@ -42,24 +42,89 @@ describe('getEventDisplayImages', () => {
   it('uses an explicit detail image when it is present', () => {
     const result = getEventDisplayImages({
       ...baseEvent,
-      bannerImage: '/events/2026/event-2026-06-midyear-sale-banner.webp',
-      thumbnailImage: '/events/2026/event-2026-06-midyear-sale-thumb.webp',
-      detailImage: '/events/2026/event-2026-06-midyear-sale-detail.webp',
+      bannerImage: '/event-assets/midyear-sale-banner.webp',
+      thumbnailImage: '/event-assets/midyear-sale-thumb.webp',
+      detailImage: '/event-assets/midyear-sale-detail.webp',
     });
 
-    expect(result.bannerImage).toBe('/events/2026/event-2026-06-midyear-sale-banner.webp');
-    expect(result.thumbnailImage).toBe('/events/2026/event-2026-06-midyear-sale-thumb.webp');
-    expect(result.detailImage).toBe('/events/2026/event-2026-06-midyear-sale-detail.webp');
+    expect(result.bannerImage).toBe('/event-assets/midyear-sale-banner.webp');
+    expect(result.thumbnailImage).toBe('/event-assets/midyear-sale-thumb.webp');
+    expect(result.detailImage).toBe('/event-assets/midyear-sale-detail.webp');
   });
 
-  it('derives a generated detail image from a generated event banner', () => {
+  it.each([
+    '/events/2026/event-banner.webp',
+    '/events/2026-v2/event-banner.webp',
+    'https://hebimall.web.app/events/2026-v3/event-banner.webp?version=1',
+    '/events/2026-editorial/event-20260715-banner.webp',
+    '/events/2026-editorial/event-20260721-detail.webp?version=2',
+  ])('replaces Firebase Hosting redirected image path %s with editorial images', (redirectedPath) => {
     const result = getEventDisplayImages({
       ...baseEvent,
-      bannerImage: '/events/2026/event-2026-08-last-summer-banner.webp',
-      thumbnailImage: '/events/2026/event-2026-08-last-summer-thumb.webp',
+      bannerImage: redirectedPath,
+      thumbnailImage: redirectedPath,
+      detailImage: redirectedPath,
     });
 
-    expect(result.detailImage).toBe('/events/2026/event-2026-08-last-summer-detail.webp');
+    expect(result.bannerImage).toBe('/main/hero_editorial_sale_fixed.webp');
+    expect(result.thumbnailImage).toBe('/main/hero_editorial_sale.webp');
+    expect(result.detailImage).toBe('/main/hero_editorial_sale_fixed.webp');
+  });
+
+  it('keeps editorial images that are not covered by Firebase Hosting redirects', () => {
+    const result = getEventDisplayImages({
+      ...baseEvent,
+      bannerImage: '/events/2026-editorial/current-sale-banner.webp',
+      thumbnailImage: '/events/2026-editorial/current-sale-thumb.webp',
+      detailImage: '/events/2026-editorial/current-sale-detail.webp',
+    });
+
+    expect(result.bannerImage).toBe('/events/2026-editorial/current-sale-banner.webp');
+    expect(result.thumbnailImage).toBe('/events/2026-editorial/current-sale-thumb.webp');
+    expect(result.detailImage).toBe('/events/2026-editorial/current-sale-detail.webp');
+  });
+
+  it('falls back safely when an image URL is malformed', () => {
+    const result = getEventDisplayImages({
+      ...baseEvent,
+      bannerImage: 'http://[invalid',
+      thumbnailImage: 'http://[invalid',
+      detailImage: 'http://[invalid',
+    });
+
+    expect(result.bannerImage).toBe('/main/hero_editorial_sale_fixed.webp');
+    expect(result.thumbnailImage).toBe('/main/hero_editorial_sale.webp');
+    expect(result.detailImage).toBe('/main/hero_editorial_sale_fixed.webp');
+  });
+
+  it.each([
+    'javascript:alert(1)',
+    'data:image/svg+xml,<svg></svg>',
+    'http://cdn.example.com/events/banner.webp',
+    '//cdn.example.com/events/banner.webp',
+    'events/banner.webp',
+  ])('replaces an image URL that next/image cannot safely render: %s', (unsafeUrl) => {
+    const result = getEventDisplayImages({
+      ...baseEvent,
+      bannerImage: unsafeUrl,
+      thumbnailImage: unsafeUrl,
+      detailImage: unsafeUrl,
+    });
+
+    expect(result.bannerImage).toBe('/main/hero_editorial_sale_fixed.webp');
+    expect(result.thumbnailImage).toBe('/main/hero_editorial_sale.webp');
+    expect(result.detailImage).toBe('/main/hero_editorial_sale_fixed.webp');
+  });
+
+  it('trims a valid local or HTTPS image URL before rendering it', () => {
+    const result = getEventDisplayImages({
+      ...baseEvent,
+      bannerImage: '  /event-assets/banner.webp  ',
+      thumbnailImage: '  https://cdn.example.com/events/thumb.webp  ',
+    });
+
+    expect(result.bannerImage).toBe('/event-assets/banner.webp');
+    expect(result.thumbnailImage).toBe('https://cdn.example.com/events/thumb.webp');
   });
 
   it('replaces known placeholder event image paths with editorial images', () => {
@@ -100,5 +165,17 @@ describe('getEventDisplayImages', () => {
     expect(result.bannerImage).toBe('/main/hero_editorial_best_fixed.webp');
     expect(result.thumbnailImage).toBe('/main/hero_editorial_best.webp');
     expect(result.detailImage).toBe('/main/hero_editorial_best_fixed.webp');
+  });
+
+  it('does not mistake spring preview for a review event', () => {
+    const result = getEventDisplayImages({
+      ...baseEvent,
+      id: 'event-2026-02-spring-preview',
+      eventType: 'new',
+      title: '스프링 프리뷰',
+      description: '봄 신상품 선공개',
+    });
+
+    expect(result.thumbnailImage).toBe('/main/hero_editorial_outer.webp');
   });
 });

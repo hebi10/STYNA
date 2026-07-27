@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import { useUserActivity } from '@/context/userActivityProvider';
-import { useProduct } from '@/context/productProvider';
 import { useAuth } from '@/context/authProvider';
-import { Product } from '@/shared/types/product';
+import { useProductsByIds } from '@/shared/hooks/useProducts';
 import Link from 'next/link';
 import styles from './RecentProducts.module.css';
 
@@ -22,16 +21,14 @@ export default function RecentProducts({
     recentProducts, 
     loading, 
     error,
-    loadRecentProducts,
     clearAllRecentProducts
   } = useUserActivity();
-  
-  const { getProductById } = useProduct();
   const { user } = useAuth();
-  
-  const [productsData, setProductsData] = useState<{ [key: string]: Product }>({});
   const visibleRecentProducts =
     typeof limit === 'number' ? recentProducts.slice(0, limit) : recentProducts;
+  const productQuery = useProductsByIds(
+    visibleRecentProducts.map((recentProduct) => recentProduct.productId),
+  );
 
   // 모든 최근 본 상품 삭제 확인
   const handleClearAll = async () => {
@@ -44,36 +41,6 @@ export default function RecentProducts({
       }
     }
   };
-
-  useEffect(() => {
-    if (user?.uid) {
-      loadRecentProducts(user.uid);
-    }
-  }, [user, loadRecentProducts]);
-
-  // 상품 정보 로드
-  useEffect(() => {
-    const loadProductsData = async () => {
-      const productDataMap: { [key: string]: Product } = {};
-      
-      for (const recentProduct of recentProducts) {
-        try {
-          const product = await getProductById(recentProduct.productId);
-          if (product) {
-            productDataMap[recentProduct.productId] = product;
-          }
-        } catch (error) {
-          console.error(`상품 ${recentProduct.productId} 정보 로드 실패:`, error);
-        }
-      }
-      
-      setProductsData(productDataMap);
-    };
-
-    if (recentProducts.length > 0) {
-      loadProductsData();
-    }
-  }, [recentProducts, getProductById]);
 
   if (!user) {
     return (
@@ -110,7 +77,7 @@ export default function RecentProducts({
         </div>
       ) : null}
 
-      {loading ? (
+      {loading || productQuery.isLoading ? (
         <div className={styles.loading}>최근 본 상품을 불러오는 중...</div>
       ) : recentProducts.length === 0 ? (
         <div className={styles.empty}>
@@ -122,15 +89,19 @@ export default function RecentProducts({
       ) : (
         <div className={styles.productGrid}>
           {visibleRecentProducts.map((recentProduct) => {
-            const product = productsData[recentProduct.productId];
+            const product = productQuery.productsById.get(recentProduct.productId);
             
             if (!product) {
+              const failed = productQuery.failedIds.includes(recentProduct.productId);
               return (
                 <div key={recentProduct.id} className={styles.productCard}>
-                  <div className={styles.productImageSkeleton}></div>
-                  <div className={styles.productInfoSkeleton}>
-                    <div className={styles.skeletonLine}></div>
-                    <div className={styles.skeletonLine}></div>
+                  <div className={styles.productInfo}>
+                    <p>{failed ? '상품 정보를 불러오지 못했습니다.' : '더 이상 판매하지 않는 상품입니다.'}</p>
+                    {failed ? (
+                      <button type="button" onClick={() => void productQuery.refetch()}>
+                        다시 시도
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               );

@@ -1,11 +1,15 @@
-import { Metadata } from 'next';
+import { cache } from 'react';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { EventService } from '@/shared/services/eventService';
-import { Event } from '@/shared/types/event';
 import EventDetailClient from './EventDetailClient';
-
-// 동적 배포에서는 generateStaticParams가 필요 없음
-// 모든 라우트는 런타임에 동적으로 처리됨
+import { isPublicEventReady } from '@/shared/utils/eventPublicPolicy';
+import { getEventDisplayImages } from '@/shared/utils/eventImages';
+import {
+  absoluteSiteUrl,
+  canonicalUrl,
+  getOpenGraphImage,
+} from '@/shared/constants/seo';
 
 interface Props {
   params: Promise<{
@@ -13,59 +17,52 @@ interface Props {
   }>;
 }
 
-const getEventFromFirebase = async (eventId: string): Promise<Event | null> => {
-  try {
-    return await EventService.getEventById(eventId);
-  } catch (error) {
-    console.error('Error loading event from Firestore:', error);
-    return null;
-  }
-};
+const getPublicEvent = cache((eventId: string) => (
+  EventService.getPublicEventById(eventId)
+));
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { eventId } = await params;
-  
-  try {
-    const event = await getEventFromFirebase(eventId);
-    
-    if (!event) {
-      return {
-        title: '이벤트를 찾을 수 없습니다 - STYNA',
-        description: '요청하신 이벤트를 찾을 수 없습니다.'
-      };
-    }
-
+  const event = await getPublicEvent(eventId);
+  if (!event || !isPublicEventReady(event)) {
     return {
-      title: `${event.title} - STYNA`,
-      description: event.description,
-      openGraph: {
-        title: event.title,
-        description: event.description,
-        images: [event.bannerImage]
-      }
-    };
-  } catch (error) {
-    console.error('Error loading event for metadata:', error);
-    return {
-      title: '이벤트 - STYNA',
-      description: 'STYNA 이벤트 페이지'
+      title: '이벤트를 찾을 수 없습니다 - STYNA',
+      description: '요청하신 이벤트를 찾을 수 없습니다.',
+      robots: { index: false, follow: false },
     };
   }
+
+  const canonical = canonicalUrl(`/events/${encodeURIComponent(eventId)}`);
+  const { bannerImage } = getEventDisplayImages(event);
+  const openGraphImage = getOpenGraphImage(bannerImage, event.title);
+
+  return {
+    title: `${event.title} - STYNA`,
+    description: event.description,
+    alternates: { canonical },
+    openGraph: {
+      title: event.title,
+      description: event.description,
+      siteName: 'STYNA',
+      type: 'website',
+      url: canonical,
+      images: [openGraphImage],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: event.title,
+      description: event.description,
+      images: [absoluteSiteUrl(bannerImage)],
+    },
+  };
 }
 
 export default async function EventDetailPage({ params }: Props) {
   const { eventId } = await params;
-  
-  try {
-    const event = await getEventFromFirebase(eventId);
-    
-    if (!event) {
-      notFound();
-    }
-
-    return <EventDetailClient event={event} />;
-  } catch (error) {
-    console.error('Error loading event:', error);
+  const event = await getPublicEvent(eventId);
+  if (!event || !isPublicEventReady(event)) {
     notFound();
   }
+
+  return <EventDetailClient event={event} />;
 }

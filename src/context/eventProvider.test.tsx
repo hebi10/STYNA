@@ -6,7 +6,7 @@ import { EventService } from '@/shared/services/eventService';
 
 jest.mock('@/shared/services/eventService', () => ({
   EventService: {
-    getEvents: jest.fn(),
+    getPublicEvents: jest.fn(),
   },
 }));
 
@@ -42,7 +42,7 @@ describe('EventProvider', () => {
   });
 
   test('uses Firebase events for the public event list', async () => {
-    jest.mocked(EventService.getEvents).mockResolvedValue([firebaseEvent]);
+    jest.mocked(EventService.getPublicEvents).mockResolvedValue([firebaseEvent]);
 
     render(
       <EventProvider>
@@ -56,7 +56,7 @@ describe('EventProvider', () => {
   });
 
   test('exposes eight events per page for the public event list', async () => {
-    jest.mocked(EventService.getEvents).mockResolvedValue([firebaseEvent]);
+    jest.mocked(EventService.getPublicEvents).mockResolvedValue([firebaseEvent]);
 
     render(
       <EventProvider>

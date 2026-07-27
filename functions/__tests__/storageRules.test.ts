@@ -39,7 +39,7 @@ beforeAll(async () => {
     firestore: { rules: firestoreRules },
     storage: { rules: storageRules },
   });
-});
+}, 30_000);
 
 beforeEach(async () => {
   await testEnv.clearFirestore();
@@ -63,7 +63,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await testEnv.cleanup();
+  await testEnv?.cleanup();
 });
 
 describe('Storage rules', () => {
@@ -107,7 +107,7 @@ describe('Storage rules', () => {
     ));
   });
 
-  test('supports strict-admin upload and public read for nested editorial event images', async () => {
+  test('keeps an unversioned nested editorial upload private to strict admins', async () => {
     const adminStorage = testEnv.authenticatedContext('admin-1', { admin: true }).storage();
     const publicStorage = testEnv.unauthenticatedContext().storage();
     const editorialPath = 'events/editorial/benefit/editorial.png';
@@ -117,7 +117,31 @@ describe('Storage rules', () => {
       onePixelPng,
       { contentType: 'image/png' }
     ));
-    await assertSucceeds(getBytes(ref(publicStorage, editorialPath)));
+    await assertSucceeds(getBytes(ref(adminStorage, editorialPath)));
+    await assertFails(getBytes(ref(publicStorage, editorialPath)));
+  });
+
+  test('keeps legacy and 20260721 event assets private until an explicit release', async () => {
+    const adminStorage = testEnv.authenticatedContext('admin-1', { admin: true }).storage();
+    const publicStorage = testEnv.unauthenticatedContext().storage();
+    const eventPaths = [
+      'events/banner/event-1-20260721-wide.webp',
+      'events/thumbnail/event-1-20260721-card.webp',
+      'events/editorial/benefit/event-1-20260721-benefit.webp',
+      'events/banner/event-1-20260714-wide.webp',
+      'events/thumbnail/event-1-20260714-card.webp',
+      'events/editorial/benefit/event-1-20260715-benefit.webp',
+    ];
+
+    for (const storagePath of eventPaths) {
+      await assertSucceeds(uploadBytes(
+        ref(adminStorage, storagePath),
+        onePixelPng,
+        { contentType: 'image/webp' }
+      ));
+      await assertSucceeds(getBytes(ref(adminStorage, storagePath)));
+      await assertFails(getBytes(ref(publicStorage, storagePath)));
+    }
   });
 
   test.each([

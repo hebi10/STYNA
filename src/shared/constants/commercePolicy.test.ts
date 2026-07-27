@@ -77,9 +77,12 @@ describe('canonical commerce policy', () => {
     expect(coupon).toContain(formatSignupBenefit());
     expect(member).toContain(formatSignupBenefit());
     expect(payment).toContain(buildDemoDataNotice());
-    expect(agent).toContain(formatSupportHours());
-    expect(product).toContain(formatSupportHours());
-    expect(defaultResponse).toContain(formatSupportHours());
+    expect(agent).toContain('사람 상담을 연결하거나 상담 요청을 저장·전송하지 않습니다');
+    expect(product).toContain('답변 여부와 시점은 보장하지 않습니다');
+    expect(defaultResponse).toContain('문의 기록');
+    expect(order).toContain('포트폴리오 문의');
+    expect(combined).not.toMatch(/다음 영업일.*답변|영업일 기준.*답변|상담 연결 요청을 확인/);
+    expect(combined).not.toMatch(/고객센터|개별 안내|230~280mm|5mm 단위 제공|빠른 답변/);
     expect(combined).not.toMatch(/09:00|10:00~19:00|10시~19시/);
     expect(combined).not.toMatch(unsupportedPolicyPattern);
   });

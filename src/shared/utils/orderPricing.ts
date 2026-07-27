@@ -1,4 +1,5 @@
 import { UserCouponView } from '@/shared/types/coupon';
+import { COMMERCE_POLICY } from '@/shared/constants/commercePolicy';
 import { isExpiredOnKstDay } from './kstDate';
 
 export type OrderPricingDeliveryOption = 'standard' | 'express';
@@ -38,10 +39,6 @@ export interface OrderPreview {
   usableCoupon: UserCouponView | null;
   couponAvailability: CouponAvailability;
 }
-
-const STANDARD_DELIVERY_FEE = 3000;
-const EXPRESS_DELIVERY_FEE = 5000;
-const STANDARD_FREE_SHIPPING_AMOUNT = 50000;
 
 function toNonNegativeInteger(value: unknown): number {
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -118,14 +115,14 @@ export function calculateDeliveryFee(
   couponFreeShipping: boolean
 ): number {
   if (deliveryOption === 'express') {
-    return EXPRESS_DELIVERY_FEE;
+    return COMMERCE_POLICY.shipping.expressFee;
   }
 
-  if (totalAfterCoupon >= STANDARD_FREE_SHIPPING_AMOUNT || couponFreeShipping) {
+  if (totalAfterCoupon >= COMMERCE_POLICY.shipping.freeThreshold || couponFreeShipping) {
     return 0;
   }
 
-  return STANDARD_DELIVERY_FEE;
+  return COMMERCE_POLICY.shipping.standardFee;
 }
 
 export function calculateOrderPreview(params: CalculateOrderPreviewParams): OrderPreview {

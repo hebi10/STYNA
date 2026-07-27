@@ -25,15 +25,20 @@ export interface FeaturedProductConfig {
   updatedAt: Date;
 }
 
+export interface FeaturedProductSection {
+  config: FeaturedProductConfig;
+  products: Product[];
+}
+
 const FEATURED_PRODUCTS_COLLECTION = 'featuredProducts';
 
 export class FeaturedProductService {
   // 기본 추천 상품 설정
   private static defaultConfig: Omit<FeaturedProductConfig, 'id' | 'createdAt' | 'updatedAt'> = {
     productIds: [],
-    title: '이번 주 추천 상품',
-    subtitle: 'MD가 직접 선별한 특별한 상품들',
-    description: '전문 MD가 엄선한 이번 주 추천 상품을 만나보세요',
+    title: '추천 상품',
+    subtitle: '관리자가 등록한 상품',
+    description: '등록된 추천 상품을 확인해 보세요',
     isActive: true,
     maxCount: 4
   };
@@ -65,7 +70,7 @@ export class FeaturedProductService {
       return this.createDefaultConfig();
     } catch (error) {
  console.error('추천 상품 설정 조회 실패:', error);
-      return this.createDefaultConfig();
+      throw error;
     }
   }
 
@@ -129,38 +134,23 @@ export class FeaturedProductService {
    * 설정된 추천 상품들 가져오기 (실제 상품 데이터 포함)
    */
   static async getFeaturedProducts(): Promise<Product[]> {
-    try {
-      const config = await this.getFeaturedProductConfig();
-      if (!config || !config.isActive || config.productIds.length === 0) {
- console.log(' 추천 상품 설정이 없거나 비활성화됨');
-        return [];
-      }
+    const section = await this.getFeaturedSection();
+    return section?.products ?? [];
+  }
 
- console.log(' 추천 상품 ID 목록:', config.productIds);
-
-      // ProductService를 사용하여 효율적으로 상품 조회
-      const products: Product[] = [];
-      
-      for (const productId of config.productIds.slice(0, config.maxCount)) {
-        try {
-          const product = await ProductService.getProductById(productId);
-          if (product) {
-            products.push(product);
- console.log(` 추천 상품 로드: ${product.name} (${product.id})`);
-          } else {
- console.warn(` 추천 상품을 찾을 수 없음: ${productId}`);
-          }
-        } catch (error) {
- console.error(` 상품 ${productId} 조회 실패:`, error);
-        }
-      }
-
- console.log(` 총 ${products.length}개 추천 상품 로드 완료`);
-      return products;
-    } catch (error) {
- console.error('추천 상품 조회 실패:', error);
-      return [];
+  static async getFeaturedSection(): Promise<FeaturedProductSection | null> {
+    const config = await this.getFeaturedProductConfig();
+    if (!config?.isActive || config.productIds.length === 0) {
+      return null;
     }
+
+    const productIds = Array.from(new Set(config.productIds)).slice(0, config.maxCount);
+    const results = await Promise.all(
+      productIds.map((productId) => ProductService.getPublicProductById(productId)),
+    );
+    const products = results.filter((product): product is Product => Boolean(product));
+
+    return { config, products };
   }
 
   /**

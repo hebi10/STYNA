@@ -81,7 +81,7 @@ export class DashboardService {
       ordersResult,
     ] = await Promise.allSettled([
       CouponService.getActiveCoupons(),
-      EventService.getActiveEvents(),
+      EventService.getAdminActiveEvents(),
       AdminUserService.getAllUsersSimple(),
       SimpleQnAService.getAllQnAs(100),
       InquiryService.getAllInquiries(100),

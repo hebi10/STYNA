@@ -37,4 +37,15 @@ describe('getCuratedMainPageCategories', () => {
       'sports',
     ]);
   });
+
+  test('does not fabricate category routes that are absent from active data', () => {
+    const categories = [
+      { id: 'bottoms', name: '하의', order: 0 },
+      { id: 'outdoor', name: '아웃도어', order: 1 },
+    ];
+
+    expect(getCuratedMainPageCategories(categories, 4).map((category) => category.id)).toEqual([
+      'bottoms',
+    ]);
+  });
 });

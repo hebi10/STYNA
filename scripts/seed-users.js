@@ -22,6 +22,7 @@ const mockUsers = [
       zipCode: '12345',
     },
     pointBalance: 5000, // 가입 적립 후 사용·환불을 반영한 잔액
+    signupBonusGrantedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
     status: 'active',
     role: 'user',
     createdAt: new Date(),
@@ -38,6 +39,7 @@ const mockUsers = [
       zipCode: '54321',
     },
     pointBalance: 5000,
+    signupBonusGrantedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
     status: 'active',
     role: 'user',
     createdAt: new Date(),
@@ -55,6 +57,7 @@ const mockPointHistory = [
         type: 'earn',
         amount: 5000,
         description: '신규 회원가입 적립',
+        source: 'signupBonus',
         date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7일 전
         balanceAfter: 5000,
         expired: false,
@@ -87,6 +90,7 @@ const mockPointHistory = [
         type: 'earn',
         amount: 5000,
         description: '신규 회원가입 적립',
+        source: 'signupBonus',
         date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10일 전
         balanceAfter: 5000,
         expired: false,
@@ -105,7 +109,7 @@ const seedUsers = async () => {
 
     mockUsers.forEach((user) => {
       const userRef = db.collection('users').doc(user.id);
-      batch.set(userRef, user);
+      batch.set(userRef, user, { merge: true });
     });
 
     await batch.commit();

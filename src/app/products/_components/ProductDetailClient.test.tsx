@@ -2,7 +2,10 @@ import { StrictMode } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ProductDetailClient from './ProductDetailClient';
 import { Product } from '@/shared/types/product';
-import { useUserActivity } from '@/context/userActivityProvider';
+import {
+  useRecentProductTracking,
+  useWishlistActivity,
+} from '@/shared/hooks/useUserActivityQueries';
 import { QnAService } from '@/shared/services/qnaService';
 import {
   PRODUCT_INTENT_STORAGE_KEY,
@@ -13,12 +16,22 @@ const push = jest.fn();
 const addRecentProduct = jest.fn();
 const addToWishlist = jest.fn();
 const removeFromWishlist = jest.fn();
-const loadRelatedProducts = jest.fn();
 const mutateAsync = jest.fn();
 
 let mockUser: { uid: string } | null = { uid: 'user-1' };
 
 let mockWishlistItems: Array<{ id: string; productId: string; userId: string; addedAt: Date }> = [];
+
+function mockActivityHooks() {
+  jest.mocked(useWishlistActivity).mockReturnValue({
+    wishlistItems: mockWishlistItems,
+    addToWishlist,
+    removeFromWishlist,
+  } as unknown as ReturnType<typeof useWishlistActivity>);
+  jest.mocked(useRecentProductTracking).mockReturnValue({
+    addRecentProduct,
+  } as ReturnType<typeof useRecentProductTracking>);
+}
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
@@ -28,17 +41,13 @@ jest.mock('@/context/authProvider', () => ({
   useAuth: () => ({ user: mockUser }),
 }));
 
-jest.mock('@/context/userActivityProvider', () => ({
-  useUserActivity: jest.fn(),
+jest.mock('@/shared/hooks/useUserActivityQueries', () => ({
+  useWishlistActivity: jest.fn(),
+  useRecentProductTracking: jest.fn(),
 }));
 
-jest.mock('@/context/productProvider', () => ({
-  useProduct: () => ({
-    relatedProducts: [],
-    loadRelatedProducts,
-    calculateDiscountPrice: (price: number, saleRate: number) => Math.floor(price * (1 - saleRate / 100)),
-    isInStock: (product: Product) => product.stock > 0,
-  }),
+jest.mock('@/shared/hooks/useProducts', () => ({
+  useRelatedProducts: () => ({ data: [] }),
 }));
 
 jest.mock('@/shared/hooks/useCart', () => ({
@@ -121,13 +130,14 @@ describe('ProductDetailClient wishlist button', () => {
       userId: 'user-1',
       addedAt: new Date('2026-05-01T00:00:00.000Z'),
     }];
-    (useUserActivity as jest.Mock).mockReturnValue({
+    jest.mocked(useWishlistActivity).mockReturnValue({
       wishlistItems: mockWishlistItems,
-      addRecentProduct,
       addToWishlist,
       removeFromWishlist,
-      isInWishlist: jest.fn().mockResolvedValue(true),
-    });
+    } as unknown as ReturnType<typeof useWishlistActivity>);
+    jest.mocked(useRecentProductTracking).mockReturnValue({
+      addRecentProduct,
+    } as ReturnType<typeof useRecentProductTracking>);
   });
 
   afterEach(() => {
@@ -161,13 +171,7 @@ describe('ProductDetailClient detail images', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockWishlistItems = [];
-    (useUserActivity as jest.Mock).mockReturnValue({
-      wishlistItems: mockWishlistItems,
-      addRecentProduct,
-      addToWishlist,
-      removeFromWishlist,
-      isInWishlist: jest.fn().mockResolvedValue(false),
-    });
+    mockActivityHooks();
   });
 
   test('renders product detail images in the detail tab', () => {
@@ -199,13 +203,7 @@ describe('ProductDetailClient product Q&A', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockWishlistItems = [];
-    (useUserActivity as jest.Mock).mockReturnValue({
-      wishlistItems: mockWishlistItems,
-      addRecentProduct,
-      addToWishlist,
-      removeFromWishlist,
-      isInWishlist: jest.fn().mockResolvedValue(false),
-    });
+    mockActivityHooks();
     jest.mocked(QnAService.getQnAList).mockResolvedValue({
       qnas: [{
         id: 'qna-1',
@@ -248,20 +246,14 @@ describe('ProductDetailClient product Q&A', () => {
 describe('ProductDetailClient policy summary', () => {
   beforeEach(() => {
     mockWishlistItems = [];
-    (useUserActivity as jest.Mock).mockReturnValue({
-      wishlistItems: mockWishlistItems,
-      addRecentProduct,
-      addToWishlist,
-      removeFromWishlist,
-      isInWishlist: jest.fn().mockResolvedValue(false),
-    });
+    mockActivityHooks();
   });
 
   test('does not promise unconditional free shipping or returns', () => {
     render(<ProductDetailClient product={product} />);
 
     expect(screen.getByText('배송비는 주문서에서 조건에 따라 계산됩니다.')).toBeInTheDocument();
-    expect(screen.getByText('수령 후 7일 이내, 상품 상태에 따라 반품 신청 가능')).toBeInTheDocument();
+    expect(screen.getByText('자동 반품 처리는 제공하지 않으며 가능 여부와 시점은 보장하지 않습니다.')).toBeInTheDocument();
     expect(screen.queryByText('무료배송')).not.toBeInTheDocument();
     expect(screen.queryByText('무료반품 (7일)')).not.toBeInTheDocument();
   });
@@ -277,13 +269,7 @@ describe('ProductDetailClient login intent', () => {
     mockUser = { uid: 'user-1' };
     mutateAsync.mockResolvedValue(undefined);
     mockWishlistItems = [];
-    (useUserActivity as jest.Mock).mockReturnValue({
-      wishlistItems: mockWishlistItems,
-      addRecentProduct,
-      addToWishlist,
-      removeFromWishlist,
-      isInWishlist: jest.fn().mockResolvedValue(false),
-    });
+    mockActivityHooks();
     addToWishlist.mockResolvedValue(undefined);
   });
 
@@ -368,6 +354,34 @@ describe('ProductDetailClient login intent', () => {
         color: 'white gold',
         quantity: 3,
       })],
+      deliveryFee: 0,
+    });
+  });
+
+  test('uses the shared shipping policy when preparing a low-value buy-now draft', async () => {
+    window.history.pushState({}, '', '/products/product-1?resumeIntent=1');
+    saveProductIntent(sessionStorage, {
+      action: 'buy',
+      productId: 'product-1',
+      pathname: '/products/product-1',
+      size: '13호',
+      color: 'white gold',
+      quantity: 3,
+    }, Date.now());
+
+    render(<ProductDetailClient product={{
+      ...product,
+      price: 10000,
+      originalPrice: 10000,
+      isSale: false,
+      saleRate: 0,
+    }} />);
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/orders/checkout'));
+    expect(JSON.parse(sessionStorage.getItem('orderData') || '{}')).toMatchObject({
+      subtotal: 30000,
+      deliveryFee: 3000,
+      finalAmount: 33000,
     });
   });
 

@@ -11,6 +11,7 @@ const DRAG_THRESHOLD_PX = 48;
 const CLICK_SUPPRESSION_THRESHOLD_PX = 4;
 const ACTIVE_SLIDE_STORAGE_KEY = 'hebimall.main-banner.active-index';
 const STORAGE_BUCKET = 'hebimall.firebasestorage.app';
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 const storageUrl = (path: string) =>
   `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodeURIComponent(path)}?alt=media`;
@@ -121,8 +122,46 @@ export default function MainBanner() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [isSlideStateReady, setIsSlideStateReady] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(true);
+  const [isHoverPaused, setIsHoverPaused] = useState(false);
+  const [isFocusPaused, setIsFocusPaused] = useState(false);
   const pointerStartXRef = useRef<number | null>(null);
   const didDragRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia(REDUCED_MOTION_QUERY);
+    const updateMotionPreference = (matches: boolean) => {
+      setPrefersReducedMotion(matches);
+      if (matches) {
+        setIsAutoPlayEnabled(false);
+        setIsAnimating(false);
+        setIsJumping(false);
+        setTrackIndex((currentIndex) => {
+          if (currentIndex === 0) {
+            return bannerPairs.length;
+          }
+          if (currentIndex === bannerPairs.length + 1) {
+            return 1;
+          }
+          return currentIndex;
+        });
+        setIsDragging(false);
+        setDragOffset(0);
+        pointerStartXRef.current = null;
+        didDragRef.current = false;
+      }
+    };
+    const handleChange = (event: MediaQueryListEvent) => updateMotionPreference(event.matches);
+
+    updateMotionPreference(mediaQuery.matches);
+    mediaQuery.addEventListener?.('change', handleChange);
+    return () => mediaQuery.removeEventListener?.('change', handleChange);
+  }, []);
 
   useEffect(() => {
     const storedIndex = Number(window.sessionStorage.getItem(ACTIVE_SLIDE_STORAGE_KEY));
@@ -147,7 +186,15 @@ export default function MainBanner() {
   }, [activeIndex, isSlideStateReady]);
 
   useEffect(() => {
-    if (!isSlideStateReady || isAnimating || isDragging) {
+    if (
+      !isSlideStateReady
+      || !isAutoPlayEnabled
+      || prefersReducedMotion
+      || isHoverPaused
+      || isFocusPaused
+      || isAnimating
+      || isDragging
+    ) {
       return undefined;
     }
 
@@ -160,7 +207,17 @@ export default function MainBanner() {
     }, SLIDE_DELAY_MS);
 
     return () => window.clearInterval(timer);
-  }, [activeIndex, isAnimating, isDragging, isSlideStateReady, rotationKey]);
+  }, [
+    activeIndex,
+    isAnimating,
+    isAutoPlayEnabled,
+    isDragging,
+    isFocusPaused,
+    isHoverPaused,
+    isSlideStateReady,
+    prefersReducedMotion,
+    rotationKey,
+  ]);
 
   useEffect(() => {
     if (!isJumping) {
@@ -178,13 +235,17 @@ export default function MainBanner() {
     const nextIndex = (activeIndex + direction + bannerPairs.length) % bannerPairs.length;
 
     setIsJumping(false);
-    setIsAnimating(true);
+    setIsAnimating(!prefersReducedMotion);
     setActiveIndex(nextIndex);
-    setTrackIndex(direction === -1 && activeIndex === 0
-      ? 0
-      : direction === 1 && activeIndex === bannerPairs.length - 1
-        ? bannerPairs.length + 1
-        : nextIndex + 1);
+    setTrackIndex(
+      prefersReducedMotion
+        ? nextIndex + 1
+        : direction === -1 && activeIndex === 0
+          ? 0
+          : direction === 1 && activeIndex === bannerPairs.length - 1
+            ? bannerPairs.length + 1
+            : nextIndex + 1,
+    );
     setRotationKey((key) => key + 1);
   };
 
@@ -210,7 +271,7 @@ export default function MainBanner() {
     }
 
     setIsJumping(false);
-    setIsAnimating(true);
+    setIsAnimating(!prefersReducedMotion);
     setActiveIndex(index);
     setTrackIndex(index + 1);
     setRotationKey((key) => key + 1);
@@ -267,7 +328,7 @@ export default function MainBanner() {
     }
 
     if (Math.abs(dragDistance) < DRAG_THRESHOLD_PX) {
-      if (dragDistance !== 0) {
+      if (dragDistance !== 0 && !prefersReducedMotion) {
         setIsAnimating(true);
       }
       return;
@@ -285,7 +346,7 @@ export default function MainBanner() {
     setIsDragging(false);
     setDragOffset(0);
 
-    if (dragOffset !== 0) {
+    if (dragOffset !== 0 && !prefersReducedMotion) {
       setIsAnimating(true);
     }
   };
@@ -329,7 +390,19 @@ export default function MainBanner() {
   } as CSSProperties;
 
   return (
-    <section className={styles.bannerSection} aria-label="메인 상품 배너">
+    <section
+      className={styles.bannerSection}
+      aria-label="메인 상품 배너"
+      onMouseEnter={() => setIsHoverPaused(true)}
+      onMouseLeave={() => setIsHoverPaused(false)}
+      onFocusCapture={() => setIsFocusPaused(true)}
+      onBlurCapture={(event) => {
+        const nextTarget = event.relatedTarget;
+        if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+          setIsFocusPaused(false);
+        }
+      }}
+    >
       <div className={styles.bannerStage}>
         <div
           className={styles.bannerViewport}
@@ -341,7 +414,7 @@ export default function MainBanner() {
           onClickCapture={handleBannerClickCapture}
         >
           <div
-            className={`${styles.bannerTrack} ${isJumping ? styles.bannerTrackJumping : ''} ${isDragging ? styles.bannerTrackDragging : ''}`}
+            className={`${styles.bannerTrack} ${isJumping ? styles.bannerTrackJumping : ''} ${isDragging ? styles.bannerTrackDragging : ''} ${prefersReducedMotion ? styles.bannerTrackReducedMotion : ''}`}
             style={trackStyle}
             onTransitionEnd={handleTrackTransitionEnd}
           >
@@ -356,7 +429,7 @@ export default function MainBanner() {
                   className={`${styles.bannerPair} ${isActive ? styles.activePair : ''}`}
                   aria-hidden={!isActive}
                 >
-                  {[pair.left, pair.right].map((card) => (
+                  {[pair.left, pair.right].map((card, cardIndex) => (
                     <Link
                       key={card.id}
                       href={card.href}
@@ -369,7 +442,7 @@ export default function MainBanner() {
                         src={card.image}
                         alt={card.alt}
                         fill
-                        priority={shouldRenderImages}
+                        priority={index === 1 && cardIndex === 0}
                         sizes="(min-width: 1920px) 826px, 43vw"
                         className={styles.bannerImage}
                       />
@@ -399,6 +472,17 @@ export default function MainBanner() {
           onClick={showNext}
         >
           <span aria-hidden="true">›</span>
+        </button>
+
+        <button
+          type="button"
+          className={styles.autoPlayButton}
+          aria-label={isAutoPlayEnabled ? '배너 자동 재생 정지' : '배너 자동 재생 시작'}
+          aria-pressed={isAutoPlayEnabled}
+          disabled={prefersReducedMotion}
+          onClick={() => setIsAutoPlayEnabled((enabled) => !enabled)}
+        >
+          <span aria-hidden="true">{isAutoPlayEnabled ? 'Ⅱ' : '▶'}</span>
         </button>
 
         <div className={styles.pagination} aria-label="배너 순서">

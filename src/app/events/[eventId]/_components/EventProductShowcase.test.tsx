@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Event } from '@/shared/types/event';
 import { Product } from '@/shared/types/product';
-import { useUserActivity } from '@/context/userActivityProvider';
-import { useAuthUser } from '@/shared/hooks/useAuthUser';
+import { useAuth } from '@/context/authProvider';
+import { useWishlistActivity } from '@/shared/hooks/useUserActivityQueries';
 import { loadEventProducts } from '../eventProductSelection';
 import EventProductShowcase from './EventProductShowcase';
 
@@ -26,12 +26,12 @@ jest.mock('next/image', () => ({
   },
 }));
 
-jest.mock('@/context/userActivityProvider', () => ({
-  useUserActivity: jest.fn(),
+jest.mock('@/context/authProvider', () => ({
+  useAuth: jest.fn(),
 }));
 
-jest.mock('@/shared/hooks/useAuthUser', () => ({
-  useAuthUser: jest.fn(),
+jest.mock('@/shared/hooks/useUserActivityQueries', () => ({
+  useWishlistActivity: jest.fn(),
 }));
 
 jest.mock('@/shared/services/productService', () => ({
@@ -94,15 +94,14 @@ const product = (id: string): Product => ({
 describe('EventProductShowcase', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.mocked(useUserActivity).mockReturnValue({
+    jest.mocked(useWishlistActivity).mockReturnValue({
       wishlistItems: [],
       addToWishlist: jest.fn(),
       removeFromWishlist: jest.fn(),
-    } as unknown as ReturnType<typeof useUserActivity>);
-    jest.mocked(useAuthUser).mockReturnValue({
+    } as unknown as ReturnType<typeof useWishlistActivity>);
+    jest.mocked(useAuth).mockReturnValue({
       user: null,
-      loading: false,
-    } as ReturnType<typeof useAuthUser>);
+    } as unknown as ReturnType<typeof useAuth>);
   });
 
   test('renders at most eight products with the shared ProductCard', async () => {

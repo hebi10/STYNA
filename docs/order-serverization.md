@@ -16,9 +16,10 @@
 - 주문 생성은 Firestore transaction 안에서 한 번에 처리한다.
   - 주문 문서 생성
   - 상품 재고 차감
-  - 사용자 쿠폰 상태 갱신(`사용가능` → `사용완료`/`기간만료`)
+  - 정상 사용 쿠폰 상태 갱신(`사용가능` → `사용완료`)
   - 포인트 차감
   - 장바구니 선택 항목 정리
+- 만료 쿠폰은 주문 transaction 안에서 상태를 쓰지 않는다. `ExpiredOrderCouponError`로 주문 transaction 전체를 rollback한 뒤 outer catch가 `markExpiredUserCoupon()`을 별도 transaction으로 호출해 소유권·사용 가능 상태·master 만료를 다시 확인하고 `기간만료`를 기록한다.
 - `firestore.rules`에서 `orders`의 클라이언트 `create`, `update`, `delete`를 모두 차단한다. 읽기는 활성 주문 소유자 또는 엄격 관리자에게만 허용한다.
 - 클라이언트 완료 화면은 URL 파라미터(`orderId`) 혹은 이전 저장한 `orderResult`를 기반으로 `OrderService.getOrder`로 조회하도록 변경해, 로컬 계산값 의존도를 낮췄다.
 
@@ -138,3 +139,22 @@
 - `inactive`, `banned`, `deleted`, 사용자 문서 부재는 fail-closed 처리한다. 관리자 동작은 token admin claim과 활성 사용자 문서의 `role: admin`을 모두 요구한다.
 - Firestore Rules는 주문 문서의 클라이언트 `create`, `update`, `delete`를 관리자에게도 허용하지 않는다. 주문 쓰기는 Admin SDK Function만 수행하고, 읽기는 활성 소유자 또는 엄격 관리자에게만 허용한다.
 - 상품 조회·재고 차감·복구는 이미 최상위 `products/{productId}`를 사용한다. 레거시 `categories/{categoryId}/products/{productId}` 전체 스캔 fallback은 없다.
+
+## 2026-07-21 주문 후 클라이언트 동기화
+
+- checkout은 바로구매 draft에 preset 쿠폰이 없어도 보유 쿠폰을 선택할 수 있고, KST 만료일·최소 주문금액 기준으로 사용할 수 없는 항목은 같은 사유를 표시한다. 서버 요청에는 미리보기에서 사용 가능한 coupon ID만 전달한다.
+- 주문 Function 성공 후 배송지 저장, `orderResult` 저장과 draft 제거를 마친 다음 장바구니·포인트·주문 React Query cache와 쿠폰 Context를 `Promise.allSettled()`로 갱신한다. 후속 갱신 일부가 실패해도 성공한 주문을 실패로 바꾸지 않는다.
+- 주문 목록은 사용자별 order query key를 사용하며, 고객 취소 성공 시 주문·포인트 cache와 쿠폰 Context를 함께 갱신해 서버에서 복원된 상태를 다시 조회한다.
+- `refreshPostPurchaseState()`는 `src/shared/hooks/queryKeys.ts`의 사용자별 `cartKeys`, `pointKeys`, `orderKeys`를 사용해 장바구니 목록·활성 count, 포인트 잔액/내역 prefix, 주문 목록 prefix와 `refreshUserCoupons()`를 각각 정리한다.
+- 주문 생성 실패는 draft를 보존하고 후속 refresh를 시작하지 않는다. 반대로 Function이 주문을 생성한 뒤 발생한 배송지 저장, sessionStorage, cache 또는 완료 화면 이동 오류는 각각 별도 best-effort 경계에서 기록하며 주문 성공 자체를 실패 응답으로 바꾸지 않는다.
+- `submissionLockRef`는 서버 주문 생성 요청 직전에 잠기고 생성 실패가 확인된 경우에만 해제된다. 주문 ID를 받은 뒤에는 후속 저장·라우팅 실패가 있어도 같은 checkout에서 중복 주문을 다시 제출할 수 없다.
+- 성공한 주문 ID는 `completedOrderId`에 보존한다. 자동 이동이 늦거나 실패하면 주문 완료 화면으로 직접 이동하는 복구 링크를 표시한다.
+- 저장된 쿠폰 ID가 있는 checkout은 현재 UID의 쿠폰 목록이 준비되고 선택 쿠폰이 확인될 때까지 제출을 막는다. 조회 실패·계정 전환·쿠폰 누락 시에는 사용자가 쿠폰 없이 주문할지 명시적으로 다시 선택해야 한다.
+- 장바구니 count는 한 번의 `invalidateQueries({ refetchType: 'active' })`로 갱신한다. 별도 `refetchQueries()`를 이어 호출해 같은 활성 쿼리를 중복 조회하지 않는다.
+
+## 2026-07-21 주문 조회 카운트·정렬
+
+- 마이페이지의 전체 주문 수는 사용자별 Firestore aggregate count query로 계산해 목록의 최대 조회 개수와 분리한다.
+- 주문 목록은 `userId` 조건에 `createdAt desc`와 `limit(50)`을 함께 적용해 최신 주문부터 가져온다. 화면의 상태·금액 요약은 전체 통계가 아니라 `최근 조회` 범위라고 명시한다.
+- 한국어 레거시 상태와 영문 상태를 canonical 영문 상태로 정규화한 뒤 필터, 통계, 상태 색상에 사용한다.
+- count 또는 목록 조회 실패는 `0`으로 표시하지 않고 `확인 실패`로 구분하며, 수동 새로고침 중에는 `isFetching` 상태를 버튼에 반영한다.

@@ -24,7 +24,7 @@ test('labels sample stores and does not render unavailable actions', async () =>
     phone: '예시 연락처',
     hours: '예시 운영시간',
     transport: '예시 교통편',
-    features: [],
+    features: ['피팅룸', '당일배송'],
     order: 1,
   }]);
   jest.mocked(SiteContentService.getOfflineServices).mockResolvedValue([]);
@@ -34,6 +34,8 @@ test('labels sample stores and does not render unavailable actions', async () =>
 
   await waitFor(() => expect(screen.getByText('STYNA SAMPLE')).toBeInTheDocument());
   expect(screen.getByText(/포트폴리오 데모용 가상 매장/)).toBeInTheDocument();
+  expect(screen.getByText('피팅룸')).toBeInTheDocument();
+  expect(screen.queryByText('당일배송')).not.toBeInTheDocument();
   expect(screen.queryByRole('link', { name: '상세보기' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: '길찾기' })).not.toBeInTheDocument();
 });

@@ -729,16 +729,21 @@ describe("points signup bonus", () => {
   test("grants signup bonus once through a transaction", async () => {
     const response = createResponse();
     const historyDocRef = {};
+    const emptyHistoryQuery = { limit: jest.fn() };
+    const historyCollection = {
+      doc: jest.fn(() => historyDocRef),
+      where: jest.fn(() => emptyHistoryQuery),
+    };
     const userRef = {
-      collection: jest.fn(() => ({
-        doc: jest.fn(() => historyDocRef),
-      })),
+      collection: jest.fn(() => historyCollection),
     };
     const transaction = {
-      get: jest.fn().mockResolvedValue({
-        exists: true,
-        data: () => ({ pointBalance: 0 }),
-      }),
+      get: jest.fn(async (target: unknown) => target === userRef
+        ? {
+            exists: true,
+            data: () => ({ pointBalance: 0 }),
+          }
+        : { docs: [] }),
       update: jest.fn(),
       set: jest.fn(),
     };
@@ -757,6 +762,7 @@ describe("points signup bonus", () => {
     }, response);
 
     expect(db.runTransaction).toHaveBeenCalledTimes(1);
+    expect(emptyHistoryQuery.limit).not.toHaveBeenCalled();
     expect(transaction.update).toHaveBeenCalledWith(userRef, expect.objectContaining({
       pointBalance: 5000,
       signupBonusGrantedAt: "server-time",
@@ -767,6 +773,142 @@ describe("points signup bonus", () => {
       description: "신규 회원가입 적립",
       balanceAfter: 5000,
     }));
+    expect(response.json).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        newBalance: 5000,
+        alreadyGranted: false,
+        bonusAmount: 5000,
+        userId: "user-1",
+      },
+    });
+  });
+
+  test("returns the UID marker result without writing the signup bonus twice", async () => {
+    const response = createResponse();
+    const userRef = {
+      collection: jest.fn(),
+    };
+    const transaction = {
+      get: jest.fn().mockResolvedValue({
+        exists: true,
+        data: () => ({
+          pointBalance: 5000,
+          signupBonusGrantedAt: "first-grant-time",
+        }),
+      }),
+      update: jest.fn(),
+      set: jest.fn(),
+    };
+    const db = {
+      collection: jest.fn(() => ({
+        doc: jest.fn(() => userRef),
+      })),
+      runTransaction: jest.fn((callback: (tx: typeof transaction) => unknown) => callback(transaction)),
+    };
+    jest.mocked(admin.firestore).mockReturnValue(db as never);
+
+    await (points as unknown as Handler)({
+      method: "POST",
+      headers: { authorization: "Bearer user-token" },
+      body: { action: "signupBonus" },
+    }, response);
+
+    expect(transaction.update).not.toHaveBeenCalled();
+    expect(transaction.set).not.toHaveBeenCalled();
+    expect(userRef.collection).not.toHaveBeenCalled();
+    expect(response.json).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        newBalance: 5000,
+        alreadyGranted: true,
+        bonusAmount: 5000,
+        userId: "user-1",
+      },
+    });
+  });
+
+  test.each([
+    ["canonical source", "source", {
+      type: "earn",
+      amount: 5000,
+      source: "signupBonus",
+      description: "renamed copy",
+    }],
+    ["legacy description", "description", {
+      type: "earn",
+      amount: 5000,
+      description: "신규 회원가입 적립",
+    }],
+  ])("backfills only the marker when %s history already proves the bonus", async (
+    _label,
+    evidenceField,
+    historyData,
+  ) => {
+    const response = createResponse();
+    const historyDocRef = {};
+    const sourceQuery = { kind: "source-query", limit: jest.fn() };
+    const descriptionQuery = { kind: "description-query", limit: jest.fn() };
+    const historyCollection = {
+      doc: jest.fn(() => historyDocRef),
+      where: jest.fn((field: string) => field === "source" ? sourceQuery : descriptionQuery),
+    };
+    const userRef = {
+      collection: jest.fn(() => historyCollection),
+    };
+    const transaction = {
+      get: jest.fn(async (target: unknown) => {
+        if (target === userRef) {
+          return {
+            exists: true,
+            data: () => ({ pointBalance: 5000 }),
+          };
+        }
+
+        const evidenceQuery = evidenceField === "source" ? sourceQuery : descriptionQuery;
+        if (target === evidenceQuery) {
+          return {
+            docs: [{
+              data: () => historyData,
+            }],
+          };
+        }
+
+        return { docs: [] };
+      }),
+      update: jest.fn(),
+      set: jest.fn(),
+    };
+    const db = {
+      collection: jest.fn(() => ({
+        doc: jest.fn(() => userRef),
+      })),
+      runTransaction: jest.fn((callback: (tx: typeof transaction) => unknown) => callback(transaction)),
+    };
+    jest.mocked(admin.firestore).mockReturnValue(db as never);
+
+    await (points as unknown as Handler)({
+      method: "POST",
+      headers: { authorization: "Bearer user-token" },
+      body: { action: "signupBonus" },
+    }, response);
+
+    expect(transaction.update).toHaveBeenCalledWith(userRef, {
+      signupBonusGrantedAt: "server-time",
+      updatedAt: "server-time",
+    });
+    expect(sourceQuery.limit).not.toHaveBeenCalled();
+    expect(descriptionQuery.limit).not.toHaveBeenCalled();
+    expect(transaction.set).not.toHaveBeenCalled();
+    expect(response.json).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        newBalance: 5000,
+        alreadyGranted: true,
+        bonusAmount: 5000,
+        userId: "user-1",
+      },
+    });
   });
 });
 
@@ -1509,6 +1651,7 @@ describe("event participation", () => {
     participantExists?: boolean;
     orders?: Array<{ id: string; data: Record<string, unknown> }>;
     reviews?: Record<string, Record<string, unknown>>;
+    couponExists?: boolean;
     couponData?: Record<string, unknown>;
   } = {}) {
     const eventRef = { kind: "event", id: "event-1" };
@@ -1530,6 +1673,7 @@ describe("event participation", () => {
     let participantExists = options.participantExists ?? false;
     const eventData = {
       isActive: true,
+      publicPolicyVerified: true,
       startDate: new Date(Date.now() - 60_000),
       endDate: new Date(Date.now() + 60_000),
       participantCount: 0,
@@ -1569,7 +1713,7 @@ describe("event participation", () => {
         }
         if (target === couponRef) {
           return {
-            exists: true,
+            exists: options.couponExists ?? true,
             data: () => options.couponData || {
               name: "이벤트 쿠폰",
               isActive: true,
@@ -1646,6 +1790,7 @@ describe("event participation", () => {
               participantCount: 0,
               eventType: "coupon",
               couponType: "auto",
+              publicPolicyVerified: true,
               eligibilityType: "none",
               rewardType: "coupon",
               rewardCouponId: "coupon-1",
@@ -1744,6 +1889,41 @@ describe("event participation", () => {
     ["invalid rewardType", { eligibilityType: "none", rewardType: "points" }],
     ["whitespace rewardType", { eligibilityType: "none", rewardType: " none " }],
     ["coupon reward without coupon id", { eligibilityType: "none", rewardType: "coupon" }],
+    ["coupon reward with whitespace coupon id", {
+      eligibilityType: "none",
+      rewardType: "coupon",
+      rewardCouponId: " coupon-1 ",
+    }],
+    ["coupon reward with nested coupon path", {
+      eligibilityType: "none",
+      rewardType: "coupon",
+      rewardCouponId: "coupon/sub/id",
+    }],
+    ["coupon reward with dot coupon id", {
+      eligibilityType: "none",
+      rewardType: "coupon",
+      rewardCouponId: ".",
+    }],
+    ["coupon reward with dot-dot coupon id", {
+      eligibilityType: "none",
+      rewardType: "coupon",
+      rewardCouponId: "..",
+    }],
+    ["coupon reward with reserved coupon id", {
+      eligibilityType: "none",
+      rewardType: "coupon",
+      rewardCouponId: "__reserved__",
+    }],
+    ["coupon reward with oversized coupon id", {
+      eligibilityType: "none",
+      rewardType: "coupon",
+      rewardCouponId: "가".repeat(501),
+    }],
+    ["coupon reward with empty coupon id", {
+      eligibilityType: "none",
+      rewardType: "coupon",
+      rewardCouponId: "",
+    }],
     ["stale coupon id for no reward", {
       eligibilityType: "none",
       rewardType: "none",
@@ -1767,6 +1947,31 @@ describe("event participation", () => {
     expect(harness.transaction.set).not.toHaveBeenCalled();
     expect(harness.transaction.update).not.toHaveBeenCalled();
   });
+
+  test.each([undefined, false])(
+    "rejects a new participant when public policy verification is %s before reward reads or writes",
+    async (publicPolicyVerified) => {
+      const harness = createEventParticipationHarness({
+        eventData: {
+          publicPolicyVerified,
+          eligibilityType: "none",
+          rewardType: "coupon",
+          rewardCouponId: "coupon-1",
+        },
+      });
+
+      const response = await harness.participate();
+
+      expect(response.status).toHaveBeenCalledWith(403);
+      expect(response.json).toHaveBeenCalledWith(expect.objectContaining({
+        success: false,
+        code: "event_inactive",
+      }));
+      expect(harness.operationOrder).not.toContain("read:coupon");
+      expect(harness.transaction.set).not.toHaveBeenCalled();
+      expect(harness.transaction.update).not.toHaveBeenCalled();
+    },
+  );
 
   test.each([
     ["inactive event", { isActive: false }, 403, "event_inactive"],
@@ -1884,10 +2089,45 @@ describe("event participation", () => {
     expect(harness.transaction.update).not.toHaveBeenCalled();
   });
 
+  test("returns the stable misconfiguration code for a stale reward coupon reference", async () => {
+    const harness = createEventParticipationHarness({
+      eventData: {
+        eligibilityType: "none",
+        rewardType: "coupon",
+        rewardCouponId: "coupon-1",
+      },
+      couponExists: false,
+    });
+
+    const response = await harness.participate();
+
+    expect(response.status).toHaveBeenCalledWith(409);
+    expect(response.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: false,
+      code: "event_misconfigured",
+    }));
+    expect(harness.transaction.set).not.toHaveBeenCalled();
+    expect(harness.transaction.update).not.toHaveBeenCalled();
+  });
+
+  test("accepts a canonical no-reward event", async () => {
+    const harness = createEventParticipationHarness();
+
+    const response = await harness.participate();
+
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(harness.transaction.set).toHaveBeenCalledTimes(1);
+    expect(harness.transaction.update).toHaveBeenCalledTimes(1);
+  });
+
   test("keeps an existing participant idempotent before validating legacy configuration", async () => {
     const harness = createEventParticipationHarness({
       participantExists: true,
-      eventData: { eligibilityType: undefined, rewardType: undefined },
+      eventData: {
+        publicPolicyVerified: undefined,
+        eligibilityType: undefined,
+        rewardType: undefined,
+      },
     });
 
     const response = await harness.participate();

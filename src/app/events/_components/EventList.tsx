@@ -7,6 +7,7 @@ import { getEventDisplayImages } from '@/shared/utils/eventImages';
 import styles from './EventList.module.css';
 import { useEvent } from '@/context/eventProvider';
 import EventResponsiveImage from './EventResponsiveImage';
+import { isPublicEventReady } from '@/shared/utils/eventPublicPolicy';
 
 const FILTER_OPTIONS = [
   { type: 'all', label: '전체' },
@@ -25,6 +26,15 @@ const formatDate = (date: Date) =>
     day: 'numeric',
   });
 
+function EventListHeading() {
+  return (
+    <header className={styles.pageHeader}>
+      <h1 className={styles.pageTitle}>이벤트</h1>
+      <p className={styles.pageDescription}>검증이 완료된 이벤트와 이용 조건을 확인하세요.</p>
+    </header>
+  );
+}
+
 export default function EventList() {
   const {
     events,
@@ -40,10 +50,11 @@ export default function EventList() {
   } = useEvent();
 
   const activeFilterType: EventFilterButton = filter.eventType ?? 'all';
-  const totalPages = Math.max(1, Math.ceil(filteredEvents.length / eventsPerPage));
+  const publicEvents = filteredEvents.filter(isPublicEventReady);
+  const totalPages = Math.max(1, Math.ceil(publicEvents.length / eventsPerPage));
   const startIndex = (currentPage - 1) * eventsPerPage;
   const endIndex = startIndex + eventsPerPage;
-  const displayedEvents = filteredEvents.slice(startIndex, endIndex);
+  const displayedEvents = publicEvents.slice(startIndex, endIndex);
 
   const handleFilterChange = (type: EventFilterButton) => {
     setFilter(type === 'all' ? {} : { eventType: type });
@@ -52,6 +63,7 @@ export default function EventList() {
   if (loading) {
     return (
       <div className={styles.container}>
+        <EventListHeading />
         <div className={`${styles.statePanel} ${styles.loadingState}`} role="status" aria-live="polite">
           <span>이벤트를 불러오는 중입니다.</span>
           <p className={styles.stateTitle}>이벤트를 불러오는 중입니다.</p>
@@ -75,6 +87,7 @@ export default function EventList() {
   if (error) {
     return (
       <div className={styles.container}>
+        <EventListHeading />
         <div className={`${styles.statePanel} ${styles.errorState}`}>
           <p className={styles.stateTitle}>이벤트 정보를 불러오지 못했습니다.</p>
           <p className={styles.stateDescription}>{error}</p>
@@ -92,10 +105,11 @@ export default function EventList() {
       : activeFilterType === 'all'
       ? '현재 노출할 이벤트가 없습니다.'
       : `"${FILTER_OPTIONS.find(option => option.type === activeFilterType)?.label}" 조건에 맞는 이벤트가 없습니다.`;
-  const showEmptyState = filteredEvents.length === 0;
+  const showEmptyState = publicEvents.length === 0;
 
   return (
     <div className={styles.container}>
+      <EventListHeading />
       <section className={styles.bannerSection} aria-label="이벤트 안내">
         <div className={styles.posterHero}>
           <EventResponsiveImage
@@ -114,15 +128,17 @@ export default function EventList() {
         <div className={styles.filters} aria-label="이벤트 유형 필터">
           {FILTER_OPTIONS.map(option => (
             <button
+              type="button"
               key={option.type}
               className={`${styles.filterButton} ${activeFilterType === option.type ? styles.active : ''}`}
+              aria-pressed={activeFilterType === option.type}
               onClick={() => handleFilterChange(option.type)}
             >
               {option.label}
             </button>
           ))}
         </div>
-        <p className={styles.eventCount}>{filteredEvents.length.toLocaleString()}개 이벤트</p>
+        <p className={styles.eventCount}>{publicEvents.length.toLocaleString()}개 이벤트</p>
       </div>
 
       {showEmptyState ? (
@@ -159,10 +175,16 @@ export default function EventList() {
                     />
                   </div>
                   <div className={styles.eventFooter}>
-                    <span className={styles.eventPeriod}>
-                      {formatDate(event.startDate)} - {formatDate(event.endDate)}
-                    </span>
-                    <span className={styles.cardCta}>{uiMeta.cardCtaLabel}</span>
+                    <div className={styles.eventCopy}>
+                      <h2 className={styles.eventTitle}>{event.title}</h2>
+                      <p className={styles.eventDescription}>{event.description}</p>
+                    </div>
+                    <div className={styles.eventMeta}>
+                      <span className={styles.eventPeriod}>
+                        {formatDate(event.startDate)} - {formatDate(event.endDate)}
+                      </span>
+                      <span className={styles.cardCta}>{uiMeta.cardCtaLabel}</span>
+                    </div>
                   </div>
                 </Link>
               );
@@ -172,6 +194,7 @@ export default function EventList() {
           {totalPages > 1 && (
             <div className={styles.pagination}>
               <button
+                type="button"
                 className={styles.pageButton}
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
@@ -181,8 +204,10 @@ export default function EventList() {
 
               {Array.from({ length: totalPages }, (_, index) => index + 1).map(page => (
                 <button
+                  type="button"
                   key={page}
                   className={`${styles.pageButton} ${currentPage === page ? styles.active : ''}`}
+                  aria-current={currentPage === page ? 'page' : undefined}
                   onClick={() => setCurrentPage(page)}
                 >
                   {page}
@@ -190,6 +215,7 @@ export default function EventList() {
               ))}
 
               <button
+                type="button"
                 className={styles.pageButton}
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}

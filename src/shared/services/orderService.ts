@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  getCountFromServer,
   query,
   where,
   orderBy,
@@ -180,7 +181,12 @@ export class OrderService {
   static async getUserOrders(userId: string, limitCount: number = 20): Promise<Order[]> {
     try {
       const ordersRef = collection(db, this.COLLECTION_NAME);
-      const simpleQuery = query(ordersRef, where('userId', '==', userId), limit(limitCount));
+      const simpleQuery = query(
+        ordersRef,
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc'),
+        limit(limitCount),
+      );
       const querySnapshot = await getDocs(simpleQuery);
 
       return querySnapshot.docs
@@ -198,6 +204,18 @@ export class OrderService {
       }
 
       throw new Error(userMessage);
+    }
+  }
+
+  static async getUserOrderCount(userId: string): Promise<number> {
+    try {
+      const ordersRef = collection(db, this.COLLECTION_NAME);
+      const userOrdersQuery = query(ordersRef, where('userId', '==', userId));
+      const countSnapshot = await getCountFromServer(userOrdersQuery);
+      return countSnapshot.data().count;
+    } catch (error) {
+      console.error('Failed to count user orders:', error);
+      throw new Error('주문 건수를 불러오지 못했습니다.');
     }
   }
 

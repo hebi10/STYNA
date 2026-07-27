@@ -161,6 +161,25 @@
   display: none;
 }
 
+.mobileMenu {
+  display: flex;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  background: var(--off-white);
+}
+
+.mobileMenu .menuItem {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.mobileMenu button.menuItem {
+  width: auto;
+}
+
 .sidebarCard {
   padding: 1rem;
   border: 1px solid var(--line);
@@ -185,7 +204,7 @@
 .menuItem {
   display: flex;
   align-items: center;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0.55rem 0.7rem;
   border: 1px solid transparent;
   background: transparent;
@@ -450,6 +469,10 @@ button.menuItem {
     display: block;
     position: sticky;
     top: 8rem;
+  }
+
+  .mobileMenu {
+    display: none;
   }
 }
 

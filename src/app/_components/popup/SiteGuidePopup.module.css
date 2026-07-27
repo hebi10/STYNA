@@ -25,7 +25,8 @@
   max-width: 400px;
   width: 100%;
   animation: slideUp 0.2s ease-out;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 @keyframes slideUp {
@@ -57,6 +58,9 @@
 }
 
 .logoSection h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   font-size: 0.95rem;
   font-weight: 700;
   margin: 0;
@@ -73,8 +77,8 @@
 .closeButton {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.18);
-  width: 26px;
-  height: 26px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -159,7 +163,7 @@
 .linkButton,
 .linkButtonPrimary {
   flex: 1;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0.65rem 0.85rem;
   font-size: 0.78rem;
   font-weight: 700;
@@ -218,7 +222,7 @@
 }
 
 .closeButtonSecondary {
-  min-height: 32px;
+  min-height: 44px;
   padding: 0.45rem 1rem;
   background: var(--color-white);
   color: var(--black);
@@ -233,6 +237,12 @@
 .closeButtonSecondary:hover {
   border-color: var(--black);
   background: var(--color-white);
+}
+
+.popup a:focus-visible,
+.popup button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 /* 반응형 */

@@ -244,26 +244,28 @@
   background: #6b7280;
 }
 
-.statusDot.status-배송완료 {
+.statusDot.status-delivered {
   background: #10b981;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+  box-shadow: none;
 }
 
-.statusDot.status-배송중 {
+.statusDot.status-shipped {
   background: #3b82f6;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  box-shadow: none;
 }
 
-.statusDot.status-주문확인 {
+.statusDot.status-pending,
+.statusDot.status-confirmed,
+.statusDot.status-preparing {
   background: #f59e0b;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+  box-shadow: none;
 }
 
-.statusDot.status-취소,
-.statusDot.status-교환,
-.statusDot.status-반품 {
+.statusDot.status-cancelled,
+.statusDot.status-returned,
+.statusDot.status-exchanged {
   background: #ef4444;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+  box-shadow: none;
 }
 
 .orderProducts {
@@ -677,12 +679,14 @@
   border-radius: 2px;
 }
 
-.statusDot.status-배송중,
-.statusDot.status-배송완료,
-.statusDot.status-주문확인,
-.statusDot.status-취소,
-.statusDot.status-교환,
-.statusDot.status-반품 {
+.statusDot.status-pending,
+.statusDot.status-confirmed,
+.statusDot.status-preparing,
+.statusDot.status-shipped,
+.statusDot.status-delivered,
+.statusDot.status-cancelled,
+.statusDot.status-returned,
+.statusDot.status-exchanged {
   box-shadow: none;
 }
 

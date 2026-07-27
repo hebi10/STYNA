@@ -192,7 +192,8 @@ export default function QnADetailPage() {
             <div className={styles.waitingAnswer}>
               <div className={styles.waitingIcon}></div>
               <h3>답변 대기</h3>
-              <p>운영자가 확인 후 순차적으로 답변드릴 예정입니다.</p>
+              <p>문의 기록의 현재 상태는 답변 대기입니다.</p>
+              <p>답변 여부와 시점은 보장하지 않습니다.</p>
             </div>
           )}
         </div>

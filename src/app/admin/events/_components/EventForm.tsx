@@ -13,6 +13,7 @@ import { Category } from '@/shared/types/category';
 import { EventService } from '@/shared/services/eventService';
 import { CategoryService } from '@/shared/services/categoryService';
 import { REVIEW_EVENT_KEYWORDS } from '@/shared/constants/eventUiMeta';
+import { isValidFirestoreDocumentId } from '@/shared/utils/firestoreDocumentId';
 import Button from '@/app/_components/Button';
 import Input from '@/app/_components/Input';
 import styles from './EventForm.module.css';
@@ -24,7 +25,7 @@ interface Props {
 
 const EDITORIAL_IMAGE_FIELDS = [
   { role: 'benefit', label: '혜택 이미지', uploadLabel: '혜택 이미지 업로드' },
-  { role: 'styling', label: 'MD 추천 이미지', uploadLabel: 'MD 추천 이미지 업로드' },
+  { role: 'styling', label: '스타일 제안 이미지', uploadLabel: '스타일 제안 이미지 업로드' },
   { role: 'product', label: '상품 에디토리얼 이미지', uploadLabel: '상품 에디토리얼 이미지 업로드' },
 ] as const;
 
@@ -75,7 +76,10 @@ const getInitialEligibilityType = (event?: Event): EventEligibilityType => {
 
   const searchableText = [event.title, event.description, event.content ?? ''].join(' ');
   return LEGACY_REVIEW_EVENT_IDS.has(event.id)
-    || REVIEW_EVENT_KEYWORDS.some(keyword => searchableText.includes(keyword))
+    || (
+      event.eventType === 'special'
+      && REVIEW_EVENT_KEYWORDS.some(keyword => searchableText.includes(keyword))
+    )
     ? 'review'
     : 'none';
 };
@@ -105,6 +109,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
     eventType: event?.eventType || 'sale' as 'sale' | 'coupon' | 'special' | 'new',
     eligibilityType: getInitialEligibilityType(event),
     rewardType: event?.rewardType || (event?.rewardCouponId ? 'coupon' : 'none') as EventRewardType,
+    publicPolicyVerified: event?.publicPolicyVerified ?? false,
     targetProductsText: event?.targetProducts?.join('\n') || '',
     startDate: event?.startDate ? new Date(event.startDate).toISOString().slice(0, 16) : '',
     endDate: event?.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : '',
@@ -160,7 +165,8 @@ export default function EventForm({ event, isEdit = false }: Props) {
   const handleInputChange = (field: string, value: string | number | boolean | string[]) => {
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: value,
+      ...(field === 'publicPolicyVerified' ? {} : { publicPolicyVerified: false }),
     }));
   };
 
@@ -174,12 +180,14 @@ export default function EventForm({ event, isEdit = false }: Props) {
         if (isSelected) {
           return {
             ...prev,
-            selectedCategories: []
+            selectedCategories: [],
+            publicPolicyVerified: false,
           };
         } else {
           return {
             ...prev,
-            selectedCategories: ['전체']
+            selectedCategories: ['전체'],
+            publicPolicyVerified: false,
           };
         }
       } else {
@@ -188,14 +196,16 @@ export default function EventForm({ event, isEdit = false }: Props) {
           // 카테고리 제거
           return {
             ...prev,
-            selectedCategories: currentCategories.filter(cat => cat !== categoryName)
+            selectedCategories: currentCategories.filter(cat => cat !== categoryName),
+            publicPolicyVerified: false,
           };
         } else {
           // 카테고리 추가 (전체 제거)
           const newCategories = currentCategories.filter(cat => cat !== '전체');
           return {
             ...prev,
-            selectedCategories: [...newCategories, categoryName]
+            selectedCategories: [...newCategories, categoryName],
+            publicPolicyVerified: false,
           };
         }
       }
@@ -210,6 +220,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
         ...prev,
         [`${type}Image`]: imageUrl
       }));
+      setFormData(prev => ({ ...prev, publicPolicyVerified: false }));
       alert(`${type === 'banner' ? '배너' : '썸네일'} 이미지가 업로드되었습니다.`);
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -227,6 +238,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
         ...prev,
         [role]: imageUrl,
       }));
+      setFormData(prev => ({ ...prev, publicPolicyVerified: false }));
       alert('에디토리얼 이미지가 업로드되었습니다.');
     } catch (error) {
       console.error('Error uploading editorial image:', error);
@@ -255,8 +267,11 @@ export default function EventForm({ event, isEdit = false }: Props) {
       return;
     }
 
-    if (formData.rewardType === 'coupon' && !formData.rewardCouponId.trim()) {
-      alert('쿠폰 보상에는 쿠폰 관리 문서 ID가 필요합니다.');
+    if (
+      formData.rewardType === 'coupon'
+      && !isValidFirestoreDocumentId(formData.rewardCouponId.trim())
+    ) {
+      alert('쿠폰 보상에는 유효한 쿠폰 관리 문서 ID가 필요합니다.');
       return;
     }
 
@@ -271,6 +286,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
         eventType: formData.eventType as Event['eventType'],
         eligibilityType: formData.eligibilityType,
         rewardType: formData.rewardType,
+        publicPolicyVerified: formData.publicPolicyVerified,
         ...(formData.eligibilityType !== 'none' && targetProducts.length > 0
           ? { targetProducts }
           : {}),
@@ -748,6 +764,20 @@ export default function EventForm({ event, isEdit = false }: Props) {
               />
               이벤트 활성화
             </label>
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={formData.publicPolicyVerified}
+                onChange={(e) => handleInputChange('publicPolicyVerified', e.target.checked)}
+                className={styles.checkbox}
+              />
+              공개 혜택·참여 조건 검증 완료
+            </label>
+            <p className={styles.helpText}>
+              상품 범위, 쿠폰 문서, 이미지와 문구를 실제 동작과 대조한 뒤에만 선택하세요. 다른 설정을 바꾸면 자동 해제됩니다.
+            </p>
           </div>
         </div>
 

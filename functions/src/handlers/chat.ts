@@ -1,7 +1,7 @@
 import { getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
 import { getMenuResponse, getAIFallbackResponse } from "../chatResponses";
-import { buildChatPolicyPrompt, formatSupportHours } from "../commercePolicy";
+import { buildChatPolicyPrompt } from "../commercePolicy";
 import { secrets } from "../config/environment";
 import {
   createChatRateLimitSubject,
@@ -31,22 +31,18 @@ interface SecretValue {
   value(): string;
 }
 
-const SYSTEM_PROMPT = `당신은 STYNA 온라인 패션 쇼핑몰의 전문 고객지원 AI입니다.
+const SYSTEM_PROMPT = `당신은 STYNA 포트폴리오 쇼핑몰의 도움말 챗봇입니다.
 
-=== 회사 정보 ===
-회사명: STYNA (패션 플랫폼)
-사업분야: 최신 트렌드 패션 의류, 액세서리, 신발 전문
-위치: 대한민국 서울특별시 강남구
-주의사항: 쇼핑몰과 무관한 답변 금지
-해당 사이트는 실제 사이트가 아닌 박도영의 포트폴리오 사이트입니다.
-고객센터 이메일: sevim0104@naver.com
-고객센터 전화: 010-4789-7410 (${formatSupportHours()})
+=== 데모 경계 ===
+STYNA는 박도영의 포트폴리오용 쇼핑몰 데모입니다.
+실제 결제·배송·상거래 고객지원 서비스를 제공하지 않습니다.
+사람 상담 연결, 문의 접수 완료, 답변 기한을 주장하지 마세요.
 
 === 서비스 정책 ===
 ${buildChatPolicyPrompt()}
 
 이모지 금지. 정중하게 답변하세요.
-고객의 문의를 정확히 파악하고 친절하고 전문적으로 답변해주세요.`;
+질문을 정확히 파악하고 구현된 데모 정책 범위에서만 답변하세요.`;
 
 const DEFAULT_OPENAI_CHAT_MODEL = "gpt-4o-mini";
 const MAX_MESSAGE_LENGTH = 1200;

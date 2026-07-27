@@ -13,10 +13,17 @@ export default function Input({
   helperText, 
   className = '', 
   id,
+  'aria-describedby': ariaDescribedBy,
+  'aria-invalid': ariaInvalid,
   ...props 
 }: InputProps) {
   const generatedId = useId();
   const inputId = id || generatedId;
+  const describedBy = [
+    ariaDescribedBy,
+    error ? `${inputId}-error` : undefined,
+    !error && helperText ? `${inputId}-helper` : undefined,
+  ].filter(Boolean).join(' ') || undefined;
   
   const inputClasses = [
     styles.input,
@@ -32,15 +39,17 @@ export default function Input({
         </label>
       )}
       <input
+        {...props}
         id={inputId}
         className={inputClasses}
-        {...props}
+        aria-invalid={error ? true : ariaInvalid}
+        aria-describedby={describedBy}
       />
       {error && (
-        <p className={styles.error}>{error}</p>
+        <p id={`${inputId}-error`} role="alert" className={styles.error}>{error}</p>
       )}
       {helperText && !error && (
-        <p className={styles.helperText}>{helperText}</p>
+        <p id={`${inputId}-helper`} className={styles.helperText}>{helperText}</p>
       )}
     </div>
   );

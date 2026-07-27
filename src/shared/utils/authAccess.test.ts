@@ -46,6 +46,10 @@ jest.mock('@/shared/hooks/useUserData', () => ({
   useUserData: jest.fn(),
 }));
 
+jest.mock('@/shared/hooks/useSignupBonusReconciliation', () => ({
+  useSignupBonusReconciliation: jest.fn(),
+}));
+
 jest.mock('@/shared/libs/firebase/auth', () => ({
   loginOneSession: jest.fn(),
   loginKeepAlive: jest.fn(),

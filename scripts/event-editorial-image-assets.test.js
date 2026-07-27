@@ -37,7 +37,7 @@ const VERTICAL_DETAIL_CONSTRAINTS = Object.freeze([
 const ROLE_VERTICAL_FLOWS = Object.freeze({
   benefit: Object.freeze([
     '상단 캠페인 오프닝',
-    '중단 핵심 혜택',
+    '중단 핵심 안내',
     '하단 기간/참여 안내',
   ]),
   styling: Object.freeze([
@@ -80,6 +80,7 @@ afterEach(() => {
 });
 
 test('defines 22 source-aligned campaigns and 66 role images', () => {
+  expect(manifest.version).toBe(sourceManifest.version);
   expect(manifest.events).toHaveLength(22);
   expect(manifest.events.flatMap((event) => event.images)).toHaveLength(66);
   expect(EDITORIAL_ROLES).toEqual(['benefit', 'styling', 'product']);
@@ -139,7 +140,7 @@ test('defines 22 source-aligned campaigns and 66 role images', () => {
       expect(copyCount).toBeGreaterThanOrEqual(3);
       expect(copyCount).toBeLessThanOrEqual(4);
       expect(image.output).toBe(
-        `public/events/2026-editorial/${event.id}-20260715-${image.role}.webp`,
+        `public/events/2026-editorial/${event.id}-${manifest.version}-${image.role}.webp`,
       );
     }
 
@@ -277,9 +278,15 @@ test('rejects outputs outside the dedicated versioned editorial path', () => {
 
   const wrongEditorialName = createManifest();
   wrongEditorialName.events[0].images[0].output =
-    'public/events/2026-editorial/unrelated-20260715-benefit.webp';
+    `public/events/2026-editorial/unrelated-${manifest.version}-benefit.webp`;
   expect(() => validateManifestContract(wrongEditorialName)).toThrow(
     '에디토리얼 출력 경로가 계약과 일치하지 않습니다.',
+  );
+
+  const mismatchedVersion = createManifest();
+  mismatchedVersion.version = '20260715';
+  expect(() => validateManifestContract(mismatchedVersion)).toThrow(
+    '원본 이벤트 매니페스트와 버전이 일치하지 않습니다.',
   );
 });
 
@@ -287,7 +294,7 @@ test('builds deterministic raw and output paths', () => {
   const event = { id: 'event-1' };
   const image = {
     role: 'product',
-    output: 'public/events/2026-editorial/event-1-20260715-product.webp',
+    output: `public/events/2026-editorial/event-1-${manifest.version}-product.webp`,
   };
 
   expect(getRawPath(event, 'benefit')).toBe(

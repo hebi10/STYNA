@@ -11,6 +11,7 @@ import {
 jest.mock('@/shared/services/productService', () => ({
   ProductService: {
     getProductById: jest.fn(),
+    getPublicProductById: jest.fn(),
     getProductsByCategory: jest.fn(),
     getSaleProducts: jest.fn(),
     getRecommendedProducts: jest.fn(),
@@ -95,18 +96,27 @@ describe('getEventProductSectionMeta', () => {
   ])('returns product section metadata for %s', (variant, title, href) => {
     expect(getEventProductSectionMeta(variant as EventUiVariant)).toMatchObject({ title, href });
   });
+
+  test('describes sale fallback products without claiming event-specific eligibility', () => {
+    expect(getEventProductSectionMeta('sale').description).toBe(
+      '현재 할인가가 등록된 상품을 확인해 보세요.',
+    );
+  });
 });
 
 describe('loadEventProducts', () => {
   test('uses strict ProductService options through the default event adapter', async () => {
+    jest.mocked(ProductService.getPublicProductById).mockResolvedValue(null);
     jest.mocked(ProductService.getProductsByCategory).mockResolvedValue([]);
     jest.mocked(ProductService.getSaleProducts).mockResolvedValue([]);
 
     await loadEventProducts({
-      event: createEvent({ targetCategories: ['tops'] }),
+      event: createEvent({ targetProducts: ['product-1'], targetCategories: ['tops'] }),
       variant: 'sale',
     });
 
+    expect(ProductService.getPublicProductById).toHaveBeenCalledWith('product-1');
+    expect(ProductService.getProductById).not.toHaveBeenCalled();
     expect(ProductService.getProductsByCategory).toHaveBeenCalledWith(
       'tops',
       8,
