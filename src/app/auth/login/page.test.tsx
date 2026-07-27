@@ -5,6 +5,7 @@ import { useAuth } from '@/context/authProvider';
 const replace = jest.fn();
 const login = jest.fn();
 const clearError = jest.fn();
+const originalDemoLoginFlag = process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN;
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ replace }),
@@ -76,6 +77,15 @@ describe('LoginPage transition feedback', () => {
       user: null,
       loading: false,
     });
+  });
+
+  afterEach(() => {
+    if (originalDemoLoginFlag === undefined) {
+      delete process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN;
+      return;
+    }
+
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN = originalDemoLoginFlag;
   });
 
   test('shows an account transition overlay while login is being verified', () => {
@@ -155,10 +165,23 @@ describe('LoginPage transition feedback', () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/mypage'));
   });
 
-  test('does not show hard-coded demo account login buttons outside development', () => {
+  test('shows both portfolio demo logins when the public flag is true', () => {
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN = 'true';
+
     render(<LoginPage />);
 
-    expect(screen.queryByText('일반 유저 로그인')).not.toBeInTheDocument();
-    expect(screen.queryByText('관리자 로그인')).not.toBeInTheDocument();
+    expect(screen.getByText('포트폴리오 데모 로그인')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '일반 회원 로그인' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '관리자 로그인' })).toBeInTheDocument();
+  });
+
+  test('hides portfolio demo logins when the public flag is not true', () => {
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN = 'false';
+
+    render(<LoginPage />);
+
+    expect(screen.queryByText('포트폴리오 데모 로그인')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '일반 회원 로그인' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '관리자 로그인' })).not.toBeInTheDocument();
   });
 });

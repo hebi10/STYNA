@@ -557,6 +557,59 @@ describe('ProductService.getPublicProductById', () => {
   );
 });
 
+describe('ProductService.getPublicProductsByIds', () => {
+  let consoleErrorSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.mocked(getDocs).mockReset();
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('deduplicates ids, skips missing products, and preserves the requested order', async () => {
+    jest.mocked(getDocs)
+      .mockResolvedValueOnce({
+        docs: [makeDoc('product-b', { status: 'active' })],
+      } as unknown as Awaited<ReturnType<typeof getDocs>>)
+      .mockResolvedValueOnce({
+        docs: [],
+      } as unknown as Awaited<ReturnType<typeof getDocs>>)
+      .mockResolvedValueOnce({
+        docs: [makeDoc('product-a', { status: 'active' })],
+      } as unknown as Awaited<ReturnType<typeof getDocs>>);
+
+    const products = await ProductService.getPublicProductsByIds([
+      'product-b',
+      'missing',
+      'product-a',
+      'product-b',
+    ]);
+
+    expect(products.map((product) => product.id)).toEqual([
+      'product-b',
+      'product-a',
+    ]);
+    expect(getDocs).toHaveBeenCalledTimes(3);
+  });
+
+  it('propagates a public product service failure instead of returning a partial list', async () => {
+    const upstreamError = { code: 'unavailable' };
+    jest.mocked(getDocs)
+      .mockResolvedValueOnce({
+        docs: [makeDoc('product-a', { status: 'active' })],
+      } as unknown as Awaited<ReturnType<typeof getDocs>>)
+      .mockRejectedValueOnce(upstreamError);
+
+    await expect(
+      ProductService.getPublicProductsByIds(['product-a', 'product-b']),
+    ).rejects.toBe(upstreamError);
+  });
+});
+
 describe('ProductService.updateProduct', () => {
   test('writes only explicitly changed fields for a status-only update', async () => {
     const set = jest.fn();

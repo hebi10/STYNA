@@ -10,7 +10,7 @@
 - `npm run lint:fix`: `eslint . --fix` 실행.
 - `npm test`: Jest 전체 테스트를 `--runInBand`로 실행해 Windows spawn 오류 가능성을 낮춘다.
 - `npm run test:functions`: `functions/__tests__`만 실행.
-- `npm run test:rules`: Firestore·Storage Rules Emulator 권한 테스트를 실행한다. Java 또는 Emulator 실행 환경이 없거나 테스트가 실패하면 품질 게이트도 실패한다.
+- `npm run test:rules`: `scripts/run-rules-tests.js`를 통해 Firestore·Storage Rules Emulator 권한 테스트를 실행한다. Java 또는 Emulator 실행 환경이 없거나 테스트가 실패하면 품질 게이트도 실패한다.
 - `npm run ci`: `typecheck -> lint -> test -> test:rules -> functions:build` 순서로 실행.
 - `npm run verify`: `typecheck -> lint -- --max-warnings=0 -> test -> test:rules -> functions:build -> build` 순서로 배포 전 전체 검증을 실행한다.
 - `npm run sync:chat-responses`: 공통 채팅 응답 생성물이 원본과 같은지만 확인하며 파일을 수정하지 않는다.
@@ -39,6 +39,14 @@
 - Jest 설정은 TSX 테스트와 `@/` alias를 처리하도록 `ts-jest` transform과 `moduleNameMapper`를 루트 `src` 기준으로 맞췄다.
 - `functions/.next/**` 산출물을 ESLint 제외 대상에 추가해 Functions 빌드 부산물이 lint 입력으로 들어오지 않게 했다.
 - `scripts/**`, `next-env.d.ts`처럼 운영 보조 스크립트와 생성 파일 성격의 파일은 기본 lint 대상에서 제외했다. 검색 백업 페이지와 Functions 시드 JS는 저장소 정리 과정에서 제거했다.
+
+## Windows Rules Emulator 프로세스 정리
+
+- Firebase CLI의 `emulators:exec`가 종료된 뒤에도 Windows에서 Firestore Java 프로세스가 남는 경우가 있어 `test:rules`를 전용 실행기로 감쌌다.
+- 실행 전후에 `cloud-firestore-emulator`, 프로젝트 ID `demo-hebimall-rules-test`, 포트 `8081`, 현재 저장소의 `firestore.rules` 경로를 모두 만족하는 프로세스만 정리한다.
+- 다른 프로젝트의 Emulator, 일반 Java 프로세스, 관련 없는 포트 점유 프로세스는 종료하지 않는다.
+- Jest 또는 Firebase CLI의 종료 코드는 그대로 전달하며, 성공·실패·중단 경로 모두에서 후처리를 실행한다.
+- Windows 외 환경에서는 Firebase CLI의 기본 종료 동작을 사용하고 별도 프로세스 정리를 수행하지 않는다.
 
 ## 2026-06-05 TypeScript 6 baseUrl 경고 정리
 - TypeScript 6에서 `compilerOptions.baseUrl`이 deprecated 처리되어 루트 `tsconfig.json`에서 제거했다.

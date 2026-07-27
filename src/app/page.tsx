@@ -3,6 +3,7 @@ import MainBanner from "./_components/MainBanner";
 import ProductSection from "./_components/ProductSection";
 import DynamicCategorySection from "./_components/DynamicCategorySection";
 import FeaturedProducts from "./_components/FeaturedProducts";
+import StyleNowSection from "./_components/style-now/StyleNowSection";
 import { SITE_INFO } from "@/shared/constants/siteInfo";
 import { formatSignupBenefit } from "@/shared/constants/commercePolicy";
 import styles from "./page.module.css";
@@ -205,6 +206,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <StyleNowSection />
     </div>
   );
 }

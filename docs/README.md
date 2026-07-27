@@ -41,9 +41,12 @@
 - Firestore AI 요약 Export : firestore-ai-summary.md
 - Firestore 최적화 실행 계획 : superpowers/plans/2026-06-30-firestore-optimization.md
 - 메인 편집형 쇼핑몰 개편 실행 계획 : superpowers/plans/2026-07-08-main-editorial-shopping-mall.md
+- 스타일나우 시즌 콘텐츠 설계 : superpowers/specs/2026-07-27-style-now-season-content-design.md
+- 스타일나우 시즌 콘텐츠 실행 계획 : superpowers/plans/2026-07-27-style-now-season-content.md
 - 주문·권한 정합성 설계 : superpowers/specs/2026-07-10-security-integrity-design.md
 - 주문·권한 정합성 실행 계획 : superpowers/plans/2026-07-10-security-integrity.md
 - 품질 게이트/CI 스크립트 정리 : quality-gates.md
+- Rules Emulator 잔여 프로세스 정리 실행 계획 : superpowers/plans/2026-07-27-rules-emulator-cleanup.md
 - 정적 콘텐츠 Firestore 관리 : static-content.md
 - 프로젝트 정리·안정화 설계 : superpowers/specs/2026-07-20-project-hardening-design.md
 - 프로젝트 데드·중복 코드 정리 실행 계획 : superpowers/plans/2026-07-20-project-cleanup.md
@@ -51,4 +54,6 @@
 - 프로젝트 정책·구매 흐름 실행 계획 : superpowers/plans/2026-07-20-project-policy-purchase.md
 - 프로젝트 접근성·사용자 경험 개선 실행 계획 : superpowers/plans/2026-07-21-project-accessibility-ux.md
 - 프로젝트 성능·SEO 개선 실행 계획 : superpowers/plans/2026-07-21-project-performance-seo.md
+- 쇼핑 우선 하이브리드 UI 개선 설계 : superpowers/specs/2026-07-27-shopping-first-hybrid-ui-design.md
+- 쇼핑 우선 하이브리드 UI 개선 실행 계획 : superpowers/plans/2026-07-27-shopping-first-hybrid-ui.md
 - SEO 경로·색인 정책 : seo-routing.md

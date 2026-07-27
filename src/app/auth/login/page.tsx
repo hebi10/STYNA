@@ -12,7 +12,8 @@ import { getSafeRedirectTarget } from "@/shared/utils/safeRedirect";
 
 export default function LoginPage() {
   const router = useRouter();
-  const showDevelopmentLogins = process.env.NODE_ENV === "development";
+  const showDemoLogins =
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === "true";
   const [redirectTarget, setRedirectTarget] = useState(() => {
     if (typeof window === "undefined") {
       return "/mypage";
@@ -171,10 +172,10 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        {showDevelopmentLogins && (
+        {showDemoLogins && (
           <>
             <div className={styles.divider}>
-              <span className={styles.dividerText}>개발용 빠른 로그인</span>
+              <span className={styles.dividerText}>포트폴리오 데모 로그인</span>
             </div>
 
             <div className={styles.socialButtons}>
@@ -184,7 +185,12 @@ export default function LoginPage() {
                 onClick={handleKakaoLogin}
                 disabled={isSubmitting}
               >
-                <span className={`${styles.socialBtn} ${styles.kakaoIcon}`}>U</span>
+                <span
+                  className={`${styles.socialBtn} ${styles.kakaoIcon}`}
+                  aria-hidden="true"
+                >
+                  U
+                </span>
                 {isSubmitting ? "로그인 중..." : "일반 회원 로그인"}
               </button>
               <button
@@ -193,7 +199,12 @@ export default function LoginPage() {
                 onClick={handleNaverLogin}
                 disabled={isSubmitting}
               >
-                <span className={`${styles.socialBtn} ${styles.naverIcon}`}>A</span>
+                <span
+                  className={`${styles.socialBtn} ${styles.naverIcon}`}
+                  aria-hidden="true"
+                >
+                  A
+                </span>
                 {isSubmitting ? "로그인 중..." : "관리자 로그인"}
               </button>
             </div>

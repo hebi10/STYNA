@@ -42,10 +42,10 @@ export function formatSignupBenefit(): string {
 
 export function formatShippingPolicy(): string {
   return (
-    `일반 배송비는 ${formatNumber(COMMERCE_POLICY.shipping.standardFee)}원이며, ` +
-    `쿠폰 할인 적용 후 상품금액이 ${formatNumber(COMMERCE_POLICY.shipping.freeThreshold)}원 이상이거나 ` +
-    '무료배송 쿠폰을 적용하면 무료입니다. ' +
-    `특급 배송은 주문금액 및 무료배송 쿠폰과 관계없이 ${formatNumber(COMMERCE_POLICY.shipping.expressFee)}원입니다.`
+    `일반 배송 ${formatNumber(COMMERCE_POLICY.shipping.standardFee)}원 · ` +
+    `쿠폰 할인 적용 후 상품금액 ${formatNumber(COMMERCE_POLICY.shipping.freeThreshold)}원 이상 또는 ` +
+    '무료배송 쿠폰 사용 시 무료 · ' +
+    `특급 배송 ${formatNumber(COMMERCE_POLICY.shipping.expressFee)}원`
   );
 }
 

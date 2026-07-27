@@ -971,6 +971,21 @@ export class ProductService {
     }
   }
 
+  static async getPublicProductsByIds(productIds: string[]): Promise<Product[]> {
+    const uniqueProductIds = Array.from(
+      new Set(
+        productIds
+          .map((productId) => productId.trim())
+          .filter(Boolean),
+      ),
+    );
+    const products = await Promise.all(
+      uniqueProductIds.map((productId) => this.getPublicProductById(productId)),
+    );
+
+    return products.filter((product): product is Product => product !== null);
+  }
+
   static async getProductsByCategory(
     categorySlug: string,
     limitCount?: number,

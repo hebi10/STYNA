@@ -354,6 +354,9 @@ test("package quality gates keep sync compare-only and include Rules Emulator te
   expect(packageJson.scripts["functions:build"]).toBe(
     "npm run sync:chat-responses && cd functions && npm run build",
   );
+  expect(packageJson.scripts["test:rules"]).toBe(
+    "node scripts/run-rules-tests.js",
+  );
   expect(packageJson.scripts.ci).toBe(
     "npm run typecheck && npm run lint && npm run test && npm run test:rules && npm run functions:build",
   );

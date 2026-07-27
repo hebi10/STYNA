@@ -40,6 +40,11 @@ jest.mock('./_components/FeaturedProducts', () => ({
   default: () => <section><h2>관리자 추천 상품</h2></section>,
 }));
 
+jest.mock('./_components/style-now/StyleNowSection', () => ({
+  __esModule: true,
+  default: () => <section>mock style now</section>,
+}));
+
 describe('Home editorial composition', () => {
   test('renders operating traces for a curated daily shopping mall', () => {
     const markup = renderToStaticMarkup(<Home />);
@@ -70,6 +75,10 @@ describe('Home editorial composition', () => {
     expect(markup).not.toContain('07.14까지');
     expect(markup).toContain('category visual mode: image');
     expect(markup).toContain('관리자 추천 상품');
+    expect(markup).toContain('mock style now');
+    expect(markup.lastIndexOf('mock style now')).toBeGreaterThan(
+      markup.lastIndexOf('PORTFOLIO'),
+    );
   });
 
   test('keeps the main page compact instead of rendering duplicate editorial grids', () => {
