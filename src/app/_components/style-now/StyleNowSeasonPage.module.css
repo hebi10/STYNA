@@ -1,0 +1,354 @@
+.page {
+  min-height: 100vh;
+  padding: 2rem 0 5rem;
+  background: #fff;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-left: -0.25rem;
+  padding: 0 0.25rem;
+  color: #30394a;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.22em;
+}
+
+.backLink:focus-visible,
+.seasonLink:focus-visible,
+.activeSeasonLink:focus-visible,
+.errorState button:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+.pageHeader {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.7fr) minmax(0, 1fr);
+  align-items: flex-end;
+  gap: 3rem;
+  margin-top: 2rem;
+  padding: 2rem 0 1.5rem;
+  border-top: 1px solid #13233a;
+  border-bottom: 1px solid #13233a;
+}
+
+.kicker {
+  margin: 0;
+  color: #596579;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.pageHeader h1 {
+  margin: 0.65rem 0 0;
+  color: #111;
+  font-size: 2rem;
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+}
+
+.pageHeader > p {
+  max-width: 40rem;
+  margin: 0;
+  color: #596579;
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+
+.seasonNav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 1.25rem;
+  border-top: 1px solid #cfd2d6;
+  border-left: 1px solid #cfd2d6;
+}
+
+.seasonLink,
+.activeSeasonLink {
+  min-height: 46px;
+  padding: 0.8rem 1rem;
+  border-right: 1px solid #cfd2d6;
+  border-bottom: 1px solid #cfd2d6;
+  color: #30394a;
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+
+.seasonLink:hover {
+  background: #f2f3f4;
+}
+
+.activeSeasonLink {
+  background: #111;
+  color: #fff;
+}
+
+.contentLayout {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  align-items: start;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.editorial {
+  border: 1px solid #d8d8d8;
+  background: #eceff1;
+}
+
+.editorialPanel {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+}
+
+.editorialPanel + .editorialPanel {
+  border-top: 1px solid #fff;
+}
+
+.editorialImage {
+  object-fit: cover;
+}
+
+.modelImage {
+  object-position: center top;
+}
+
+.copyLight,
+.copyDark {
+  position: absolute;
+  z-index: 1;
+  right: 1rem;
+  bottom: 1rem;
+  left: 1rem;
+  max-width: 20rem;
+  padding: 0.85rem 1rem;
+}
+
+.copyLight {
+  background: rgb(17 17 17 / 78%);
+  color: #fff;
+}
+
+.copyDark {
+  background: rgb(255 255 255 / 88%);
+  color: #111;
+}
+
+.copyLight p,
+.copyDark p {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.copyLight h2,
+.copyDark h2 {
+  margin: 0.35rem 0 0;
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.copyLight span,
+.copyDark span {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.73rem;
+  line-height: 1.5;
+}
+
+.products {
+  min-width: 0;
+}
+
+.productsHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #d8d8d8;
+}
+
+.productsHeader h2 {
+  margin: 0.45rem 0 0;
+  color: #111;
+  font-size: clamp(1.45rem, 3vw, 2.2rem);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.productsHeader > span {
+  flex: 0 0 auto;
+  color: #596579;
+  font-size: 0.8rem;
+}
+
+.productGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.status,
+.errorState {
+  min-height: 180px;
+  padding: 2rem;
+  color: #596579;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.status {
+  display: grid;
+  place-items: center;
+  border-top: 1px solid #d8d8d8;
+  border-bottom: 1px solid #d8d8d8;
+}
+
+.errorState {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1rem;
+  border: 1px dashed #a7adb6;
+}
+
+.errorState p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.errorState button {
+  min-height: 40px;
+  padding: 0.65rem 1rem;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.errorState button:hover {
+  background: #303030;
+}
+
+@media (max-width: 1024px) {
+  .contentLayout {
+    grid-template-columns: minmax(250px, 310px) minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .productGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 800px) {
+  .pageHeader,
+  .contentLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .pageHeader {
+    gap: 1rem;
+  }
+
+  .editorial {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .editorialPanel + .editorialPanel {
+    border-top: 0;
+    border-left: 1px solid #fff;
+  }
+
+  .copyLight,
+  .copyDark {
+    right: 0.5rem;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    padding: 0.65rem;
+  }
+
+  .copyLight span,
+  .copyDark span {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 1.5rem 0 3.5rem;
+  }
+
+  .container {
+    padding: 0 0.75rem;
+  }
+
+  .pageHeader {
+    margin-top: 1.5rem;
+    padding: 1.5rem 0 1rem;
+  }
+
+  .seasonLink,
+  .activeSeasonLink {
+    padding: 0.7rem 0.35rem;
+  }
+
+  .editorial {
+    grid-template-columns: 1fr;
+  }
+
+  .editorialPanel + .editorialPanel {
+    border-top: 1px solid #fff;
+    border-left: 0;
+  }
+
+  .copyLight,
+  .copyDark {
+    right: 6rem;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    padding: 0.8rem;
+  }
+
+  .copyLight span,
+  .copyDark span {
+    display: block;
+  }
+
+  .productsHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .productGrid {
+    gap: 0.625rem;
+  }
+}

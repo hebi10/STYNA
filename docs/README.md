@@ -5,6 +5,8 @@
 - 관리자 토큰 통합 정리 : store-admin-token-unification.md
 - 관리자 페이지 권한 검토 : admin-page-review.md
 - 헤더 UI 정리 : header-ui.md
+- 데스크톱 헤더 메뉴 구성 복원 설계 : superpowers/specs/2026-07-28-header-desktop-menu-restore-design.md
+- 데스크톱 헤더 메뉴 구성 복원 실행 계획 : superpowers/plans/2026-07-28-header-desktop-menu-restore.md
 - 이벤트 페이지 점검 : event-page-review.md
 - 이벤트 이미지 전면 교체 설계 : superpowers/specs/2026-07-14-event-image-refresh-design.md
 - 이벤트 이미지 전면 교체 실행 계획 : superpowers/plans/2026-07-14-event-image-refresh.md
@@ -43,6 +45,9 @@
 - 메인 편집형 쇼핑몰 개편 실행 계획 : superpowers/plans/2026-07-08-main-editorial-shopping-mall.md
 - 스타일나우 시즌 콘텐츠 설계 : superpowers/specs/2026-07-27-style-now-season-content-design.md
 - 스타일나우 시즌 콘텐츠 실행 계획 : superpowers/plans/2026-07-27-style-now-season-content.md
+- 스타일나우 계절 카테고리·상세 화면 설계 : superpowers/specs/2026-07-28-style-now-category-pages-design.md
+- 스타일나우 계절 카테고리·상세 화면 실행 계획 : superpowers/plans/2026-07-28-style-now-category-pages.md
+- 스타일나우 이미지 생성 명령어 84개 : style-now-image-generation-commands.md
 - 주문·권한 정합성 설계 : superpowers/specs/2026-07-10-security-integrity-design.md
 - 주문·권한 정합성 실행 계획 : superpowers/plans/2026-07-10-security-integrity.md
 - 품질 게이트/CI 스크립트 정리 : quality-gates.md

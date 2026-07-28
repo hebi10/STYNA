@@ -34,7 +34,7 @@
 - Produces: `loadStyleNowManifest()`와 `validateStyleNowManifest()`가 4개 시즌, 84개 자산, 80개 상품의 구조와 고유성을 검증한다.
 - Produces: 결정적 ID `style-now-{season}-{01..20}`, 계절 태그, SKU, 로컬·Storage 경로, 이미지 프롬프트, 기존 상품 필드를 제공한다.
 
-- [ ] **Step 1: 실패 테스트 작성**
+- [x] **Step 1: 실패 테스트 작성**
 
 ```js
 expect(summary.seasons).toBe(4);
@@ -52,13 +52,13 @@ expect(summary.uniqueStoragePaths).toBe(84);
 expect(summary.uniquePrompts).toBe(84);
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `npm test -- scripts/style-now-manifest.test.js`
 
 Expected: `style-now-manifest.js` 또는 매니페스트가 없어 FAIL.
 
-- [ ] **Step 3: 계절·상품 목록과 필수 메타데이터 작성**
+- [x] **Step 3: 계절·상품 목록과 필수 메타데이터 작성**
 
 계절별 정확한 상품명은 다음 순서를 사용한다.
 
@@ -82,11 +82,11 @@ Expected: `style-now-manifest.js` 또는 매니페스트가 없어 FAIL.
 }
 ```
 
-- [ ] **Step 4: 84개 최종 이미지 프롬프트 작성**
+- [x] **Step 4: 84개 최종 이미지 프롬프트 작성**
 
 대표 이미지는 계절 분위기·장소·모델/제품 배치·주요 색상·조명·1:3 구도·패션 화보·무문자를 명시한다. 상품 이미지는 상품 종류·색상·소재·형태·촬영 각도·배경·조명·카탈로그 사진·고유 특징·무문자를 각각 명시한다.
 
-- [ ] **Step 5: 검증기와 package 스크립트 구현**
+- [x] **Step 5: 검증기와 package 스크립트 구현**
 
 ```json
 {
@@ -94,7 +94,7 @@ Expected: `style-now-manifest.js` 또는 매니페스트가 없어 FAIL.
 }
 ```
 
-- [ ] **Step 6: 테스트와 UTF-8 문구 검증**
+- [x] **Step 6: 테스트와 UTF-8 문구 검증**
 
 Run: `npm test -- scripts/style-now-manifest.test.js`
 
@@ -116,19 +116,19 @@ Expected: 4 seasons, 84 assets, 80 products, season counts 20/20/20/20.
 - Consumes: `loadStyleNowManifest()`.
 - Produces: `normalize`은 생성 원본을 WebP로 변환하고, `validate`는 84개 파일의 경로·MIME·규격·고유 SHA-256을 확인한다.
 
-- [ ] **Step 1: 실패 테스트 작성**
+- [x] **Step 1: 실패 테스트 작성**
 
 대표 이미지는 `900×2700`, 상품 이미지는 `1200×1200`, MIME은 WebP, 해시는 84개 모두 고유해야 한다.
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `npm test -- scripts/style-now-assets.test.js`
 
-- [ ] **Step 3: Sharp 정규화 구현**
+- [x] **Step 3: Sharp 정규화 구현**
 
 대표 이미지는 `fit: "contain"`과 계절 팔레트 배경 확장을 사용해 자르지 않는다. 상품 이미지는 `fit: "cover"`를 사용하되 생성 프롬프트에서 상품 주변 안전 여백을 확보한다.
 
-- [ ] **Step 4: package 스크립트 추가**
+- [x] **Step 4: package 스크립트 추가**
 
 ```json
 {
@@ -137,7 +137,7 @@ Run: `npm test -- scripts/style-now-assets.test.js`
 }
 ```
 
-- [ ] **Step 5: 테스트 통과 확인**
+- [x] **Step 5: 테스트 통과 확인**
 
 Run: `npm test -- scripts/style-now-assets.test.js`
 
@@ -155,22 +155,22 @@ Expected: 도구 단위 테스트 PASS. 실제 자산 검증은 생성 완료 �
 - Produces: `ProductService.getPublicProductsByIds(productIds: string[]): Promise<Product[]>`.
 - Contract: 중복 제거, 입력 순서 보존, 존재하지 않거나 비활성인 상품 제외, 서비스 오류 전파.
 
-- [ ] **Step 1: 실패 테스트 작성**
+- [x] **Step 1: 실패 테스트 작성**
 
 ```ts
 const products = await ProductService.getPublicProductsByIds(['b', 'missing', 'a']);
 expect(products.map(product => product.id)).toEqual(['b', 'a']);
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `npm test -- src/shared/services/productService.test.ts`
 
-- [ ] **Step 3: 최소 구현**
+- [x] **Step 3: 최소 구현**
 
 기존 `getPublicProductById()`를 병렬 호출하고 ID별 결과 맵을 만든 뒤 입력 순서로 복원한다.
 
-- [ ] **Step 4: 통과 확인**
+- [x] **Step 4: 통과 확인**
 
 Run: `npm test -- src/shared/services/productService.test.ts`
 
@@ -190,7 +190,7 @@ Run: `npm test -- src/shared/services/productService.test.ts`
 - Produces: 접근 가능한 `StyleNowSection` 클라이언트 컴포넌트.
 - Consumes: `ProductService.getPublicProductsByIds()`와 기존 `ProductCard`.
 
-- [ ] **Step 1: 설정 실패 테스트 작성**
+- [x] **Step 1: 설정 실패 테스트 작성**
 
 ```ts
 expect(STYLE_NOW_SEASONS).toHaveLength(4);
@@ -198,7 +198,7 @@ expect(getStyleNowProductIds('spring')).toHaveLength(20);
 expect(new Set(STYLE_NOW_SEASONS.flatMap(item => item.productIds))).toHaveProperty('size', 80);
 ```
 
-- [ ] **Step 2: 컴포넌트 실패 테스트 작성**
+- [x] **Step 2: 컴포넌트 실패 테스트 작성**
 
 테스트는 다음을 검증한다.
 
@@ -209,15 +209,15 @@ expect(new Set(STYLE_NOW_SEASONS.flatMap(item => item.productIds))).toHaveProper
 - 로딩, 오류, 20개 미만 상태
 - 방향키 탭 이동
 
-- [ ] **Step 3: 실패 확인**
+- [x] **Step 3: 실패 확인**
 
 Run: `npm test -- src/app/_components/style-now/styleNowData.test.ts src/app/_components/style-now/StyleNowSection.test.tsx`
 
-- [ ] **Step 4: 설정과 UI 구현**
+- [x] **Step 4: 설정과 UI 구현**
 
 `useQuery` 키는 `['products', 'style-now', season]`을 사용한다. 결과는 해당 계절 태그와 활성 상태를 다시 검사하고 정확히 20개가 아닐 때 오류 상태로 표시한다.
 
-- [ ] **Step 5: CSS 구현**
+- [x] **Step 5: CSS 구현**
 
 ```css
 .heroImage {
@@ -239,7 +239,7 @@ Run: `npm test -- src/app/_components/style-now/styleNowData.test.ts src/app/_co
 
 새 스타일에 `box-shadow`와 `border-radius`를 작성하지 않는다.
 
-- [ ] **Step 6: 통과 확인**
+- [x] **Step 6: 통과 확인**
 
 Run: `npm test -- src/app/_components/style-now/styleNowData.test.ts src/app/_components/style-now/StyleNowSection.test.tsx`
 
@@ -255,22 +255,22 @@ Run: `npm test -- src/app/_components/style-now/styleNowData.test.ts src/app/_co
 - Consumes: `StyleNowSection`.
 - Produces: 기존 `serviceInfo` 다음, 메인 컨테이너의 마지막 콘텐츠로 스타일나우를 렌더링한다.
 
-- [ ] **Step 1: 실패 테스트 작성**
+- [x] **Step 1: 실패 테스트 작성**
 
 ```ts
 expect(markup).toContain('mock style now');
 expect(markup.lastIndexOf('mock style now')).toBeGreaterThan(markup.lastIndexOf('PORTFOLIO'));
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `npm test -- src/app/page.test.tsx`
 
-- [ ] **Step 3: 최소 통합**
+- [x] **Step 3: 최소 통합**
 
 `StyleNowSection`을 import하고 기존 `serviceInfo` 바로 뒤에 배치한다.
 
-- [ ] **Step 4: 통과 확인**
+- [x] **Step 4: 통과 확인**
 
 Run: `npm test -- src/app/page.test.tsx`
 
@@ -287,7 +287,7 @@ Run: `npm test -- src/app/page.test.tsx`
 - Consumes: 매니페스트와 검증된 84개 WebP.
 - Produces: `analyze`, `upload`, `verify-upload`, `apply-draft`, `verify-draft`, `activate`, `verify`.
 
-- [ ] **Step 1: 실패 테스트 작성**
+- [x] **Step 1: 실패 테스트 작성**
 
 테스트는 다음 계약을 고정한다.
 
@@ -299,11 +299,11 @@ Run: `npm test -- src/app/page.test.tsx`
 - 활성화 batch는 정확한 80개 ID만 update
 - 삭제 API와 rollback 명령 없음
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 
 Run: `npm test -- scripts/style-now-firebase-sync.test.js`
 
-- [ ] **Step 3: 단계별 구현**
+- [x] **Step 3: 단계별 구현**
 
 다운로드 URL은 다음 형식을 사용한다.
 
@@ -313,7 +313,7 @@ Run: `npm test -- scripts/style-now-firebase-sync.test.js`
 
 Firestore 문서는 `createdAt`과 `updatedAt`을 서버 Timestamp로 기록하며 `rating`, `reviewCount`, `reviewSummary`는 0으로 초기화한다.
 
-- [ ] **Step 4: package 스크립트 추가**
+- [x] **Step 4: package 스크립트 추가**
 
 ```json
 {
@@ -327,7 +327,7 @@ Firestore 문서는 `createdAt`과 `updatedAt`을 서버 Timestamp로 기록하�
 }
 ```
 
-- [ ] **Step 5: 테스트 통과 확인**
+- [x] **Step 5: 테스트 통과 확인**
 
 Run: `npm test -- scripts/style-now-firebase-sync.test.js`
 
@@ -345,19 +345,19 @@ Run: `npm test -- scripts/style-now-firebase-sync.test.js`
 - Consumes: 매니페스트의 84개 프롬프트.
 - Produces: 대표 이미지 4개와 상품 이미지 80개.
 
-- [ ] **Step 1: 대표 이미지 4개 생성**
+- [x] **Step 1: 대표 이미지 4개 생성**
 
 GPT Image 2 기반 이미지 생성 기능을 자산별로 호출한다. 각 결과를 로컬 계절 폴더에 복사하고 `normalize`로 900×2700 WebP를 만든다.
 
-- [ ] **Step 2: 봄 상품 이미지 20개 생성**
+- [x] **Step 2: 봄 상품 이미지 20개 생성**
 
-- [ ] **Step 3: 여름 상품 이미지 20개 생성**
+- [x] **Step 3: 여름 상품 이미지 20개 생성**
 
-- [ ] **Step 4: 가을 상품 이미지 20개 생성**
+- [x] **Step 4: 가을 상품 이미지 20개 생성**
 
-- [ ] **Step 5: 겨울 상품 이미지 20개 생성**
+- [x] **Step 5: 겨울 상품 이미지 20개 생성**
 
-- [ ] **Step 6: 실제 자산 검증**
+- [x] **Step 6: 실제 자산 검증**
 
 Run: `npm run style-now:assets:validate`
 
@@ -375,13 +375,13 @@ Expected: 84/84, 대표 4개 900×2700, 상품 80개 1200×1200, SHA-256 중복 
 - Consumes: 검증된 자산과 상품 80개.
 - Produces: Storage 84개, Firestore 활성 상품 80개.
 
-- [ ] **Step 1: 충돌 분석**
+- [x] **Step 1: 충돌 분석**
 
 Run: `npm run style-now:firebase:analyze`
 
 Expected: product conflicts 0, storage conflicts 0, local assets 84.
 
-- [ ] **Step 2: Storage 업로드와 검증**
+- [x] **Step 2: Storage 업로드와 검증**
 
 Run: `npm run style-now:firebase:upload`
 
@@ -389,7 +389,7 @@ Run: `npm run style-now:firebase:verify-upload`
 
 Expected: 84/84.
 
-- [ ] **Step 3: draft 등록과 검증**
+- [x] **Step 3: draft 등록과 검증**
 
 Run: `npm run style-now:firebase:apply-draft`
 
@@ -397,7 +397,7 @@ Run: `npm run style-now:firebase:verify-draft`
 
 Expected: draft 80, season counts 20/20/20/20.
 
-- [ ] **Step 4: 활성화와 최종 검증**
+- [x] **Step 4: 활성화와 최종 검증**
 
 Run: `npm run style-now:firebase:activate`
 
@@ -417,7 +417,7 @@ Expected: active 80, season counts 20/20/20/20, image responses 84/84.
 **Interfaces:**
 - Produces: 코드, Firebase, 화면을 모두 포함한 완료 증거.
 
-- [ ] **Step 1: 관련 테스트**
+- [x] **Step 1: 관련 테스트**
 
 Run:
 
@@ -425,7 +425,7 @@ Run:
 npm test -- scripts/style-now-manifest.test.js scripts/style-now-assets.test.js scripts/style-now-firebase-sync.test.js src/shared/services/productService.test.ts src/app/_components/style-now/styleNowData.test.ts src/app/_components/style-now/StyleNowSection.test.tsx src/app/page.test.tsx
 ```
 
-- [ ] **Step 2: 전체 품질 게이트**
+- [x] **Step 2: 전체 품질 게이트**
 
 Run:
 
@@ -438,15 +438,15 @@ npm run functions:build
 npm run build
 ```
 
-- [ ] **Step 3: 브라우저 1차 검증**
+- [x] **Step 3: 브라우저 1차 검증**
 
 1440×1000, 768×1024, 390×844에서 메인 최하단과 네 계절 탭을 확인한다. 계절별 20개, 대표 이미지 전체 노출, 상품 상세 이동·새로고침, 가로 오버플로우, 콘솔·네트워크 오류를 한 번에 수집한다.
 
-- [ ] **Step 4: 발견 사항 일괄 수정**
+- [x] **Step 4: 발견 사항 일괄 수정**
 
 UI 파일 편집 직전에 Impeccable `craft-floor.md`를 읽고, 1차 검증에서 확인한 관련 문제만 한 번에 수정한다.
 
-- [ ] **Step 5: 최종 브라우저 확인과 detector**
+- [x] **Step 5: 최종 브라우저 확인과 detector**
 
 데스크톱·모바일 최종 캡처를 한 번 더 확인하고 다음 detector를 한 번만 실행한다.
 
@@ -454,7 +454,7 @@ UI 파일 편집 직전에 Impeccable `craft-floor.md`를 읽고, 1차 검증에
 node C:\Users\박도영\.agents\skills\impeccable\scripts\detect.mjs --json src/app/_components/style-now/StyleNowSection.tsx src/app/_components/style-now/StyleNowSection.module.css src/app/page.tsx
 ```
 
-- [ ] **Step 6: 최종 상태 확인**
+- [x] **Step 6: 최종 상태 확인**
 
 Run: `git diff --check`
 

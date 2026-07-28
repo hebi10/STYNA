@@ -1,4 +1,8 @@
-import { buildHeaderNavGroups, getHeaderNavHref } from './navigation';
+import {
+  buildDesktopHeaderNav,
+  buildHeaderNavGroups,
+  getHeaderNavHref,
+} from './navigation';
 
 describe('buildHeaderNavGroups', () => {
   test('keeps six first-level SHOP destinations and nests active categories', () => {
@@ -85,5 +89,36 @@ describe('buildHeaderNavGroups', () => {
 
   test('returns no direct destination for an incomplete direct-link group', () => {
     expect(getHeaderNavHref({ id: 'recommend', label: '추천', items: [] })).toBeNull();
+  });
+});
+
+describe('buildDesktopHeaderNav', () => {
+  test('restores the desktop primary and secondary destinations in their previous order', () => {
+    expect(buildDesktopHeaderNav([
+      { id: 'bags', name: '가방', href: '/categories/bags' },
+    ])).toEqual({
+      primaryItems: [
+        { label: '전체 상품', href: '/products' },
+        { label: '신상', href: '/recommend?filter=new' },
+        { label: '베스트', href: '/recommend?filter=review' },
+        { label: '가방', href: '/categories/bags' },
+        { label: '세일', href: '/main/sale' },
+        { label: '브랜드', href: '/brand' },
+      ],
+      secondaryItems: [
+        { label: '추천', href: '/recommend' },
+        { label: '이벤트', href: '/events' },
+        { label: '리뷰', href: '/reviews' },
+        { label: '1:1문의', href: '/cs/inquiry' },
+        { label: '상품문의', href: '/qna' },
+      ],
+    });
+  });
+
+  test('uses the category hub before an active category loads', () => {
+    expect(buildDesktopHeaderNav([]).primaryItems[3]).toEqual({
+      label: '카테고리',
+      href: '/categories',
+    });
   });
 });

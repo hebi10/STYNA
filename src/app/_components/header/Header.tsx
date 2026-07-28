@@ -5,12 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/authProvider";
 import { useCartItemCount } from "@/shared/hooks/useCart";
-import {
-  formatShippingPolicy,
-  formatSignupBenefit,
-} from "@/shared/constants/commercePolicy";
+import { formatSignupBenefit } from "@/shared/constants/commercePolicy";
 import { CategoryOrderService } from "@/shared/services/categoryOrderService";
 import {
+  buildDesktopHeaderNav,
   buildHeaderNavGroups,
   getHeaderNavHref,
   type HeaderCategory,
@@ -23,7 +21,6 @@ const FALLBACK_CATEGORIES: HeaderCategory[] = [];
 
 const ANNOUNCEMENTS = [
   formatSignupBenefit(),
-  formatShippingPolicy(),
   "출고 일정은 주문별 배송 상태에서 확인할 수 있습니다.",
 ];
 
@@ -35,18 +32,12 @@ export default function Header() {
   const { data: cartItemCount = 0 } = useCartItemCount(user?.uid || null);
   const [categories, setCategories] = useState<HeaderCategory[]>(FALLBACK_CATEGORIES);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [openDesktopGroup, setOpenDesktopGroup] = useState<HeaderNavGroup["id"] | null>(null);
   const [openMobileGroup, setOpenMobileGroup] = useState<HeaderNavGroup["id"] | null>(null);
-  const [openDesktopDisclosure, setOpenDesktopDisclosure] = useState<HeaderNavDisclosure["id"] | null>(null);
   const [openMobileDisclosure, setOpenMobileDisclosure] = useState<HeaderNavDisclosure["id"] | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const previousPathnameRef = useRef(pathname);
-  const desktopTriggerRefs = useRef<Partial<Record<HeaderNavGroup["id"], HTMLButtonElement | null>>>({});
-  const desktopDisclosureTriggerRefs = useRef<
-    Partial<Record<HeaderNavDisclosure["id"], HTMLButtonElement | null>>
-  >({});
 
   useEffect(() => {
     setIsMounted(true);
@@ -56,8 +47,6 @@ export default function Header() {
     if (previousPathnameRef.current === pathname) return;
 
     previousPathnameRef.current = pathname;
-    setOpenDesktopGroup(null);
-    setOpenDesktopDisclosure(null);
     setIsMobileMenuOpen(false);
     setOpenMobileGroup(null);
     setOpenMobileDisclosure(null);
@@ -92,38 +81,11 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
-    if (!openDesktopGroup) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-
-      event.preventDefault();
-      if (openDesktopDisclosure) {
-        const disclosureTrigger = desktopDisclosureTriggerRefs.current[openDesktopDisclosure];
-        setOpenDesktopDisclosure(null);
-        disclosureTrigger?.focus();
-        return;
-      }
-
-      const trigger = desktopTriggerRefs.current[openDesktopGroup];
-      setOpenDesktopGroup(null);
-      trigger?.focus();
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [openDesktopDisclosure, openDesktopGroup]);
-
-  useEffect(() => {
     const handleResponsiveResize = () => {
-      if (window.innerWidth < DESKTOP_BREAKPOINT_PX) {
-        setOpenDesktopGroup(null);
-        setOpenDesktopDisclosure(null);
-        return;
+      if (window.innerWidth >= DESKTOP_BREAKPOINT_PX) {
+        setOpenMobileGroup(null);
+        setOpenMobileDisclosure(null);
       }
-
-      setOpenMobileGroup(null);
-      setOpenMobileDisclosure(null);
     };
 
     window.addEventListener("resize", handleResponsiveResize);
@@ -228,13 +190,12 @@ export default function Header() {
   }, [isMobileMenuOpen]);
 
   const navGroups = buildHeaderNavGroups(categories);
+  const { primaryItems, secondaryItems } = buildDesktopHeaderNav(categories);
   const safeCartItemCount = isMounted ? cartItemCount : 0;
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen((isOpen) => !isOpen);
-    setOpenDesktopGroup(null);
     setOpenMobileGroup(null);
-    setOpenDesktopDisclosure(null);
     setOpenMobileDisclosure(null);
   };
 
@@ -244,23 +205,9 @@ export default function Header() {
     setOpenMobileDisclosure(null);
   };
 
-  const closeDesktopNavigation = () => {
-    setOpenDesktopGroup(null);
-    setOpenDesktopDisclosure(null);
-  };
-
-  const toggleDesktopGroup = (groupId: HeaderNavGroup["id"]) => {
-    setOpenDesktopDisclosure(null);
-    setOpenDesktopGroup((current) => current === groupId ? null : groupId);
-  };
-
   const toggleMobileGroup = (groupId: HeaderNavGroup["id"]) => {
     setOpenMobileDisclosure(null);
     setOpenMobileGroup((current) => current === groupId ? null : groupId);
-  };
-
-  const toggleDesktopDisclosure = (disclosureId: HeaderNavDisclosure["id"]) => {
-    setOpenDesktopDisclosure((current) => current === disclosureId ? null : disclosureId);
   };
 
   const toggleMobileDisclosure = (disclosureId: HeaderNavDisclosure["id"]) => {
@@ -303,7 +250,6 @@ export default function Header() {
               href="/"
               className={styles.logoLink}
               aria-label="STYNA home"
-              onClick={closeDesktopNavigation}
             >
               <span className={styles.logoTopRow}>
                 <span className={styles.logoWordmark}>STYNA</span>
@@ -332,96 +278,21 @@ export default function Header() {
             inert={isMobileMenuOpen}
           >
             <div className={styles.navList}>
-              {navGroups.map((group) => {
-                if (group.items.length > 0) {
-                  return (
-                    <div className={styles.desktopNavGroup} key={group.id}>
-                  <button
-                    ref={(element) => { desktopTriggerRefs.current[group.id] = element; }}
-                    type="button"
-                    className={`${styles.navTrigger} ${openDesktopGroup === group.id ? styles.navTriggerOpen : ""}`}
-                    aria-label={`${group.label} 메뉴 ${openDesktopGroup === group.id ? "닫기" : "열기"}`}
-                    aria-expanded={openDesktopGroup === group.id}
-                    aria-controls={`desktop-nav-${group.id}`}
-                    onClick={() => toggleDesktopGroup(group.id)}
-                  >
-                    {group.label}
-                  </button>
-                  {openDesktopGroup === group.id && (
-                    <div id={`desktop-nav-${group.id}`} className={styles.desktopDropdown}>
-                      {group.items.map((item) => {
-                        if ("items" in item) {
-                          return (
-                            <div className={styles.dropdownDisclosure} key={item.id}>
-                              <button
-                                ref={(element) => {
-                                  desktopDisclosureTriggerRefs.current[item.id] = element;
-                                }}
-                                type="button"
-                                className={`${styles.dropdownTrigger} ${
-                                  openDesktopDisclosure === item.id
-                                    ? styles.dropdownTriggerOpen
-                                    : ""
-                                }`}
-                                aria-label={`${item.label} 하위 메뉴 ${
-                                  openDesktopDisclosure === item.id ? "닫기" : "열기"
-                                }`}
-                                aria-expanded={openDesktopDisclosure === item.id}
-                                aria-controls={`desktop-nav-${group.id}-${item.id}`}
-                                onClick={() => toggleDesktopDisclosure(item.id)}
-                              >
-                                {item.label}
-                              </button>
-                              {openDesktopDisclosure === item.id && (
-                                <div
-                                  id={`desktop-nav-${group.id}-${item.id}`}
-                                  className={styles.desktopNestedDisclosure}
-                                >
-                                  {item.items.map((nestedItem) => (
-                                    <Link
-                                      key={nestedItem.href}
-                                      href={nestedItem.href}
-                                      className={styles.dropdownLink}
-                                      onClick={closeDesktopNavigation}
-                                    >
-                                      {nestedItem.label}
-                                    </Link>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        }
+              {primaryItems.map((item) => (
+                <Link key={item.href} href={item.href} className={styles.navLink}>
+                  {item.label}
+                </Link>
+              ))}
+            </div>
 
-                        return (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            className={styles.dropdownLink}
-                            onClick={closeDesktopNavigation}
-                          >
-                            {item.label}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                    </div>
-                  );
-                }
-
-                const href = getHeaderNavHref(group);
-                return href ? (
-                  <Link
-                    key={group.id}
-                    href={href}
-                    className={styles.navLink}
-                    onClick={closeDesktopNavigation}
-                  >
-                    {group.label}
+            <div className={styles.secondaryNav} aria-label="Quick links">
+              <div className={styles.secondaryNavList}>
+                {secondaryItems.map((item) => (
+                  <Link key={item.href} href={item.href} className={styles.secondaryLink}>
+                    {item.label}
                   </Link>
-                ) : null;
-              })}
+                ))}
+              </div>
             </div>
           </nav>
 
@@ -430,18 +301,18 @@ export default function Header() {
             aria-hidden={isMobileMenuOpen || undefined}
             inert={isMobileMenuOpen}
           >
-            <Link href="/search" className={styles.userLink} onClick={closeDesktopNavigation}>검색</Link>
-            <Link href="/orders/cart" className={styles.userLink} onClick={closeDesktopNavigation}>
+            <Link href="/search" className={styles.userLink}>검색</Link>
+            <Link href="/orders/cart" className={styles.userLink}>
               장바구니
               {safeCartItemCount > 0 && <span className={styles.cartBadge}>{safeCartItemCount}</span>}
             </Link>
             {user ? (
-              <Link href="/mypage" className={styles.userLink} onClick={closeDesktopNavigation}>마이페이지</Link>
+              <Link href="/mypage" className={styles.userLink}>마이페이지</Link>
             ) : (
-              <Link href="/auth/login" className={styles.userLink} onClick={closeDesktopNavigation}>로그인</Link>
+              <Link href="/auth/login" className={styles.userLink}>로그인</Link>
             )}
             {isAdmin && (
-              <Link href="/admin" className={styles.userLink} onClick={closeDesktopNavigation}>
+              <Link href="/admin" className={styles.userLink}>
                 관리자
               </Link>
             )}

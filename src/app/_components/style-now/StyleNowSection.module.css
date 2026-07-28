@@ -13,14 +13,13 @@
 .sectionHeader {
   display: grid;
   grid-template-columns: minmax(140px, 0.3fr) minmax(0, 1fr);
-  align-items: end;
+  align-items: flex-end;
   gap: 2rem;
   padding-bottom: 1.25rem;
   border-bottom: 1px solid #13233a;
 }
 
-.kicker,
-.seasonLabel {
+.kicker {
   margin: 0;
   color: #596579;
   font-size: 0.72rem;
@@ -30,13 +29,12 @@
 
 .sectionHeading {
   display: flex;
-  align-items: end;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 2rem;
 }
 
-.sectionHeading h2,
-.seasonHeader h3 {
+.sectionHeading h2 {
   margin: 0;
   color: #111;
   letter-spacing: -0.03em;
@@ -55,163 +53,87 @@
   line-height: 1.7;
 }
 
-.tabs {
+.seasonGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
   margin-top: 1.5rem;
-  border-top: 1px solid #cfd2d6;
-  border-left: 1px solid #cfd2d6;
 }
 
-.tab,
-.activeTab {
-  min-height: 48px;
-  padding: 0.75rem 1rem;
-  border: 0;
-  border-right: 1px solid #cfd2d6;
-  border-bottom: 1px solid #cfd2d6;
+.seasonCard {
+  display: block;
+  border: 1px solid #d8d8d8;
   background: #fff;
-  color: #30394a;
-  font: inherit;
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
+  color: #111;
+  text-decoration: none;
 }
 
-.activeTab {
-  background: #111;
-  color: #fff;
-}
-
-.tab:hover {
-  background: #f2f3f4;
-}
-
-.tab:focus-visible,
-.activeTab:focus-visible,
-.panel:focus-visible,
-.errorState button:focus-visible {
+.seasonCard:focus-visible {
   outline: 2px solid #111;
   outline-offset: 2px;
 }
 
-.panel {
-  display: grid;
-  grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
-  gap: 2rem;
-  padding-top: 2rem;
-}
-
-.heroColumn {
-  align-self: start;
-  width: 100%;
+.cardImageFrame {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
   background: #eceff1;
-  border: 1px solid #d8d8d8;
 }
 
-.heroImage {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1 / 3;
-  object-fit: contain;
+.cardImage {
+  object-fit: cover;
+  transition: transform 220ms ease;
 }
 
-.productsColumn {
-  min-width: 0;
+.seasonCard:hover .cardImage {
+  transform: scale(1.02);
 }
 
-.seasonHeader {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 1.5rem;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #d8d8d8;
-}
-
-.seasonHeader h3 {
-  margin-top: 0.55rem;
-  font-size: clamp(1.3rem, 2.4vw, 2rem);
-  line-height: 1.15;
-}
-
-.seasonHeader div > p:last-child {
-  max-width: 42rem;
-  margin: 0.65rem 0 0;
-  color: #596579;
-  font-size: 0.88rem;
-  line-height: 1.7;
-}
-
-.productCount {
-  flex: 0 0 auto;
-  color: #596579;
-  font-size: 0.8rem;
-  white-space: nowrap;
-}
-
-.productGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.status,
-.errorState {
-  min-height: 180px;
-  padding: 2rem;
-  color: #596579;
-  font-size: 0.9rem;
-  text-align: center;
-}
-
-.status {
-  display: grid;
-  place-items: center;
+.cardContent {
+  min-height: 120px;
+  padding: 1rem;
   border-top: 1px solid #d8d8d8;
-  border-bottom: 1px solid #d8d8d8;
 }
 
-.errorState {
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 1rem;
-  border: 1px dashed #a7adb6;
+.cardSeason {
+  display: block;
+  color: #111;
+  font-size: 1rem;
+  font-weight: 800;
 }
 
-.errorState p {
-  margin: 0;
-  line-height: 1.6;
+.cardContent p {
+  display: -webkit-box;
+  margin: 0.55rem 0 0;
+  overflow: hidden;
+  color: #596579;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-.errorState button {
-  min-height: 40px;
-  padding: 0.65rem 1rem;
-  border: 1px solid #111;
-  background: #111;
-  color: #fff;
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 700;
-  cursor: pointer;
+@media (prefers-reduced-motion: reduce) {
+  .cardImage {
+    transition: none;
+  }
 }
 
-.errorState button:hover {
-  background: #303030;
+@media (max-width: 960px) {
+  .seasonGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-@media (max-width: 1024px) {
-  .panel {
-    grid-template-columns: minmax(210px, 260px) minmax(0, 1fr);
-    gap: 1.5rem;
+@media (max-width: 640px) {
+  .seasonGrid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
   }
 
-  .productGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
+  .cardContent {
+    min-height: auto;
+    padding-right: 6rem;
   }
 }
 
@@ -220,18 +142,9 @@
     padding: 3.5rem 0;
   }
 
-  .sectionHeader,
-  .panel {
-    grid-template-columns: 1fr;
-  }
-
   .sectionHeader {
+    grid-template-columns: 1fr;
     gap: 0.8rem;
-  }
-
-  .heroColumn {
-    max-width: 300px;
-    margin: 0 auto;
   }
 }
 
@@ -240,21 +153,10 @@
     padding: 0 0.75rem;
   }
 
-  .sectionHeading,
-  .seasonHeader {
+  .sectionHeading {
     align-items: flex-start;
     flex-direction: column;
     gap: 0.85rem;
-  }
-
-  .tabs {
-    margin-top: 1rem;
-  }
-
-  .tab,
-  .activeTab {
-    min-height: 44px;
-    padding: 0.65rem 0.4rem;
   }
 }
 
@@ -265,18 +167,5 @@
 
   .container {
     padding: 0 0.625rem;
-  }
-
-  .panel {
-    gap: 1.5rem;
-    padding-top: 1.5rem;
-  }
-
-  .heroColumn {
-    max-width: 260px;
-  }
-
-  .productGrid {
-    gap: 0.625rem;
   }
 }

@@ -45,6 +45,32 @@ const SUPPORT_DESTINATIONS: HeaderNavItem[] = [
   { label: '상품문의', href: '/qna' },
 ];
 
+export function buildDesktopHeaderNav(categories: HeaderCategory[]): {
+  primaryItems: HeaderNavItem[];
+  secondaryItems: HeaderNavItem[];
+} {
+  const featuredCategory = categories[0]
+    ? { label: categories[0].name, href: categories[0].href }
+    : { label: '카테고리', href: '/categories' };
+
+  return {
+    primaryItems: [
+      ...SHOP_DESTINATIONS,
+      SHOP_AFTER_CATEGORIES[0],
+      SHOP_AFTER_CATEGORIES[1],
+      featuredCategory,
+      SHOP_AFTER_CATEGORIES[2],
+      SHOP_AFTER_CATEGORIES[3],
+    ],
+    secondaryItems: [
+      { label: '추천', href: '/recommend' },
+      { label: '이벤트', href: '/events' },
+      { label: '리뷰', href: '/reviews' },
+      ...SUPPORT_DESTINATIONS.filter(({ href }) => href !== '/cs/faq'),
+    ],
+  };
+}
+
 export function buildHeaderNavGroups(categories: HeaderCategory[]): HeaderNavGroup[] {
   const knownCategoryIds = new Set<string>();
   const knownCategoryHrefs = new Set([

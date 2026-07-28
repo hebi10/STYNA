@@ -5,8 +5,9 @@
 - `src/app/_components/header/Header.module.css`
 
 ## 현재 기준
-- 데스크톱은 `.navLink`, `.navTrigger`, `.userLink`로 다섯 그룹과 사용자 메뉴를 표시한다. SHOP·고객지원 dropdown은 긴 활성 카테고리 목록에서도 헤더 아래 viewport 안에서 내부 스크롤한다.
-- 모바일은 `.mobileNavLink`, `.mobileNavTrigger`, `.mobileUserLink`로 같은 다섯 그룹을 disclosure로 표시한다.
+- 데스크톱은 `.navLink`, `.secondaryLink`, `.userLink`로 기본 메뉴, 보조 메뉴, 사용자 메뉴를 표시한다.
+- `960px` 이상에서는 전체 상품·신상·베스트·대표 카테고리·세일·브랜드를 직접 표시하고, `1280px` 이상에서는 추천·이벤트·리뷰·1:1문의·상품문의를 추가로 표시한다.
+- 모바일은 `.mobileNavLink`, `.mobileNavTrigger`, `.mobileUserLink`로 SHOP·추천·이벤트·리뷰·고객지원 다섯 그룹을 disclosure로 표시한다.
 
 ## 2026-04-23 조정 사항
 - 데스크톱 네비게이션 폰트 크기를 `0.79rem`에서 `0.87rem`으로 키웠다.
@@ -43,11 +44,17 @@
 - 모바일 메뉴의 `차분한 무드`류 감성 카피를 제거하고, 포트폴리오 쇼핑몰임을 숨기지 않는 정보형 문구로 교체했다.
 
 ## 2026-07-27 다섯 그룹 내비게이션
-- 데스크톱과 모바일은 `SHOP`, `추천`, `이벤트`, `리뷰`, `고객지원` 순서의 같은 공유 그룹 데이터를 사용한다.
+- 모바일은 `SHOP`, `추천`, `이벤트`, `리뷰`, `고객지원` 순서의 공유 그룹 데이터를 사용한다. 데스크톱의 당시 다섯 그룹 구성은 2026-07-28 직접 링크 구성으로 대체됐다.
 - SHOP 1차에는 전체 상품·카테고리·신상·베스트·세일·브랜드 여섯 목적지만 둔다. 활성 카테고리는 카테고리 2차 disclosure 안에서만 노출하고, `/categories` 허브는 `카테고리 전체 보기` 링크로 유지한다.
 - 카테고리 로드 전이나 실패 시에는 2차 목록에 `카테고리 전체 보기`만 노출하며 추측한 상세 경로는 만들지 않는다.
 - 데스크톱 SHOP·고객지원은 한 번에 하나만 열리는 버튼 disclosure이며 Escape로 닫고 trigger에 focus를 되돌린다. 추천·이벤트·리뷰는 직접 링크다.
 - 데스크톱에서 카테고리 2차가 열렸을 때 첫 Escape는 2차만 닫고 카테고리 trigger로 focus를 되돌리며, 다음 Escape는 SHOP을 닫고 SHOP trigger로 focus를 되돌린다.
 - 모바일도 동일한 2단계 구조를 사용하되 Escape는 기존처럼 메뉴 전체를 닫고 햄버거 trigger로 focus를 되돌린다. 목적지 선택·부모 닫힘·viewport 전환에서도 2차 상태를 초기화하며, 기존 dialog·스크롤 잠금·focus trap을 유지한다.
 - 모바일 메뉴가 열리면 본문·푸터와 함께 챗봇·쇼핑 가이드 floating root도 `aria-hidden`과 `inert`로 제외하고, 닫힘·unmount 시 각 요소의 기존 속성값을 그대로 복원한다.
-- Header 외부 링크, 브라우저 이전·다음, router API 등으로 pathname이 바뀌면 데스크톱·모바일의 부모 및 하위 disclosure와 모바일 메뉴 상태를 모두 초기화한다. 최초 pathname 관찰만으로 focus를 이동하지 않는다.
+- Header 외부 링크, 브라우저 이전·다음, router API 등으로 pathname이 바뀌면 모바일의 부모 및 하위 disclosure와 모바일 메뉴 상태를 모두 초기화한다. 최초 pathname 관찰만으로 focus를 이동하지 않는다.
+
+## 2026-07-28 데스크톱 메뉴 구성 복원
+- 최근 모바일 dialog, focus trap, inert 처리, pathname·viewport 상태 초기화는 유지했다.
+- 데스크톱은 예전처럼 기본 메뉴 6개를 직접 표시하고 `1280px` 이상에서 구분선 뒤 보조 메뉴 5개를 추가한다.
+- 대표 카테고리는 활성 카테고리의 첫 항목을 사용하며, 로드 전이나 실패 시에는 `/categories`로 이동하는 `카테고리` 링크를 표시한다.
+- 데스크톱의 SHOP·고객지원 disclosure는 직접 링크 구성으로 대체하고, 모바일의 중첩 disclosure는 유지했다.
