@@ -1,15 +1,30 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { InquiryService } from '@/shared/services/inquiryService';
 import { Inquiry } from '@/shared/types/inquiry';
 import styles from './page.module.css';
 
 export default function AdminInquiriesPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminInquiriesPageContent />
+    </Suspense>
+  );
+}
+
+function AdminInquiriesPageContent() {
+  const searchParams = useSearchParams();
+  const requestedFilter = searchParams.get('filter') === 'unread' ? 'unread' : 'all';
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFilter, setSelectedFilter] = useState<string>('all');
+  const [selectedFilter, setSelectedFilter] = useState<string>(requestedFilter);
+  const [pendingAdminReadIds, setPendingAdminReadIds] = useState<string[]>([]);
+  const inFlightAdminReadIdsRef = useRef(new Set<string>());
+  const failedAdminReadIdsRef = useRef(new Set<string>());
+  const loadRequestIdRef = useRef(0);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAnswerModal, setShowAnswerModal] = useState(false);
@@ -17,6 +32,7 @@ export default function AdminInquiriesPage() {
   const [answerContent, setAnswerContent] = useState('');
 
   const statusOptions = [
+    { value: 'unread', label: '새 문의' },
     { value: 'all', label: '전체' },
     { value: 'waiting', label: '답변대기' },
     { value: 'answered', label: '답변완료' },
@@ -35,14 +51,21 @@ export default function AdminInquiriesPage() {
 
   // 문의 목록 로드
   const loadInquiries = useCallback(async () => {
+    const requestId = ++loadRequestIdRef.current;
+
     try {
       setLoading(true);
+      setError(null);
       const allInquiries = await InquiryService.getAllInquiries(100);
+
+      if (requestId !== loadRequestIdRef.current) return;
       
       // 필터링
       let filteredInquiries = allInquiries;
       
-      if (selectedFilter !== 'all') {
+      if (selectedFilter === 'unread') {
+        filteredInquiries = allInquiries.filter(inquiry => inquiry.unreadForAdmin);
+      } else if (selectedFilter !== 'all') {
         filteredInquiries = filteredInquiries.filter(inquiry => inquiry.status === selectedFilter);
       }
       
@@ -58,19 +81,59 @@ export default function AdminInquiriesPage() {
           inquiry.userName.toLowerCase().includes(searchLower)
         );
       }
-      
+
+      setPendingAdminReadIds(
+        selectedFilter === 'unread' ? filteredInquiries.map(inquiry => inquiry.id) : [],
+      );
+      setError(null);
       setInquiries(filteredInquiries);
     } catch (err) {
+      if (requestId !== loadRequestIdRef.current) return;
+
       setError('문의 목록을 불러오는데 실패했습니다.');
       console.error('Error loading inquiries:', err);
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [selectedFilter, selectedCategory, searchTerm]);
 
   useEffect(() => {
     loadInquiries();
   }, [loadInquiries]);
+
+  useEffect(() => {
+    setSelectedFilter(requestedFilter);
+  }, [requestedFilter]);
+
+  useEffect(() => {
+    if (loading || selectedFilter !== 'unread' || pendingAdminReadIds.length === 0) return;
+
+    const readIds = pendingAdminReadIds.filter((inquiryId) => (
+      !inFlightAdminReadIdsRef.current.has(inquiryId)
+      && !failedAdminReadIdsRef.current.has(inquiryId)
+    ));
+
+    if (readIds.length === 0) {
+      setPendingAdminReadIds([]);
+      return;
+    }
+
+    readIds.forEach((inquiryId) => inFlightAdminReadIdsRef.current.add(inquiryId));
+
+    void InquiryService.markInquiriesRead(readIds, 'admin')
+      .catch((error) => {
+        readIds.forEach((inquiryId) => failedAdminReadIdsRef.current.add(inquiryId));
+        console.error('신규 문의 읽음 처리 실패:', error);
+      })
+      .finally(() => {
+        readIds.forEach((inquiryId) => inFlightAdminReadIdsRef.current.delete(inquiryId));
+        setPendingAdminReadIds((currentIds) => (
+          currentIds.filter((inquiryId) => !readIds.includes(inquiryId))
+        ));
+      });
+  }, [loading, pendingAdminReadIds, selectedFilter]);
 
   // 검색 처리
   const handleSearch = () => {

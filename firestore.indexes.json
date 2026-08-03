@@ -219,6 +219,20 @@
       ]
     },
     {
+      "collectionGroup": "inquiries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "userId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "unreadForCustomer",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "qna",
       "queryScope": "COLLECTION",
       "fields": [

@@ -63,8 +63,9 @@
 
 - QnA 생성 필수 필드는 `userId`, `userEmail`, `userName`, `category`, `title`, `content`, `images`, `isSecret`, `status`, `views`, `isNotified`, `createdAt`, `updatedAt`이며 `productId`, `productName`만 선택적으로 허용한다. 작성자 정보는 Auth token·사용자 문서와 일치해야 하고, `status: waiting`, `views: 0`, 생성·수정 시각은 `request.time`이어야 한다.
 - QnA 작성자는 `title`, `content`, `category`, `images`, `isSecret`, `isNotified`, `updatedAt`과 종료 목적의 `status: closed`만 바꿀 수 있다. 엄격 관리자는 `answer`, `status`, `updatedAt`만 바꿀 수 있으며 답변은 `content`, `answeredBy`, `answeredAt`, `isAdmin: true`의 정확한 스키마를 사용한다.
-- 일반 문의 생성은 `userId`, `userEmail`, `userName`, `category`, `title`, `content`, `status`, `createdAt`, `updatedAt`의 정확한 필드 집합만 허용한다. `status: waiting`, Auth/문서 사용자 정보 일치, `request.time`을 검증한다.
-- 일반 문의 수정은 엄격 관리자의 `answer`, `status`, `updatedAt`만 허용한다. 답변은 `content`, `answeredBy`, `answeredAt`만 포함하며 작성자 수정과 모든 hard delete는 거부한다.
+- 일반 문의 생성은 기존 필드에 `unreadForAdmin`, `unreadForCustomer`를 포함한 정확한 필드 집합만 허용한다. 최초 값은 관리자 알림만 읽지 않음(`true`)이고 고객 알림은 읽음(`false`)이어야 하며, `status: waiting`, Auth/문서 사용자 정보 일치, `request.time`을 함께 검증한다.
+- 일반 문의 작성자는 자신의 `unreadForCustomer`를 `true`에서 `false`로 바꾸는 읽음 처리만 할 수 있다. 엄격 관리자는 기존 문의 상태 관리 외에 `unreadForAdmin` 읽음 처리와 유효한 답변 저장을 할 수 있으며, 답변 저장 시 관리자 알림은 읽음, 고객 알림은 읽지 않음으로 함께 전환한다.
+- 답변은 `content`, `answeredBy`, `answeredAt`만 포함하고, 알림 필드 위조·본문 임의 수정·모든 hard delete는 거부한다. 알림 필드가 없는 기존 문의 문서는 읽은 상태로 해석한다.
 
 ## 남은 확인
 - 일반 계정으로 `/admin` 접속 시 Unauthorized UI 분기와 비로그인 이동 UX는 통합 점검 필요.

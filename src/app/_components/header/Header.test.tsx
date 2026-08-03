@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import Header from './Header';
 import { useAuth } from '@/context/authProvider';
 import { useCartItemCount } from '@/shared/hooks/useCart';
+import { useInquiryNotification } from '@/shared/hooks/useInquiryNotification';
 import { CategoryOrderService } from '@/shared/services/categoryOrderService';
 import { formatSignupBenefit } from '@/shared/constants/commercePolicy';
 
@@ -41,6 +42,10 @@ jest.mock('@/shared/hooks/useCart', () => ({
   useCartItemCount: jest.fn(),
 }));
 
+jest.mock('@/shared/hooks/useInquiryNotification', () => ({
+  useInquiryNotification: jest.fn(),
+}));
+
 jest.mock('@/shared/services/categoryOrderService', () => ({
   CategoryOrderService: {
     getSortedCategories: jest.fn(),
@@ -60,6 +65,7 @@ describe('Header', () => {
     jest.mocked(useCartItemCount).mockReturnValue({
       data: 0,
     } as unknown as ReturnType<typeof useCartItemCount>);
+    jest.mocked(useInquiryNotification).mockReturnValue(false);
     jest.mocked(CategoryOrderService.getSortedCategories).mockResolvedValue([]);
     jest.mocked(usePathname).mockReturnValue('/');
   });
@@ -431,5 +437,73 @@ describe('Header', () => {
       expect(screen.getByRole('button', { name: '메뉴 열기' })).not.toHaveFocus();
       expect(document.body.style.overflow).toBe('scroll');
     });
+  });
+
+  test.each([
+    [false, '/cs/inquiry?tab=list', '새 문의 답변 확인'],
+    [true, '/admin/inquiries?filter=unread', '새 고객 문의 확인'],
+  ] as const)('읽지 않은 문의가 있으면 admin=%s 역할의 종 링크를 표시한다', (isAdmin, href, label) => {
+    jest.mocked(useAuth).mockReturnValue({
+      user: { uid: 'owner-1' },
+      userData: {
+        email: 'owner-1@example.com',
+        name: '작성자',
+        role: isAdmin ? 'admin' : 'user',
+        status: 'active',
+      },
+      isAdmin,
+      loading: false,
+      isUserDataLoading: false,
+      logout: jest.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+    jest.mocked(useInquiryNotification).mockReturnValue(true);
+
+    render(<Header />);
+
+    const links = screen.getAllByRole('link', { name: label });
+    expect(links).toHaveLength(2);
+    links.forEach((link) => expect(link).toHaveAttribute('href', href));
+  });
+
+  test('읽지 않은 문의가 없으면 종 링크를 표시하지 않는다', () => {
+    jest.mocked(useAuth).mockReturnValue({
+      user: { uid: 'owner-1' },
+      isAdmin: false,
+      loading: false,
+      isUserDataLoading: false,
+      logout: jest.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+
+    render(<Header />);
+
+    expect(screen.queryByRole('link', { name: '새 문의 답변 확인' }))
+      .not.toBeInTheDocument();
+  });
+
+  test('비로그인 또는 인증 로딩 중에는 알림 구독을 비활성화한다', () => {
+    const { rerender } = render(<Header />);
+
+    expect(useInquiryNotification).toHaveBeenLastCalledWith({
+      userId: null,
+      isAdmin: false,
+      enabled: false,
+    });
+
+    jest.mocked(useAuth).mockReturnValue({
+      user: { uid: 'owner-1' },
+      isAdmin: false,
+      loading: true,
+      isUserDataLoading: false,
+      logout: jest.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+    rerender(<Header />);
+
+    expect(useInquiryNotification).toHaveBeenLastCalledWith({
+      userId: 'owner-1',
+      isAdmin: false,
+      enabled: false,
+    });
+    expect(screen.queryByRole('link', { name: '새 문의 답변 확인' }))
+      .not.toBeInTheDocument();
   });
 });

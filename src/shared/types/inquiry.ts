@@ -9,6 +9,8 @@ export interface Inquiry {
   status: 'waiting' | 'answered' | 'closed';
   createdAt: Date;
   updatedAt: Date;
+  unreadForAdmin: boolean;
+  unreadForCustomer: boolean;
   answer?: {
     content: string;
     answeredBy: string;
@@ -26,4 +28,11 @@ export interface InquiryAnswer {
   content: string;
   answeredBy: string;
   answeredAt: Date;
+}
+
+export type InquiryNotificationAudience = 'admin' | 'customer';
+
+export interface SubscribeToUnreadInquiryOptions {
+  audience: InquiryNotificationAudience;
+  userId: string;
 }

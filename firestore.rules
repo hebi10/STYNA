@@ -291,7 +291,9 @@ service cloud.firestore {
         'content',
         'status',
         'createdAt',
-        'updatedAt'
+        'updatedAt',
+        'unreadForAdmin',
+        'unreadForCustomer'
       ];
     }
 
@@ -320,6 +322,8 @@ service cloud.firestore {
         isNonEmptyStringAtMost(request.resource.data.title, 100) &&
         isNonEmptyStringAtMost(request.resource.data.content, 2000) &&
         request.resource.data.status == 'waiting' &&
+        request.resource.data.unreadForAdmin == true &&
+        request.resource.data.unreadForCustomer == false &&
         request.resource.data.createdAt == request.time &&
         request.resource.data.updatedAt == request.time;
     }
@@ -337,12 +341,43 @@ service cloud.firestore {
     function isValidInquiryAdminUpdate() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       return isStrictAdmin() &&
-        changed.hasOnly(['answer', 'status', 'updatedAt']) &&
+        changed.hasOnly([
+          'answer',
+          'status',
+          'updatedAt',
+          'unreadForAdmin',
+          'unreadForCustomer'
+        ]) &&
         changed.hasAny(['updatedAt']) &&
         request.resource.data.updatedAt == request.time &&
-        (!changed.hasAny(['answer']) || isValidInquiryAnswer()) &&
+        (!changed.hasAny(['answer']) ||
+          (isValidInquiryAnswer() &&
+            request.resource.data.status == 'answered' &&
+            request.resource.data.unreadForAdmin == false &&
+            request.resource.data.unreadForCustomer == true)) &&
+        (!changed.hasAny(['unreadForAdmin']) ||
+          (changed.hasAny(['answer']) && request.resource.data.unreadForAdmin == false)) &&
+        (!changed.hasAny(['unreadForCustomer']) ||
+          (changed.hasAny(['answer']) && request.resource.data.unreadForCustomer == true)) &&
         (!changed.hasAny(['status']) ||
           request.resource.data.status in ['waiting', 'answered', 'closed']);
+    }
+
+    function isValidInquiryOwnerReadUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isActiveOwner(resource.data.userId) &&
+        request.resource.data.userId == resource.data.userId &&
+        changed.hasOnly(['unreadForCustomer']) &&
+        resource.data.get('unreadForCustomer', false) == true &&
+        request.resource.data.unreadForCustomer == false;
+    }
+
+    function isValidInquiryAdminReadUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isStrictAdmin() &&
+        changed.hasOnly(['unreadForAdmin']) &&
+        resource.data.get('unreadForAdmin', false) == true &&
+        request.resource.data.unreadForAdmin == false;
     }
 
     function hasValidReviewAggregateFields(data) {
@@ -592,7 +627,9 @@ service cloud.firestore {
       allow create: if isValidInquiryCreate();
       allow read: if isAdmin() ||
         (isActiveAccount() && resource.data.userId == request.auth.uid);
-      allow update: if isValidInquiryAdminUpdate();
+      allow update: if isValidInquiryAdminUpdate() ||
+        isValidInquiryAdminReadUpdate() ||
+        isValidInquiryOwnerReadUpdate();
       allow delete: if false;
     }
 

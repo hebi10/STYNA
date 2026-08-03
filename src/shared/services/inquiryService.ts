@@ -9,10 +9,19 @@ import {
   where,
   orderBy,
   limit,
+  onSnapshot,
   serverTimestamp,
+  writeBatch,
+  type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '@/shared/libs/firebase/firebase';
-import { Inquiry, CreateInquiryData, InquiryAnswer } from '@/shared/types/inquiry';
+import {
+  Inquiry,
+  CreateInquiryData,
+  InquiryAnswer,
+  InquiryNotificationAudience,
+  SubscribeToUnreadInquiryOptions,
+} from '@/shared/types/inquiry';
 
 const COLLECTION_NAME = 'inquiries';
 
@@ -32,6 +41,8 @@ export class InquiryService {
       title: data.title,
       content: data.content,
       status: 'waiting' as const,
+      unreadForAdmin: true,
+      unreadForCustomer: false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -56,6 +67,8 @@ export class InquiryService {
         ...data,
         createdAt: data.createdAt?.toDate() || new Date(),
         updatedAt: data.updatedAt?.toDate() || new Date(),
+        unreadForAdmin: data.unreadForAdmin === true,
+        unreadForCustomer: data.unreadForCustomer === true,
         answer: data.answer ? {
           ...data.answer,
           answeredAt: data.answer.answeredAt?.toDate() || new Date(),
@@ -80,6 +93,8 @@ export class InquiryService {
         ...data,
         createdAt: data.createdAt?.toDate() || new Date(),
         updatedAt: data.updatedAt?.toDate() || new Date(),
+        unreadForAdmin: data.unreadForAdmin === true,
+        unreadForCustomer: data.unreadForCustomer === true,
         answer: data.answer ? {
           ...data.answer,
           answeredAt: data.answer.answeredAt?.toDate() || new Date(),
@@ -100,6 +115,8 @@ export class InquiryService {
         answeredAt: serverTimestamp(),
       },
       status: 'answered',
+      unreadForAdmin: false,
+      unreadForCustomer: true,
       updatedAt: serverTimestamp(),
     });
   }
@@ -116,6 +133,45 @@ export class InquiryService {
     });
   }
 
+  static subscribeToUnreadInquiries(
+    options: SubscribeToUnreadInquiryOptions,
+    onChange: (hasUnread: boolean) => void,
+    onError?: (error: Error) => void,
+  ): Unsubscribe {
+    const constraints = options.audience === 'admin'
+      ? [where('unreadForAdmin', '==', true), limit(1)]
+      : [
+          where('userId', '==', options.userId),
+          where('unreadForCustomer', '==', true),
+          limit(1),
+        ];
+
+    return onSnapshot(
+      query(collection(db, COLLECTION_NAME), ...constraints),
+      (snapshot) => onChange(!snapshot.empty),
+      (error) => {
+        onChange(false);
+        onError?.(error);
+      },
+    );
+  }
+
+  static async markInquiriesRead(
+    inquiryIds: string[],
+    audience: InquiryNotificationAudience,
+  ): Promise<void> {
+    const uniqueIds = Array.from(new Set(inquiryIds.filter(Boolean)));
+    const field = audience === 'admin' ? 'unreadForAdmin' : 'unreadForCustomer';
+
+    for (let start = 0; start < uniqueIds.length; start += 450) {
+      const batch = writeBatch(db);
+      uniqueIds.slice(start, start + 450).forEach((inquiryId) => {
+        batch.update(doc(db, COLLECTION_NAME, inquiryId), { [field]: false });
+      });
+      await batch.commit();
+    }
+  }
+
   // 특정 문의 조회
   static async getInquiry(inquiryId: string): Promise<Inquiry | null> {
     const docRef = doc(db, COLLECTION_NAME, inquiryId);
@@ -128,6 +184,8 @@ export class InquiryService {
         ...data,
         createdAt: data.createdAt?.toDate() || new Date(),
         updatedAt: data.updatedAt?.toDate() || new Date(),
+        unreadForAdmin: data.unreadForAdmin === true,
+        unreadForCustomer: data.unreadForCustomer === true,
         answer: data.answer ? {
           ...data.answer,
           answeredAt: data.answer.answeredAt?.toDate() || new Date(),

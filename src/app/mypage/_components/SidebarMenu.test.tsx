@@ -9,11 +9,13 @@ jest.mock('../layout.module.css', () => ({
 }));
 
 describe('SidebarMenu', () => {
-  test('exposes the implemented inquiry history without empty support routes', () => {
+  test('routes inquiry management to the canonical customer inquiry screen', () => {
     render(<SidebarMenu activeTab="reviews" logout={jest.fn()} />);
 
     const desktopNavigation = screen.getByRole('navigation', { name: '마이페이지 메뉴' });
-    expect(within(desktopNavigation).getByRole('link', { name: '문의관리' })).toHaveAttribute('href', '/mypage/qa');
+    screen.getAllByRole('link', { name: '문의관리' }).forEach((link) => {
+      expect(link).toHaveAttribute('href', '/cs/inquiry?tab=list');
+    });
     expect(within(desktopNavigation).queryByRole('link', { name: '상담내역' })).not.toBeInTheDocument();
     expect(within(desktopNavigation).queryByRole('link', { name: '재입고알림' })).not.toBeInTheDocument();
   });

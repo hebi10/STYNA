@@ -9,7 +9,7 @@ interface SidebarMenuProps {
 const menuItems = [
   { activeTab: 'overview', href: '/mypage', label: '나의 쇼핑 현황' },
   { activeTab: 'orders', href: '/mypage/order-list', label: '주문내역' },
-  { activeTab: 'reviews', href: '/mypage/qa', label: '문의관리' },
+  { activeTab: 'reviews', href: '/cs/inquiry?tab=list', label: '문의관리' },
   { activeTab: 'wishlist', href: '/mypage/recently-viewed', label: '최근본상품' },
   { activeTab: 'favorite', href: '/mypage/wishlist', label: '찜한상품' },
   { activeTab: 'coupons', href: '/mypage/coupons', label: '쿠폰관리' },

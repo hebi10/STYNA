@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/authProvider";
 import { useCartItemCount } from "@/shared/hooks/useCart";
+import { useInquiryNotification } from "@/shared/hooks/useInquiryNotification";
 import { formatSignupBenefit } from "@/shared/constants/commercePolicy";
 import { CategoryOrderService } from "@/shared/services/categoryOrderService";
 import {
@@ -15,6 +16,7 @@ import {
   type HeaderNavDisclosure,
   type HeaderNavGroup,
 } from "./navigation";
+import InquiryNotificationLink from "./InquiryNotificationLink";
 import styles from "./Header.module.css";
 
 const FALLBACK_CATEGORIES: HeaderCategory[] = [];
@@ -28,8 +30,20 @@ const DESKTOP_BREAKPOINT_PX = 960;
 
 export default function Header() {
   const pathname = usePathname();
-  const { user, isAdmin, logout } = useAuth();
+  const {
+    user,
+    isAdmin,
+    logout,
+    loading: authLoading = true,
+    isUserDataLoading = true,
+  } = useAuth();
   const { data: cartItemCount = 0 } = useCartItemCount(user?.uid || null);
+  const authReady = !authLoading && !isUserDataLoading && Boolean(user);
+  const hasUnreadInquiry = useInquiryNotification({
+    userId: user?.uid ?? null,
+    isAdmin,
+    enabled: authReady,
+  });
   const [categories, setCategories] = useState<HeaderCategory[]>(FALLBACK_CATEGORIES);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openMobileGroup, setOpenMobileGroup] = useState<HeaderNavGroup["id"] | null>(null);
@@ -258,18 +272,27 @@ export default function Header() {
             </Link>
           </div>
 
-          <button
-            ref={mobileMenuButtonRef}
-            className={styles.mobileMenuButton}
-            onClick={toggleMobileMenu}
-            aria-label={isMobileMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
-            aria-expanded={isMobileMenuOpen}
-            aria-controls="mobile-navigation"
-          >
-            <span className={`${styles.hamburgerLine} ${isMobileMenuOpen ? styles.line1Active : ""}`}></span>
-            <span className={`${styles.hamburgerLine} ${isMobileMenuOpen ? styles.line2Active : ""}`}></span>
-            <span className={`${styles.hamburgerLine} ${isMobileMenuOpen ? styles.line3Active : ""}`}></span>
-          </button>
+          <div className={styles.mobileHeaderActions}>
+            {hasUnreadInquiry && (
+              <InquiryNotificationLink
+                isAdmin={isAdmin}
+                className={styles.notificationLink}
+                onNavigate={closeMobileMenu}
+              />
+            )}
+            <button
+              ref={mobileMenuButtonRef}
+              className={styles.mobileMenuButton}
+              onClick={toggleMobileMenu}
+              aria-label={isMobileMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-navigation"
+            >
+              <span className={`${styles.hamburgerLine} ${isMobileMenuOpen ? styles.line1Active : ""}`}></span>
+              <span className={`${styles.hamburgerLine} ${isMobileMenuOpen ? styles.line2Active : ""}`}></span>
+              <span className={`${styles.hamburgerLine} ${isMobileMenuOpen ? styles.line3Active : ""}`}></span>
+            </button>
+          </div>
 
           <nav
             className={styles.nav}
@@ -311,6 +334,12 @@ export default function Header() {
             ) : (
               <Link href="/auth/login" className={styles.userLink}>로그인</Link>
             )}
+            {hasUnreadInquiry && (
+              <InquiryNotificationLink
+                isAdmin={isAdmin}
+                className={styles.notificationLink}
+              />
+            )}
             {isAdmin && (
               <Link href="/admin" className={styles.userLink}>
                 관리자
@@ -318,6 +347,12 @@ export default function Header() {
             )}
           </div>
         </div>
+
+        <span className={styles.visuallyHidden} role="status" aria-live="polite">
+          {hasUnreadInquiry
+            ? (isAdmin ? "새 고객 문의가 있습니다." : "새 문의 답변이 있습니다.")
+            : ""}
+        </span>
 
         <div
           ref={mobileMenuRef}

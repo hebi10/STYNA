@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState, useEffect } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/authProvider';
 import { InquiryService } from '@/shared/services/inquiryService';
 import { Inquiry, CreateInquiryData } from '@/shared/types/inquiry';
@@ -15,12 +16,23 @@ const CATEGORY_LABELS = {
   other: '기타'
 } as const;
 
-export default function InquiryPage() {
+function InquiryPageContent() {
   const { user, userData, isUserDataLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'write' | 'list'>('write');
+  const userId = user?.uid ?? null;
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get('tab') === 'list' ? 'list' : 'write';
+  const [activeTab, setActiveTab] = useState<'write' | 'list'>(requestedTab);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
   const [openItems, setOpenItems] = useState<string[]>([]);
+  const [pendingCustomerReadIds, setPendingCustomerReadIds] = useState<string[]>([]);
+  const [pendingCustomerReadVersion, setPendingCustomerReadVersion] = useState(0);
+  const activeUserIdRef = useRef<string | null>(userId);
+  const listRequestGenerationRef = useRef(0);
+  const customerReadVersionRef = useRef(0);
+  const attemptedCustomerReadVersionRef = useRef(new Map<string, number>());
+  const inFlightCustomerReadIdsRef = useRef(new Map<string, symbol>());
   const accountEmail = typeof userData?.email === 'string' ? userData.email : '';
   const accountName = typeof userData?.name === 'string' ? userData.name : '';
   const hasAuthoritativeIdentity = userData?.status === 'active' &&
@@ -36,25 +48,121 @@ export default function InquiryPage() {
 
   // 사용자 문의 내역 로드
   const loadUserInquiries = useCallback(async () => {
-    if (!user) return;
-    
+    if (!userId) return;
+
+    const requestGeneration = ++listRequestGenerationRef.current;
     setLoading(true);
+    setListError(null);
     try {
-      const userInquiries = await InquiryService.getUserInquiries(user.uid);
-      setInquiries(userInquiries);
+      const userInquiries = await InquiryService.getUserInquiries(userId);
+      if (
+        requestGeneration !== listRequestGenerationRef.current ||
+        activeUserIdRef.current !== userId
+      ) return;
+
+      const unreadIds = userInquiries
+        .filter((inquiry) => inquiry.unreadForCustomer)
+        .map((inquiry) => inquiry.id);
+      const orderedInquiries = [...userInquiries].sort((a, b) => {
+        const unreadOrder = Number(b.unreadForCustomer) - Number(a.unreadForCustomer);
+        return unreadOrder || b.updatedAt.getTime() - a.updatedAt.getTime();
+      });
+
+      setInquiries(orderedInquiries);
+      setOpenItems((current) => unreadIds.length > 0
+        ? Array.from(new Set([...current, unreadIds[0]]))
+        : current);
+      const readVersion = ++customerReadVersionRef.current;
+      unreadIds.forEach((id) => {
+        if (inFlightCustomerReadIdsRef.current.has(id)) {
+          attemptedCustomerReadVersionRef.current.set(id, readVersion);
+        }
+      });
+      setPendingCustomerReadIds(unreadIds);
+      setPendingCustomerReadVersion(readVersion);
     } catch (error) {
+      if (
+        requestGeneration !== listRequestGenerationRef.current ||
+        activeUserIdRef.current !== userId
+      ) return;
+
       console.error('문의 내역 로드 실패:', error);
-      alert('문의 내역을 불러오는데 실패했습니다.');
+      setListError('문의 내역을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
-      setLoading(false);
+      if (
+        requestGeneration === listRequestGenerationRef.current &&
+        activeUserIdRef.current === userId
+      ) {
+        setLoading(false);
+      }
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
-    if (user && activeTab === 'list') {
+    const inFlightCustomerReadIds = inFlightCustomerReadIdsRef.current;
+    activeUserIdRef.current = userId;
+    listRequestGenerationRef.current += 1;
+    customerReadVersionRef.current = 0;
+    attemptedCustomerReadVersionRef.current.clear();
+    inFlightCustomerReadIds.clear();
+    setInquiries([]);
+    setOpenItems([]);
+    setPendingCustomerReadIds([]);
+    setPendingCustomerReadVersion(0);
+    setListError(null);
+    setLoading(false);
+
+    return () => {
+      activeUserIdRef.current = null;
+      listRequestGenerationRef.current += 1;
+      inFlightCustomerReadIds.clear();
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    setActiveTab(requestedTab);
+  }, [requestedTab]);
+
+  useEffect(() => {
+    if (userId && activeTab === 'list') {
       void loadUserInquiries();
     }
-  }, [user, activeTab, loadUserInquiries]);
+  }, [userId, activeTab, loadUserInquiries]);
+
+  useEffect(() => {
+    if (loading || activeTab !== 'list' || pendingCustomerReadIds.length === 0 || !userId) return;
+
+    const unreadIds = pendingCustomerReadIds.filter((id) => {
+      if (inFlightCustomerReadIdsRef.current.has(id)) {
+        attemptedCustomerReadVersionRef.current.set(id, pendingCustomerReadVersion);
+        return false;
+      }
+
+      return attemptedCustomerReadVersionRef.current.get(id) !== pendingCustomerReadVersion;
+    });
+    if (unreadIds.length === 0) return;
+
+    const requestToken = Symbol('customer-read-request');
+    unreadIds.forEach((id) => {
+      attemptedCustomerReadVersionRef.current.set(id, pendingCustomerReadVersion);
+      inFlightCustomerReadIdsRef.current.set(id, requestToken);
+    });
+
+    void InquiryService.markInquiriesRead(unreadIds, 'customer')
+      .then(() => {
+        if (activeUserIdRef.current === userId) {
+          setPendingCustomerReadIds((current) => current.filter((id) => !unreadIds.includes(id)));
+        }
+      })
+      .catch((error) => console.error('문의 답변 읽음 처리 실패:', error))
+      .finally(() => {
+        unreadIds.forEach((id) => {
+          if (inFlightCustomerReadIdsRef.current.get(id) === requestToken) {
+            inFlightCustomerReadIdsRef.current.delete(id);
+          }
+        });
+      });
+  }, [activeTab, loading, pendingCustomerReadIds, pendingCustomerReadVersion, userId]);
 
   const toggleItem = (id: string) => {
     setOpenItems(prev =>
@@ -98,9 +206,8 @@ export default function InquiryPage() {
       alert('문의가 저장되었습니다. 문의 내역에서 상태를 확인해 주세요.');
       setFormData({ category: 'order', title: '', content: '' });
       
-      // 문의 내역 탭으로 이동하고 데이터 새로고침
+      // 문의 내역 탭 전환 effect가 목록을 조회한다.
       setActiveTab('list');
-      void loadUserInquiries();
     } catch (error) {
       console.error('문의 등록 실패:', error);
       alert('문의 등록에 실패했습니다. 다시 시도해주세요.');
@@ -259,6 +366,13 @@ export default function InquiryPage() {
             <div className={styles.noInquiries}>
               문의 내역을 불러오는 중...
             </div>
+          ) : listError ? (
+            <div className={styles.noInquiries} role="alert">
+              <p>{listError}</p>
+              <button type="button" className={styles.tab} onClick={() => void loadUserInquiries()}>
+                다시 시도
+              </button>
+            </div>
           ) : inquiries.length > 0 ? (
             inquiries.map((inquiry) => (
               <div key={inquiry.id} className={styles.inquiryItem}>
@@ -311,5 +425,13 @@ export default function InquiryPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function InquiryPage() {
+  return (
+    <Suspense fallback={<div className={styles.inquiryContainer}>문의 화면을 준비하는 중입니다.</div>}>
+      <InquiryPageContent />
+    </Suspense>
   );
 }

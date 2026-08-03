@@ -128,6 +128,8 @@ function inquiryData(userId = 'owner-1') {
     status: 'waiting',
     createdAt: fixedTime,
     updatedAt: fixedTime,
+    unreadForAdmin: true,
+    unreadForCustomer: false,
   };
 }
 
@@ -821,6 +823,20 @@ describe('inquiry rules', () => {
     }));
   });
 
+  test.each([
+    ['admin notification', { unreadForAdmin: false }],
+    ['customer notification', { unreadForCustomer: true }],
+  ])('denies forged inquiry %s on creation', async (_name, override) => {
+    const ownerDb = testEnv.authenticatedContext('owner-1', {
+      email: 'owner-1@example.com',
+    }).firestore();
+
+    await assertFails(addDoc(collection(ownerDb, 'inquiries'), {
+      ...validInquiryCreate(),
+      ...override,
+    }));
+  });
+
   test('denies inquiry creation when the user document email differs from the Auth token', async () => {
     const mismatchedDb = testEnv.authenticatedContext('owner-1', {
       email: 'different@example.com',
@@ -840,6 +856,8 @@ describe('inquiry rules', () => {
         answeredAt: serverTimestamp(),
       },
       status: 'answered',
+      unreadForAdmin: false,
+      unreadForCustomer: true,
       updatedAt: serverTimestamp(),
     }));
     await assertFails(updateDoc(doc(adminDb, 'inquiries', 'inquiry-1'), {
@@ -848,6 +866,51 @@ describe('inquiry rules', () => {
     }));
     await assertFails(updateDoc(doc(ownerDb, 'inquiries', 'inquiry-1'), {
       content: '작성자가 본문 변경',
+      updatedAt: serverTimestamp(),
+    }));
+  });
+
+  test('allows only the owner to clear a customer notification', async () => {
+    const ownerDb = testEnv.authenticatedContext('owner-1').firestore();
+    const otherDb = testEnv.authenticatedContext('user-1').firestore();
+
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'inquiries', 'inquiry-1'), {
+        unreadForCustomer: true,
+      });
+    });
+
+    await assertSucceeds(updateDoc(doc(ownerDb, 'inquiries', 'inquiry-1'), {
+      unreadForCustomer: false,
+    }));
+    await assertFails(updateDoc(doc(otherDb, 'inquiries', 'inquiry-1'), {
+      unreadForCustomer: false,
+    }));
+  });
+
+  test.each([
+    ['sets customer unread', { unreadForCustomer: true }],
+    ['clears admin unread', { unreadForAdmin: false }],
+    ['changes inquiry content', { content: '작성자 본문 변경' }],
+  ])('denies an owner update that is not a customer read receipt: %s', async (_caseName, change) => {
+    const ownerDb = testEnv.authenticatedContext('owner-1').firestore();
+
+    await assertFails(updateDoc(doc(ownerDb, 'inquiries', 'inquiry-1'), change));
+  });
+
+  test('allows a strict admin to clear only the admin notification', async () => {
+    const adminDb = testEnv.authenticatedContext('admin-1', { admin: true }).firestore();
+
+    await assertSucceeds(updateDoc(doc(adminDb, 'inquiries', 'inquiry-1'), {
+      unreadForAdmin: false,
+    }));
+  });
+
+  test('requires a valid answer when creating a customer notification', async () => {
+    const adminDb = testEnv.authenticatedContext('admin-1', { admin: true }).firestore();
+
+    await assertFails(updateDoc(doc(adminDb, 'inquiries', 'inquiry-1'), {
+      unreadForCustomer: true,
       updatedAt: serverTimestamp(),
     }));
   });
@@ -915,9 +978,27 @@ describe('inquiry rules', () => {
     const adminDb = testEnv.authenticatedContext(userId, claims).firestore();
 
     await assertFails(updateDoc(doc(adminDb, 'inquiries', 'inquiry-1'), {
-      answer: { content: '권한 없는 답변' },
+      answer: {
+        content: '권한 없는 답변',
+        answeredBy: userId,
+        answeredAt: serverTimestamp(),
+      },
       status: 'answered',
+      unreadForAdmin: false,
+      unreadForCustomer: true,
       updatedAt: serverTimestamp(),
+    }));
+  });
+
+  test.each([
+    ['claim-only', 'claim-only', { admin: true }],
+    ['role-only', 'role-only', {}],
+    ['inactive admin', 'inactive-admin', { admin: true }],
+  ])('denies %s inquiry read-receipt writes', async (_caseName, userId, claims) => {
+    const adminDb = testEnv.authenticatedContext(userId, claims).firestore();
+
+    await assertFails(updateDoc(doc(adminDb, 'inquiries', 'inquiry-1'), {
+      unreadForAdmin: false,
     }));
   });
 
