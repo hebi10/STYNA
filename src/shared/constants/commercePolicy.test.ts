@@ -26,10 +26,10 @@ describe('canonical commerce policy', () => {
   test('matches the server shipping calculation boundary', () => {
     const shippingPolicy = formatShippingPolicy();
 
-    expect(shippingPolicy).toContain('일반 배송');
-    expect(shippingPolicy).toContain('쿠폰 할인 적용 후 상품금액');
-    expect(shippingPolicy).toContain('50,000원 이상');
-    expect(shippingPolicy).toMatch(/특급 배송.*5,000원/);
+    expect(shippingPolicy).toBe(
+      '일반 배송 3,000원 · 5만원 이상 또는 무료배송 쿠폰 사용 시 무료 · 특급 배송 5,000원',
+    );
+    expect(shippingPolicy).not.toContain('쿠폰 할인 적용 후 상품금액');
     expect(buildChatPolicyPrompt()).toContain(shippingPolicy);
   });
 
@@ -70,8 +70,7 @@ describe('canonical commerce policy', () => {
     ].join('\n');
 
     expect(order).toContain('3,000원');
-    expect(order).toContain('50,000원');
-    expect(order).toContain('쿠폰 할인 적용 후 상품금액');
+    expect(order).toContain('5만원 이상');
     expect(order).toMatch(/특급 배송.*5,000원/);
     expect(coupon).toContain(formatShippingPolicy());
     expect(coupon).toContain(formatSignupBenefit());

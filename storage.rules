@@ -47,6 +47,26 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    match /events/banner/{filename} {
+      allow read: if
+        filename == 'event-2026-02-spring-preview-20260714-wide.webp' ||
+        filename == 'event-2026-06-summer-linen-20260714-wide.webp' ||
+        filename == 'event-2026-08-pre-fall-20260714-wide.webp';
+    }
+
+    match /events/thumbnail/{filename} {
+      allow read: if
+        filename == 'event-2026-02-spring-preview-20260714-card.webp' ||
+        filename == 'event-2026-06-summer-linen-20260714-card.webp' ||
+        filename == 'event-2026-08-pre-fall-20260714-card.webp';
+    }
+
+    match /events/publication/{filename} {
+      allow read: if filename.matches('.*-20260731-(wide|card)[.]webp');
+      allow create, update: if isAdmin() && isValidImageUpload();
+      allow delete: if isAdmin();
+    }
+
     match /events/{allPaths=**} {
       allow read: if isAdmin();
       allow create, update: if isAdmin() && isValidImageUpload();

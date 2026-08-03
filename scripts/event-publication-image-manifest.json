@@ -1,0 +1,485 @@
+{
+  "version": "20260731",
+  "prompts": [
+    {
+      "id": "h1WITXqWE2BL3G0ACiza",
+      "title": "신규 회원 가입 이벤트",
+      "raw": "public/events/2026-publication/raw/h1WITXqWE2BL3G0ACiza-20260731-source.png",
+      "prompt": "Use case: ads-marketing\nAsset type: 패션 쇼핑몰 이벤트 캠페인 원본\nPrimary request: 미니멀한 로프트의 첫 쇼핑 패키지, 스마트폰과 접힌 니트, 코발트 블루와 오렌지 포인트\nStyle/medium: 실제 한국 패션 쇼핑몰의 고급 에디토리얼 사진\nComposition/framing: 주요 피사체를 중앙 안전 영역에 두고, 16:9 와이드와 4:5 세로 중앙 크롭에 모두 사용할 수 있도록 사방에 충분한 배경을 둔다.\nLighting/mood: 자연스럽고 세련된 상업 사진, 실제 원단 질감\nConstraints: 이미지 안 글자 없음, 타사 브랜드·로고·워터마크·가격·할인율·쿠폰·적립·무료배송 표현 없음, 가짜 UI 없음.\nAvoid: 잘린 얼굴과 손, 왜곡된 신체, 반복된 인물, 읽을 수 없는 글자, 과도한 장식."
+    },
+    {
+      "id": "PacCrKVG9TikHo7lambG",
+      "title": "봄맞이 특가 세일",
+      "raw": "public/events/2026-publication/raw/PacCrKVG9TikHo7lambG-20260731-source.png",
+      "prompt": "Use case: ads-marketing\nAsset type: 패션 쇼핑몰 이벤트 캠페인 원본\nPrimary request: 봄 꽃시장 골목의 혼성 모델 3인, 가벼운 재킷과 셔츠, 스프링 그린과 소프트 핑크\nStyle/medium: 실제 한국 패션 쇼핑몰의 고급 에디토리얼 사진\nComposition/framing: 주요 피사체를 중앙 안전 영역에 두고, 16:9 와이드와 4:5 세로 중앙 크롭에 모두 사용할 수 있도록 사방에 충분한 배경을 둔다.\nLighting/mood: 자연스럽고 세련된 상업 사진, 실제 원단 질감\nConstraints: 이미지 안 글자 없음, 타사 브랜드·로고·워터마크·가격·할인율·쿠폰·적립·무료배송 표현 없음, 가짜 UI 없음.\nAvoid: 잘린 얼굴과 손, 왜곡된 신체, 반복된 인물, 읽을 수 없는 글자, 과도한 장식."
+    },
+    {
+      "id": "event-2026-08-summer-sale-edit",
+      "title": "라스트 서머 세일 셀렉션",
+      "raw": "public/events/2026-publication/raw/event-2026-08-summer-sale-edit-20260731-source.png",
+      "prompt": "Use case: ads-marketing\nAsset type: 패션 쇼핑몰 이벤트 캠페인 원본\nPrimary request: 늦여름 도심 테라스의 셔츠와 팬츠 스타일링, 코럴과 샌드 베이지, 시원한 자연광\nStyle/medium: 실제 한국 패션 쇼핑몰의 고급 에디토리얼 사진\nComposition/framing: 주요 피사체를 중앙 안전 영역에 두고, 16:9 와이드와 4:5 세로 중앙 크롭에 모두 사용할 수 있도록 사방에 충분한 배경을 둔다.\nLighting/mood: 자연스럽고 세련된 상업 사진, 실제 원단 질감\nConstraints: 이미지 안 글자 없음, 타사 브랜드·로고·워터마크·가격·할인율·쿠폰·적립·무료배송 표현 없음, 가짜 UI 없음.\nAvoid: 잘린 얼굴과 손, 왜곡된 신체, 반복된 인물, 읽을 수 없는 글자, 과도한 장식."
+    },
+    {
+      "id": "event-2026-08-bag-accessory-sale",
+      "title": "데일리 백 & 액세서리 세일",
+      "raw": "public/events/2026-publication/raw/event-2026-08-bag-accessory-sale-20260731-source.png",
+      "prompt": "Use case: ads-marketing\nAsset type: 패션 쇼핑몰 이벤트 캠페인 원본\nPrimary request: 가죽 숄더백, 나일론 백, 실버 액세서리를 정돈한 에디토리얼 정물, 웜 그레이와 버건디\nStyle/medium: 실제 한국 패션 쇼핑몰의 고급 에디토리얼 사진\nComposition/framing: 주요 피사체를 중앙 안전 영역에 두고, 16:9 와이드와 4:5 세로 중앙 크롭에 모두 사용할 수 있도록 사방에 충분한 배경을 둔다.\nLighting/mood: 자연스럽고 세련된 상업 사진, 실제 원단 질감\nConstraints: 이미지 안 글자 없음, 타사 브랜드·로고·워터마크·가격·할인율·쿠폰·적립·무료배송 표현 없음, 가짜 UI 없음.\nAvoid: 잘린 얼굴과 손, 왜곡된 신체, 반복된 인물, 읽을 수 없는 글자, 과도한 장식."
+    },
+    {
+      "id": "event-2026-09-active-sale",
+      "title": "액티브 라이프 세일",
+      "raw": "public/events/2026-publication/raw/event-2026-09-active-sale-20260731-source.png",
+      "prompt": "Use case: ads-marketing\nAsset type: 패션 쇼핑몰 이벤트 캠페인 원본\nPrimary request: 러닝 트랙의 액티브웨어 혼성 모델과 러닝화, 차콜과 라임 포인트, 역동적인 아침빛\nStyle/medium: 실제 한국 패션 쇼핑몰의 고급 에디토리얼 사진\nComposition/framing: 주요 피사체를 중앙 안전 영역에 두고, 16:9 와이드와 4:5 세로 중앙 크롭에 모두 사용할 수 있도록 사방에 충분한 배경을 둔다.\nLighting/mood: 자연스럽고 세련된 상업 사진, 실제 원단 질감\nConstraints: 이미지 안 글자 없음, 타사 브랜드·로고·워터마크·가격·할인율·쿠폰·적립·무료배송 표현 없음, 가짜 UI 없음.\nAvoid: 잘린 얼굴과 손, 왜곡된 신체, 반복된 인물, 읽을 수 없는 글자, 과도한 장식."
+    },
+    {
+      "id": "event-2026-08-prefall-layering-new",
+      "title": "프리폴 레이어링 신상",
+      "raw": "public/events/2026-publication/raw/event-2026-08-prefall-layering-new-20260731-source.png",
+      "prompt": "Use case: ads-marketing\nAsset type: 패션 쇼핑몰 이벤트 캠페인 원본\nPrimary request: 초가을 도심의 가벼운 재킷과 셔츠 레이어링, 올리브와 크림, 차분한 룩북\nStyle/medium: 실제 한국 패션 쇼핑몰의 고급 에디토리얼 사진\nComposition/framing: 주요 피사체를 중앙 안전 영역에 두고, 16:9 와이드와 4:5 세로 중앙 크롭에 모두 사용할 수 있도록 사방에 충분한 배경을 둔다.\nLighting/mood: 자연스럽고 세련된 상업 사진, 실제 원단 질감\nConstraints: 이미지 안 글자 없음, 타사 브랜드·로고·워터마크·가격·할인율·쿠폰·적립·무료배송 표현 없음, 가짜 UI 없음.\nAvoid: 잘린 얼굴과 손, 왜곡된 신체, 반복된 인물, 읽을 수 없는 글자, 과도한 장식."
+    },
+    {
+      "id": "event-2026-08-daily-bag-new",
+      "title": "데일리 백 신상품",
+      "raw": "public/events/2026-publication/raw/event-2026-08-daily-bag-new-20260731-source.png",
+      "prompt": "Use case: ads-marketing\nAsset type: 패션 쇼핑몰 이벤트 캠페인 원본\nPrimary request: 출근용 토트백과 크로스백을 든 여성 모델, 건축적인 로비, 토프와 딥 브라운\nStyle/medium: 실제 한국 패션 쇼핑몰의 고급 에디토리얼 사진\nComposition/framing: 주요 피사체를 중앙 안전 영역에 두고, 16:9 와이드와 4:5 세로 중앙 크롭에 모두 사용할 수 있도록 사방에 충분한 배경을 둔다.\nLighting/mood: 자연스럽고 세련된 상업 사진, 실제 원단 질감\nConstraints: 이미지 안 글자 없음, 타사 브랜드·로고·워터마크·가격·할인율·쿠폰·적립·무료배송 표현 없음, 가짜 UI 없음.\nAvoid: 잘린 얼굴과 손, 왜곡된 신체, 반복된 인물, 읽을 수 없는 글자, 과도한 장식."
+    },
+    {
+      "id": "event-2026-09-city-shoes-new",
+      "title": "시티 슈즈 신상품",
+      "raw": "public/events/2026-publication/raw/event-2026-09-city-shoes-new-20260731-source.png",
+      "prompt": "Use case: ads-marketing\nAsset type: 패션 쇼핑몰 이벤트 캠페인 원본\nPrimary request: 도심 보도 위 로퍼와 스니커즈 중심의 패션 에디토리얼, 네이비와 실버\nStyle/medium: 실제 한국 패션 쇼핑몰의 고급 에디토리얼 사진\nComposition/framing: 주요 피사체를 중앙 안전 영역에 두고, 16:9 와이드와 4:5 세로 중앙 크롭에 모두 사용할 수 있도록 사방에 충분한 배경을 둔다.\nLighting/mood: 자연스럽고 세련된 상업 사진, 실제 원단 질감\nConstraints: 이미지 안 글자 없음, 타사 브랜드·로고·워터마크·가격·할인율·쿠폰·적립·무료배송 표현 없음, 가짜 UI 없음.\nAvoid: 잘린 얼굴과 손, 왜곡된 신체, 반복된 인물, 읽을 수 없는 글자, 과도한 장식."
+    },
+    {
+      "id": "event-2026-08-late-summer-style",
+      "title": "늦여름 데일리 리셋",
+      "raw": "public/events/2026-publication/raw/event-2026-08-late-summer-style-20260731-source.png",
+      "prompt": "Use case: ads-marketing\nAsset type: 패션 쇼핑몰 이벤트 캠페인 원본\nPrimary request: 늦여름 해질녘의 셔츠, 팬츠, 가방 데일리 룩, 세이지와 테라코타\nStyle/medium: 실제 한국 패션 쇼핑몰의 고급 에디토리얼 사진\nComposition/framing: 주요 피사체를 중앙 안전 영역에 두고, 16:9 와이드와 4:5 세로 중앙 크롭에 모두 사용할 수 있도록 사방에 충분한 배경을 둔다.\nLighting/mood: 자연스럽고 세련된 상업 사진, 실제 원단 질감\nConstraints: 이미지 안 글자 없음, 타사 브랜드·로고·워터마크·가격·할인율·쿠폰·적립·무료배송 표현 없음, 가짜 UI 없음.\nAvoid: 잘린 얼굴과 손, 왜곡된 신체, 반복된 인물, 읽을 수 없는 글자, 과도한 장식."
+    },
+    {
+      "id": "event-2026-09-back-to-city",
+      "title": "가을 출근룩 큐레이션",
+      "raw": "public/events/2026-publication/raw/event-2026-09-back-to-city-20260731-source.png",
+      "prompt": "Use case: ads-marketing\nAsset type: 패션 쇼핑몰 이벤트 캠페인 원본\nPrimary request: 가을 출근길의 재킷, 와이드 팬츠, 구조적인 가방과 로퍼, 차콜과 카멜\nStyle/medium: 실제 한국 패션 쇼핑몰의 고급 에디토리얼 사진\nComposition/framing: 주요 피사체를 중앙 안전 영역에 두고, 16:9 와이드와 4:5 세로 중앙 크롭에 모두 사용할 수 있도록 사방에 충분한 배경을 둔다.\nLighting/mood: 자연스럽고 세련된 상업 사진, 실제 원단 질감\nConstraints: 이미지 안 글자 없음, 타사 브랜드·로고·워터마크·가격·할인율·쿠폰·적립·무료배송 표현 없음, 가짜 UI 없음.\nAvoid: 잘린 얼굴과 손, 왜곡된 신체, 반복된 인물, 읽을 수 없는 글자, 과도한 장식."
+    },
+    {
+      "id": "event-2026-08-summer-fit-review",
+      "title": "여름 소재 구매 인증 리뷰",
+      "raw": "public/events/2026-publication/raw/event-2026-08-summer-fit-review-20260731-source.png",
+      "prompt": "Use case: ads-marketing\nAsset type: 패션 쇼핑몰 이벤트 캠페인 원본\nPrimary request: 여름 셔츠 소재와 봉제 디테일, 착용 전신과 원단 클로즈업을 함께 보여 주는 리뷰 에디토리얼\nStyle/medium: 실제 한국 패션 쇼핑몰의 고급 에디토리얼 사진\nComposition/framing: 주요 피사체를 중앙 안전 영역에 두고, 16:9 와이드와 4:5 세로 중앙 크롭에 모두 사용할 수 있도록 사방에 충분한 배경을 둔다.\nLighting/mood: 자연스럽고 세련된 상업 사진, 실제 원단 질감\nConstraints: 이미지 안 글자 없음, 타사 브랜드·로고·워터마크·가격·할인율·쿠폰·적립·무료배송 표현 없음, 가짜 UI 없음.\nAvoid: 잘린 얼굴과 손, 왜곡된 신체, 반복된 인물, 읽을 수 없는 글자, 과도한 장식."
+    },
+    {
+      "id": "event-2026-09-prefall-fit-review",
+      "title": "프리폴 착용 구매 인증 리뷰",
+      "raw": "public/events/2026-publication/raw/event-2026-09-prefall-fit-review-20260731-source.png",
+      "prompt": "Use case: ads-marketing\nAsset type: 패션 쇼핑몰 이벤트 캠페인 원본\nPrimary request: 프리폴 집업 재킷 착용 전신과 소재 디테일, 구매 후 착용감을 기록하는 차분한 리뷰 에디토리얼\nStyle/medium: 실제 한국 패션 쇼핑몰의 고급 에디토리얼 사진\nComposition/framing: 주요 피사체를 중앙 안전 영역에 두고, 16:9 와이드와 4:5 세로 중앙 크롭에 모두 사용할 수 있도록 사방에 충분한 배경을 둔다.\nLighting/mood: 자연스럽고 세련된 상업 사진, 실제 원단 질감\nConstraints: 이미지 안 글자 없음, 타사 브랜드·로고·워터마크·가격·할인율·쿠폰·적립·무료배송 표현 없음, 가짜 UI 없음.\nAvoid: 잘린 얼굴과 손, 왜곡된 신체, 반복된 인물, 읽을 수 없는 글자, 과도한 장식."
+    }
+  ],
+  "assets": [
+    {
+      "id": "event-2026-01-layering-sale",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-01-layering-sale-source.png",
+      "output": "public/events/2026-publication/event-2026-01-layering-sale-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-01-layering-sale",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-01-layering-sale-source.png",
+      "output": "public/events/2026-publication/event-2026-01-layering-sale-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-01-welcome-coupon",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-01-welcome-coupon-source.png",
+      "output": "public/events/2026-publication/event-2026-01-welcome-coupon-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-01-welcome-coupon",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-01-welcome-coupon-source.png",
+      "output": "public/events/2026-publication/event-2026-01-welcome-coupon-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-02-knit-review",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-02-knit-review-source.png",
+      "output": "public/events/2026-publication/event-2026-02-knit-review-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-02-knit-review",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-02-knit-review-source.png",
+      "output": "public/events/2026-publication/event-2026-02-knit-review-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-03-trench-week",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-03-trench-week-source.png",
+      "output": "public/events/2026-publication/event-2026-03-trench-week-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-03-trench-week",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-03-trench-week-source.png",
+      "output": "public/events/2026-publication/event-2026-03-trench-week-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-03-photo-review",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-03-photo-review-source.png",
+      "output": "public/events/2026-publication/event-2026-03-photo-review-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-03-photo-review",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-03-photo-review-source.png",
+      "output": "public/events/2026-publication/event-2026-03-photo-review-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-03-white-day-coupon",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-03-white-day-coupon-source.png",
+      "output": "public/events/2026-publication/event-2026-03-white-day-coupon-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-03-white-day-coupon",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-03-white-day-coupon-source.png",
+      "output": "public/events/2026-publication/event-2026-03-white-day-coupon-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-04-shirt-collection",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-04-shirt-collection-source.png",
+      "output": "public/events/2026-publication/event-2026-04-shirt-collection-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-04-shirt-collection",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-04-shirt-collection-source.png",
+      "output": "public/events/2026-publication/event-2026-04-shirt-collection-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-04-office-look",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-04-office-look-source.png",
+      "output": "public/events/2026-publication/event-2026-04-office-look-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-04-office-look",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-04-office-look-source.png",
+      "output": "public/events/2026-publication/event-2026-04-office-look-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-04-styling-coupon",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-04-styling-coupon-source.png",
+      "output": "public/events/2026-publication/event-2026-04-styling-coupon-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-04-styling-coupon",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-04-styling-coupon-source.png",
+      "output": "public/events/2026-publication/event-2026-04-styling-coupon-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-05-denim-festival",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-05-denim-festival-source.png",
+      "output": "public/events/2026-publication/event-2026-05-denim-festival-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-05-denim-festival",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-05-denim-festival-source.png",
+      "output": "public/events/2026-publication/event-2026-05-denim-festival-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-05-family-coupon",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-05-family-coupon-source.png",
+      "output": "public/events/2026-publication/event-2026-05-family-coupon-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-05-family-coupon",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-05-family-coupon-source.png",
+      "output": "public/events/2026-publication/event-2026-05-family-coupon-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-05-best-review",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-05-best-review-source.png",
+      "output": "public/events/2026-publication/event-2026-05-best-review-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-05-best-review",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-05-best-review-source.png",
+      "output": "public/events/2026-publication/event-2026-05-best-review-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-06-midyear-sale",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-06-midyear-sale-source.png",
+      "output": "public/events/2026-publication/event-2026-06-midyear-sale-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-06-midyear-sale",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-06-midyear-sale-source.png",
+      "output": "public/events/2026-publication/event-2026-06-midyear-sale-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-07-vacation-coupon",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-07-vacation-coupon-source.png",
+      "output": "public/events/2026-publication/event-2026-07-vacation-coupon-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-07-vacation-coupon",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-07-vacation-coupon-source.png",
+      "output": "public/events/2026-publication/event-2026-07-vacation-coupon-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-07-cool-touch",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-07-cool-touch-source.png",
+      "output": "public/events/2026-publication/event-2026-07-cool-touch-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-07-cool-touch",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-07-cool-touch-source.png",
+      "output": "public/events/2026-publication/event-2026-07-cool-touch-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-07-summer-review",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-07-summer-review-source.png",
+      "output": "public/events/2026-publication/event-2026-07-summer-review-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-07-summer-review",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-07-summer-review-source.png",
+      "output": "public/events/2026-publication/event-2026-07-summer-review-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "event-2026-08-last-summer",
+      "role": "wide",
+      "raw": "public/events/2026/event-2026-08-last-summer-source.png",
+      "output": "public/events/2026-publication/event-2026-08-last-summer-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-08-last-summer",
+      "role": "card",
+      "raw": "public/events/2026/event-2026-08-last-summer-source.png",
+      "output": "public/events/2026-publication/event-2026-08-last-summer-20260731-card.webp",
+      "position": "east"
+    },
+    {
+      "id": "h1WITXqWE2BL3G0ACiza",
+      "role": "wide",
+      "raw": "public/events/2026-publication/raw/h1WITXqWE2BL3G0ACiza-20260731-source.png",
+      "output": "public/events/2026-publication/h1WITXqWE2BL3G0ACiza-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "h1WITXqWE2BL3G0ACiza",
+      "role": "card",
+      "raw": "public/events/2026-publication/raw/h1WITXqWE2BL3G0ACiza-20260731-source.png",
+      "output": "public/events/2026-publication/h1WITXqWE2BL3G0ACiza-20260731-card.webp",
+      "position": "centre"
+    },
+    {
+      "id": "PacCrKVG9TikHo7lambG",
+      "role": "wide",
+      "raw": "public/events/2026-publication/raw/PacCrKVG9TikHo7lambG-20260731-source.png",
+      "output": "public/events/2026-publication/PacCrKVG9TikHo7lambG-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "PacCrKVG9TikHo7lambG",
+      "role": "card",
+      "raw": "public/events/2026-publication/raw/PacCrKVG9TikHo7lambG-20260731-source.png",
+      "output": "public/events/2026-publication/PacCrKVG9TikHo7lambG-20260731-card.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-08-summer-sale-edit",
+      "role": "wide",
+      "raw": "public/events/2026-publication/raw/event-2026-08-summer-sale-edit-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-08-summer-sale-edit-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-08-summer-sale-edit",
+      "role": "card",
+      "raw": "public/events/2026-publication/raw/event-2026-08-summer-sale-edit-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-08-summer-sale-edit-20260731-card.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-08-bag-accessory-sale",
+      "role": "wide",
+      "raw": "public/events/2026-publication/raw/event-2026-08-bag-accessory-sale-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-08-bag-accessory-sale-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-08-bag-accessory-sale",
+      "role": "card",
+      "raw": "public/events/2026-publication/raw/event-2026-08-bag-accessory-sale-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-08-bag-accessory-sale-20260731-card.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-09-active-sale",
+      "role": "wide",
+      "raw": "public/events/2026-publication/raw/event-2026-09-active-sale-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-09-active-sale-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-09-active-sale",
+      "role": "card",
+      "raw": "public/events/2026-publication/raw/event-2026-09-active-sale-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-09-active-sale-20260731-card.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-08-prefall-layering-new",
+      "role": "wide",
+      "raw": "public/events/2026-publication/raw/event-2026-08-prefall-layering-new-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-08-prefall-layering-new-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-08-prefall-layering-new",
+      "role": "card",
+      "raw": "public/events/2026-publication/raw/event-2026-08-prefall-layering-new-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-08-prefall-layering-new-20260731-card.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-08-daily-bag-new",
+      "role": "wide",
+      "raw": "public/events/2026-publication/raw/event-2026-08-daily-bag-new-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-08-daily-bag-new-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-08-daily-bag-new",
+      "role": "card",
+      "raw": "public/events/2026-publication/raw/event-2026-08-daily-bag-new-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-08-daily-bag-new-20260731-card.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-09-city-shoes-new",
+      "role": "wide",
+      "raw": "public/events/2026-publication/raw/event-2026-09-city-shoes-new-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-09-city-shoes-new-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-09-city-shoes-new",
+      "role": "card",
+      "raw": "public/events/2026-publication/raw/event-2026-09-city-shoes-new-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-09-city-shoes-new-20260731-card.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-08-late-summer-style",
+      "role": "wide",
+      "raw": "public/events/2026-publication/raw/event-2026-08-late-summer-style-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-08-late-summer-style-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-08-late-summer-style",
+      "role": "card",
+      "raw": "public/events/2026-publication/raw/event-2026-08-late-summer-style-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-08-late-summer-style-20260731-card.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-09-back-to-city",
+      "role": "wide",
+      "raw": "public/events/2026-publication/raw/event-2026-09-back-to-city-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-09-back-to-city-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-09-back-to-city",
+      "role": "card",
+      "raw": "public/events/2026-publication/raw/event-2026-09-back-to-city-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-09-back-to-city-20260731-card.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-08-summer-fit-review",
+      "role": "wide",
+      "raw": "public/events/2026-publication/raw/event-2026-08-summer-fit-review-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-08-summer-fit-review-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-08-summer-fit-review",
+      "role": "card",
+      "raw": "public/events/2026-publication/raw/event-2026-08-summer-fit-review-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-08-summer-fit-review-20260731-card.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-09-prefall-fit-review",
+      "role": "wide",
+      "raw": "public/events/2026-publication/raw/event-2026-09-prefall-fit-review-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-09-prefall-fit-review-20260731-wide.webp",
+      "position": "centre"
+    },
+    {
+      "id": "event-2026-09-prefall-fit-review",
+      "role": "card",
+      "raw": "public/events/2026-publication/raw/event-2026-09-prefall-fit-review-20260731-source.png",
+      "output": "public/events/2026-publication/event-2026-09-prefall-fit-review-20260731-card.webp",
+      "position": "centre"
+    }
+  ]
+}

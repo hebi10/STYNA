@@ -8,6 +8,8 @@
 - 데스크톱 헤더 메뉴 구성 복원 설계 : superpowers/specs/2026-07-28-header-desktop-menu-restore-design.md
 - 데스크톱 헤더 메뉴 구성 복원 실행 계획 : superpowers/plans/2026-07-28-header-desktop-menu-restore.md
 - 이벤트 페이지 점검 : event-page-review.md
+- 이벤트 안전 재공개 및 신규 이벤트 확장 설계 : superpowers/specs/2026-07-31-event-safe-republication-design.md
+- 이벤트 안전 재공개 및 신규 이벤트 확장 실행 계획 : superpowers/plans/2026-07-31-event-safe-republication.md
 - 이벤트 이미지 전면 교체 설계 : superpowers/specs/2026-07-14-event-image-refresh-design.md
 - 이벤트 이미지 전면 교체 실행 계획 : superpowers/plans/2026-07-14-event-image-refresh.md
 - 이벤트 상세 커머스 템플릿 리뉴얼 설계 : superpowers/specs/2026-07-15-event-detail-commerce-template-design.md

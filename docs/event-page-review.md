@@ -134,7 +134,7 @@
 - sync 도구의 backup/rollback은 각 이벤트의 기존 이미지 필드와 `publicPolicyVerified`의 미존재·`false`·`true` 상태를 구분해 복원한다. Storage 객체는 immutable 신규 경로만 사용하며 기존 객체를 삭제하거나 덮어쓰지 않는다.
 - `public/events/2026` 80개, `public/events/2026-v2` 44개와 `public/events/2026-editorial`의 `20260715` 파일 24개는 Firestore Rules와 무관한 Firebase Hosting 정적 경로다. 기존 배포에서는 직접 URL이 계속 응답하므로 `firebase.json`에 이 세 레거시 패턴을 `/events/`로 보내는 임시 `302` redirect를 추가했다.
 - 생성 예정인 `2026-v3`와 `20260721` editorial 경로도 정책 검증 전 노출을 막기 위해 같은 임시 redirect를 둔다. 새 110개 이미지 검수와 이벤트 22건의 수동 검증이 끝난 뒤 승인된 패턴만 redirect에서 제거하고 Hosting을 배포해야 한다. 이번 작업에서는 배포하지 않았으므로 현재 원격 정적 URL 차단은 아직 반영되지 않았다.
-- Firebase Storage의 기존 `events/**` 객체는 Hosting redirect 대상이 아니다. 로컬 `storage.rules`는 현재 legacy와 `20260721`을 포함한 모든 이벤트 객체의 원시 공개 읽기를 막고 strict admin만 읽도록 fail-closed했다. 110개 시각 검수와 22건 정책 승인이 모두 끝난 뒤 승인 경로만 별도 Rules 변경으로 공개해야 한다.
+- Firebase Storage의 기존 `events/**` 객체는 Hosting redirect 대상이 아니다. 당시 로컬 `storage.rules`는 legacy와 `20260721`을 포함한 모든 이벤트 객체의 원시 공개 읽기를 막고 strict admin만 읽도록 fail-closed했다. 승인된 버전만 별도 Rules 변경으로 공개해야 한다.
 - bulk sync가 만드는 URL은 download token이 없으므로 위 Rules 공개 전에는 읽을 수 없다. 반면 관리자 폼의 `getDownloadURL()` 업로드는 token URL을 생성하므로 그 URL이 유출되면 Rules의 원시 공개 읽기와 별개로 접근할 수 있다. 검증 취소·이미지 교체 시 Firestore 공개 값 reset뿐 아니라 기존 token 폐기 또는 객체 정리 절차가 필요하다.
 - 이번 작업에서는 Storage Rules 배포, 기존 객체 삭제·token 폐기 또는 Hosting 배포를 실행하지 않았다. 따라서 현재 원격 legacy Hosting/Storage URL은 새 로컬 gate를 배포하기 전까지 계속 노출되는 미해결 운영 위험이다.
 
@@ -188,3 +188,17 @@
 - 허브 이미지는 2700×900 WebP이며 링크와 UI 오버레이 없이 27:9 비율 전체를 표시한다.
 - 카드 목록은 페이지당 8개로 변경해 데스크톱에서 4열 × 2줄을 구성한다.
 - 1280×720 브라우저 확인에서 허브 실제 비율 3.0, 링크 없음, 카드 8개·4개씩 2줄, 페이지 번호 1~3, 가로 오버플로우 0, 콘솔 오류 0을 확인했다.
+
+## 2026-07-31 이벤트 안전 재공개 준비
+
+- 기존 22개 이벤트의 날짜와 식별자는 유지하고, 현재 제공 가능한 상품·참여 조건만 남도록 제목·설명·본문·자격·보상을 검증했다. 근거 없는 쿠폰·적립금 보상은 제거하고 모든 이벤트의 `rewardType`을 `none`으로 통일했다.
+- 2026년 8~9월 세일 3개, 신상품 3개, 특별 기획 2개, 구매 인증 리뷰 2개를 추가해 총 32개 매니페스트를 `publicationVersion: 20260731`로 관리한다.
+- 목록에 `진행·예정 이벤트`와 `종료된 이벤트` 상태 탭을 추가했다. 기준 시각 2026-07-31에는 각각 16개이며, 유형 필터와 페이지네이션이 상태 탭과 함께 재계산된다.
+- 세일 상품 fallback에는 실제 `isSale`, 신상품 fallback에는 실제 `isNew` 상품만 남도록 필터를 강화했다. 리뷰 이벤트의 명시 대상 상품 6개도 운영 상품 존재·활성 상태를 검증했다.
+- 이미지 64개 중 기존 안전 자산 6개를 그대로 사용하고, 텍스트 없는 기존 원본에서 34개를 파생했으며, 12개의 새 원본으로 24개를 제작했다. 새 immutable Storage 객체 58개는 업로드와 원격 존재 확인을 모두 통과했다.
+- 운영 Firestore에는 32개 문서를 `publicPolicyVerified: false`로 스테이징했다. 검증 결과 32개 모두 유효하고 공개 값은 `false` 32개, `true` 0개다. 복구용 백업은 `migration-logs/event-publication/20260731/backups/2026-07-31T07-37-13-667Z.json`에 보관한다.
+- Firestore Emulator에는 공개 이벤트 32개와 대상 운영 상품 6개를 로컬 복제해 브라우저 QA를 진행했다. 목록은 상태별 16개, 페이지당 8개, 종료 탭·세일 필터 조합, 390px 모바일 가로 넘침 없음, 이미지 오류 없음으로 확인했다.
+- 신규 `여름 소재 구매 인증 리뷰` 상세에서 명시 대상 상품 3개가 우선 노출되고 리뷰 인기 fallback이 이어지는지, 안전 문구와 무보상 안내, 이미지, 콘솔 오류를 확인했다.
+- Storage Rules는 `events/publication/*-20260731-wide.webp`와 `*-20260731-card.webp`, 재사용 승인을 받은 기존 3개 이벤트의 정확한 와이드·카드 파일 6개만 공개 읽기를 허용한다. 그 밖의 버전, 역할, 무버전 파일과 기존 이벤트 경로는 계속 관리자 전용이다.
+- 사용자 승인 후 Firebase Functions·Hosting·Firestore·Storage Rules를 배포하고 32개 이벤트를 `publicPolicyVerified: true`로 전환했다. 운영과 로컬 목록에서 진행·예정 16개, 종료 16개와 페이지당 8개를 확인했다.
+- 상세 날짜 포맷은 `Asia/Seoul`을 명시해 UTC인 운영 서버와 한국 시간 브라우저의 hydration 텍스트가 일치하도록 보정했다. 운영 신규 리뷰 상세에서 대상 상품, 이미지, 가로 넘침, 콘솔 오류가 없음을 확인했다.

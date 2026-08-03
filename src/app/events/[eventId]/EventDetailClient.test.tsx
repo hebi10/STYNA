@@ -256,6 +256,18 @@ describe('EventDetailClient commerce template', () => {
     expect(await screen.findByText('테스트 상품 product-1')).toBeInTheDocument();
   });
 
+  test('renders event dates in Korea time when the server timezone is UTC', async () => {
+    render(<EventDetailClient event={createEvent({
+      startDate: new Date('2026-07-31T15:00:00.000Z'),
+      endDate: new Date('2026-08-31T14:59:59.000Z'),
+    })} />);
+
+    expect(await screen.findByText('테스트 상품 product-1')).toBeInTheDocument();
+    expect(screen.getAllByText(
+      '2026년 8월 1일 토 ~ 2026년 8월 31일 월',
+    ).length).toBeGreaterThanOrEqual(1);
+  });
+
   test('keeps the existing participation request connected', async () => {
     const event = createEvent({
       eventType: 'coupon',

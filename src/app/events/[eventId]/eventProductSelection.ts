@@ -97,6 +97,15 @@ const appendUnique = (target: Product[], products: Product[], limit: number) => 
   }
 };
 
+export const matchesEventVariant = (
+  product: Product,
+  variant: EventUiVariant,
+): boolean => {
+  if (variant === 'sale') return product.isSale === true;
+  if (variant === 'new') return product.isNew === true;
+  return true;
+};
+
 const loadVariantFallback = (
   service: EventProductLoader,
   variant: EventUiVariant,
@@ -148,7 +157,11 @@ export const loadEventProducts = async ({
     if (products.length >= limit) break;
 
     const categoryProducts = await service.getProductsByCategory(category, limit);
-    appendUnique(products, categoryProducts, limit);
+    appendUnique(
+      products,
+      categoryProducts.filter(product => matchesEventVariant(product, variant)),
+      limit,
+    );
   }
 
   if (products.length < limit) {

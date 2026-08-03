@@ -144,6 +144,62 @@ describe('Storage rules', () => {
     }
   });
 
+  test('allows public reads only for approved 20260731 publication assets', async () => {
+    const adminStorage = testEnv.authenticatedContext('admin-1', { admin: true }).storage();
+    const publicStorage = testEnv.unauthenticatedContext().storage();
+    const approvedPaths = [
+      'events/publication/event-1-20260731-wide.webp',
+      'events/publication/event-1-20260731-card.webp',
+    ];
+    const privatePaths = [
+      'events/publication/event-1-20260730-wide.webp',
+      'events/publication/event-1-20260731-detail.webp',
+      'events/publication/unversioned.webp',
+    ];
+
+    for (const storagePath of [...approvedPaths, ...privatePaths]) {
+      await assertSucceeds(uploadBytes(
+        ref(adminStorage, storagePath),
+        onePixelPng,
+        { contentType: 'image/webp' }
+      ));
+    }
+
+    for (const storagePath of approvedPaths) {
+      await assertSucceeds(getBytes(ref(publicStorage, storagePath)));
+    }
+    for (const storagePath of privatePaths) {
+      await assertFails(getBytes(ref(publicStorage, storagePath)));
+    }
+  });
+
+  test('allows public reads only for the six approved reused legacy assets', async () => {
+    const adminStorage = testEnv.authenticatedContext('admin-1', { admin: true }).storage();
+    const publicStorage = testEnv.unauthenticatedContext().storage();
+    const approvedPaths = [
+      'events/banner/event-2026-02-spring-preview-20260714-wide.webp',
+      'events/thumbnail/event-2026-02-spring-preview-20260714-card.webp',
+      'events/banner/event-2026-06-summer-linen-20260714-wide.webp',
+      'events/thumbnail/event-2026-06-summer-linen-20260714-card.webp',
+      'events/banner/event-2026-08-pre-fall-20260714-wide.webp',
+      'events/thumbnail/event-2026-08-pre-fall-20260714-card.webp',
+    ];
+    const privatePath = 'events/thumbnail/event-2026-06-midyear-sale-20260714-card.webp';
+
+    for (const storagePath of [...approvedPaths, privatePath]) {
+      await assertSucceeds(uploadBytes(
+        ref(adminStorage, storagePath),
+        onePixelPng,
+        { contentType: 'image/webp' }
+      ));
+    }
+
+    for (const storagePath of approvedPaths) {
+      await assertSucceeds(getBytes(ref(publicStorage, storagePath)));
+    }
+    await assertFails(getBytes(ref(publicStorage, privatePath)));
+  });
+
   test.each([
     ['active non-admin', 'user-1', {}],
     ['claim-only', 'claim-only', { admin: true }],

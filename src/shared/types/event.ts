@@ -24,6 +24,7 @@ export interface Event {
   eligibilityType?: EventEligibilityType;
   rewardType?: EventRewardType;
   publicPolicyVerified?: boolean;
+  publicationVersion?: string;
   couponType?: EventCouponType;
   startDate: Date;
   endDate: Date;

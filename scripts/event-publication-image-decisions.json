@@ -1,0 +1,453 @@
+{
+  "version": "20260731",
+  "events": [
+    {
+      "id": "event-2026-01-layering-sale",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-01-layering-sale-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-01-layering-sale-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-01-welcome-coupon",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-01-welcome-coupon-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-01-welcome-coupon-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-02-knit-review",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-02-knit-review-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-02-knit-review-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-02-spring-preview",
+      "source": "legacy",
+      "wide": {
+        "action": "reuse",
+        "sourceUrl": "https://firebasestorage.googleapis.com/v0/b/hebimall.firebasestorage.app/o/events%2Fbanner%2Fevent-2026-02-spring-preview-20260714-wide.webp?alt=media",
+        "reason": "verified_safe_current_asset"
+      },
+      "card": {
+        "action": "reuse",
+        "sourceUrl": "https://firebasestorage.googleapis.com/v0/b/hebimall.firebasestorage.app/o/events%2Fthumbnail%2Fevent-2026-02-spring-preview-20260714-card.webp?alt=media",
+        "reason": "verified_safe_current_asset"
+      }
+    },
+    {
+      "id": "event-2026-03-trench-week",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-03-trench-week-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-03-trench-week-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-03-photo-review",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-03-photo-review-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-03-photo-review-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-03-white-day-coupon",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-03-white-day-coupon-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-03-white-day-coupon-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-04-shirt-collection",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-04-shirt-collection-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-04-shirt-collection-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-04-office-look",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-04-office-look-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-04-office-look-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-04-styling-coupon",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-04-styling-coupon-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-04-styling-coupon-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-05-denim-festival",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-05-denim-festival-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-05-denim-festival-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-05-family-coupon",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-05-family-coupon-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-05-family-coupon-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-05-best-review",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-05-best-review-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-05-best-review-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-06-midyear-sale",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-06-midyear-sale-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-06-midyear-sale-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-06-summer-linen",
+      "source": "legacy",
+      "wide": {
+        "action": "reuse",
+        "sourceUrl": "https://firebasestorage.googleapis.com/v0/b/hebimall.firebasestorage.app/o/events%2Fbanner%2Fevent-2026-06-summer-linen-20260714-wide.webp?alt=media",
+        "reason": "verified_safe_current_asset"
+      },
+      "card": {
+        "action": "reuse",
+        "sourceUrl": "https://firebasestorage.googleapis.com/v0/b/hebimall.firebasestorage.app/o/events%2Fthumbnail%2Fevent-2026-06-summer-linen-20260714-card.webp?alt=media",
+        "reason": "verified_safe_current_asset"
+      }
+    },
+    {
+      "id": "event-2026-07-vacation-coupon",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-07-vacation-coupon-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-07-vacation-coupon-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-07-cool-touch",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-07-cool-touch-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-07-cool-touch-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-07-summer-review",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-07-summer-review-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-07-summer-review-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "event-2026-08-pre-fall",
+      "source": "legacy",
+      "wide": {
+        "action": "reuse",
+        "sourceUrl": "https://firebasestorage.googleapis.com/v0/b/hebimall.firebasestorage.app/o/events%2Fbanner%2Fevent-2026-08-pre-fall-20260714-wide.webp?alt=media",
+        "reason": "verified_safe_current_asset"
+      },
+      "card": {
+        "action": "reuse",
+        "sourceUrl": "https://firebasestorage.googleapis.com/v0/b/hebimall.firebasestorage.app/o/events%2Fthumbnail%2Fevent-2026-08-pre-fall-20260714-card.webp?alt=media",
+        "reason": "verified_safe_current_asset"
+      }
+    },
+    {
+      "id": "event-2026-08-last-summer",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-last-summer-20260731-wide.webp",
+        "reason": "derived_from_existing_text_free_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-last-summer-20260731-card.webp",
+        "reason": "derived_from_existing_text_free_source"
+      }
+    },
+    {
+      "id": "h1WITXqWE2BL3G0ACiza",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/h1WITXqWE2BL3G0ACiza-20260731-wide.webp",
+        "reason": "generated_text_free_campaign_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/h1WITXqWE2BL3G0ACiza-20260731-card.webp",
+        "reason": "generated_text_free_campaign_source"
+      }
+    },
+    {
+      "id": "PacCrKVG9TikHo7lambG",
+      "source": "legacy",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/PacCrKVG9TikHo7lambG-20260731-wide.webp",
+        "reason": "generated_text_free_campaign_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/PacCrKVG9TikHo7lambG-20260731-card.webp",
+        "reason": "generated_text_free_campaign_source"
+      }
+    },
+    {
+      "id": "event-2026-08-summer-sale-edit",
+      "source": "new",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-summer-sale-edit-20260731-wide.webp",
+        "reason": "generated_text_free_campaign_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-summer-sale-edit-20260731-card.webp",
+        "reason": "generated_text_free_campaign_source"
+      }
+    },
+    {
+      "id": "event-2026-08-bag-accessory-sale",
+      "source": "new",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-bag-accessory-sale-20260731-wide.webp",
+        "reason": "generated_text_free_campaign_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-bag-accessory-sale-20260731-card.webp",
+        "reason": "generated_text_free_campaign_source"
+      }
+    },
+    {
+      "id": "event-2026-09-active-sale",
+      "source": "new",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-09-active-sale-20260731-wide.webp",
+        "reason": "generated_text_free_campaign_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-09-active-sale-20260731-card.webp",
+        "reason": "generated_text_free_campaign_source"
+      }
+    },
+    {
+      "id": "event-2026-08-prefall-layering-new",
+      "source": "new",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-prefall-layering-new-20260731-wide.webp",
+        "reason": "generated_text_free_campaign_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-prefall-layering-new-20260731-card.webp",
+        "reason": "generated_text_free_campaign_source"
+      }
+    },
+    {
+      "id": "event-2026-08-daily-bag-new",
+      "source": "new",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-daily-bag-new-20260731-wide.webp",
+        "reason": "generated_text_free_campaign_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-daily-bag-new-20260731-card.webp",
+        "reason": "generated_text_free_campaign_source"
+      }
+    },
+    {
+      "id": "event-2026-09-city-shoes-new",
+      "source": "new",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-09-city-shoes-new-20260731-wide.webp",
+        "reason": "generated_text_free_campaign_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-09-city-shoes-new-20260731-card.webp",
+        "reason": "generated_text_free_campaign_source"
+      }
+    },
+    {
+      "id": "event-2026-08-late-summer-style",
+      "source": "new",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-late-summer-style-20260731-wide.webp",
+        "reason": "generated_text_free_campaign_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-late-summer-style-20260731-card.webp",
+        "reason": "generated_text_free_campaign_source"
+      }
+    },
+    {
+      "id": "event-2026-09-back-to-city",
+      "source": "new",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-09-back-to-city-20260731-wide.webp",
+        "reason": "generated_text_free_campaign_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-09-back-to-city-20260731-card.webp",
+        "reason": "generated_text_free_campaign_source"
+      }
+    },
+    {
+      "id": "event-2026-08-summer-fit-review",
+      "source": "new",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-summer-fit-review-20260731-wide.webp",
+        "reason": "generated_text_free_campaign_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-08-summer-fit-review-20260731-card.webp",
+        "reason": "generated_text_free_campaign_source"
+      }
+    },
+    {
+      "id": "event-2026-09-prefall-fit-review",
+      "source": "new",
+      "wide": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-09-prefall-fit-review-20260731-wide.webp",
+        "reason": "generated_text_free_campaign_source"
+      },
+      "card": {
+        "action": "generate",
+        "output": "public/events/2026-publication/event-2026-09-prefall-fit-review-20260731-card.webp",
+        "reason": "generated_text_free_campaign_source"
+      }
+    }
+  ]
+}

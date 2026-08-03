@@ -6,6 +6,8 @@ import { useAuth } from "@/context/authProvider";
 import styles from "./page.module.css";
 import { OrderService } from "@/shared/services/orderService";
 import { Order, OrderStatus } from "@/shared/types/order";
+import { createCsv } from "@/shared/utils/csv";
+import { downloadOrdersCsv } from "./downloadOrdersCsv";
 
 interface OrderStats {
   total: number;
@@ -187,9 +189,8 @@ export default function AdminOrdersPage() {
     return new Intl.NumberFormat('ko-KR').format(amount) + '원';
   };
 
-  const handleExport = async () => {
+  const handleExport = () => {
     try {
-      // CSV 데이터 생성
       const headers = ['주문번호', '고객', '상품수량', '주문금액', '결제방법', '주문일', '상태'];
       const csvData = filteredOrders.map(order => [
         order.orderNumber,
@@ -201,15 +202,8 @@ export default function AdminOrdersPage() {
         getStatusText(order.status)
       ]);
 
-      const csvContent = [headers, ...csvData]
-        .map(row => row.join(','))
-        .join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `orders_${new Date().toISOString().split('T')[0]}.csv`;
-      link.click();
+      const csvContent = `\ufeff${createCsv([headers, ...csvData])}`;
+      downloadOrdersCsv(csvContent);
 
       alert('주문 데이터를 CSV로 내보냈습니다.');
     } catch (error) {

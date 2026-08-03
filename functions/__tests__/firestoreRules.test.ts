@@ -207,6 +207,14 @@ beforeEach(async () => {
         isActive: true,
         createdAt: fixedTime,
       }),
+      setDoc(doc(db, 'events', 'verified-ended-event'), {
+        title: '검증 완료 종료 이벤트',
+        publicPolicyVerified: true,
+        isActive: true,
+        startDate: Timestamp.fromDate(new Date('2026-01-01T00:00:00.000Z')),
+        endDate: Timestamp.fromDate(new Date('2026-01-31T23:59:59.000Z')),
+        createdAt: fixedTime,
+      }),
       setDoc(doc(db, 'events', 'verified-inactive-event'), {
         title: '검증 완료 비활성 이벤트',
         publicPolicyVerified: true,
@@ -1035,6 +1043,7 @@ describe('other server-managed collections', () => {
     const publicDb = testEnv.unauthenticatedContext().firestore();
 
     await assertSucceeds(getDoc(doc(publicDb, 'events', 'verified-event')));
+    await assertSucceeds(getDoc(doc(publicDb, 'events', 'verified-ended-event')));
     await assertFails(getDoc(doc(publicDb, 'events', 'verified-inactive-event')));
     await assertFails(getDoc(doc(publicDb, 'events', 'unverified-event')));
     await assertFails(getDoc(doc(publicDb, 'events', 'legacy-event')));
@@ -1045,7 +1054,10 @@ describe('other server-managed collections', () => {
       where('isActive', '==', true)
     );
     const snapshot = await assertSucceeds(getDocs(publicEventsQuery));
-    expect(snapshot.docs.map((eventDoc) => eventDoc.id)).toEqual(['verified-event']);
+    expect(snapshot.docs.map((eventDoc) => eventDoc.id).sort()).toEqual([
+      'verified-ended-event',
+      'verified-event',
+    ]);
 
     await assertFails(getDocs(collection(publicDb, 'events')));
     await assertFails(getDocs(query(

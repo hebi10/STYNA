@@ -20,7 +20,11 @@ jest.mock('@/shared/services/productService', () => ({
   },
 }));
 
-const createProduct = (id: string, status: Product['status']): Product => ({
+const createProduct = (
+  id: string,
+  status: Product['status'],
+  overrides: Partial<Product> = {},
+): Product => ({
   id,
   name: `상품 ${id}`,
   description: `${id} 설명`,
@@ -46,6 +50,7 @@ const createProduct = (id: string, status: Product['status']): Product => ({
     precautions: '단독 세탁',
     sizes: {},
   },
+  ...overrides,
 });
 
 const activeProduct = (id: string) => createProduct(id, 'active');
@@ -171,14 +176,54 @@ describe('loadEventProducts', () => {
 
     const products = await loadEventProducts({
       event: createEvent({ targetCategories: ['tops', 'outer'] }),
-      variant: 'new',
+      variant: 'special',
       service,
     });
 
     expect(products.map(product => product.id)).toEqual(['p1', 'p2', 'p3', 'p4']);
     expect(service.getProductsByCategory).toHaveBeenNthCalledWith(1, 'tops', 8);
     expect(service.getProductsByCategory).toHaveBeenNthCalledWith(2, 'outer', 8);
-    expect(service.getNewProducts).toHaveBeenCalledWith(8);
+    expect(service.getRecommendedProducts).toHaveBeenCalledWith(8);
+  });
+
+  test('세일 이벤트 카테고리에서는 실제 세일 상품만 유지한다', async () => {
+    const service = createProductLoader({
+      categories: {
+        tops: [
+          createProduct('sale-top', 'active', { isSale: true }),
+          createProduct('regular-top', 'active', { isSale: false }),
+        ],
+      },
+      fallback: [createProduct('sale-fallback', 'active', { isSale: true })],
+    });
+
+    const products = await loadEventProducts({
+      event: createEvent({ targetCategories: ['tops'] }),
+      variant: 'sale',
+      service,
+    });
+
+    expect(products.map(product => product.id)).toEqual(['sale-top', 'sale-fallback']);
+  });
+
+  test('신상품 이벤트 카테고리에서는 실제 신상품만 유지한다', async () => {
+    const service = createProductLoader({
+      categories: {
+        bags: [
+          createProduct('new-bag', 'active', { isNew: true }),
+          createProduct('old-bag', 'active', { isNew: false }),
+        ],
+      },
+      fallback: [createProduct('new-fallback', 'active', { isNew: true })],
+    });
+
+    const products = await loadEventProducts({
+      event: createEvent({ targetCategories: ['bags'] }),
+      variant: 'new',
+      service,
+    });
+
+    expect(products.map(product => product.id)).toEqual(['new-bag', 'new-fallback']);
   });
 
   test.each([
@@ -195,7 +240,12 @@ describe('loadEventProducts', () => {
 
   test('ignores failed explicit lookups and excluded categories while respecting the limit', async () => {
     const service = createProductLoader({
-      categories: { tops: [activeProduct('p1'), activeProduct('p2')] },
+      categories: {
+        tops: [
+          createProduct('p1', 'active', { isSale: true }),
+          createProduct('p2', 'active', { isSale: true }),
+        ],
+      },
       fallback: [activeProduct('p3')],
     });
     service.getProductById.mockRejectedValueOnce(new Error('lookup failed'));

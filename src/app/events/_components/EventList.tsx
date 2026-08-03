@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import AsyncStatePanel from '@/app/_components/AsyncStatePanel';
 import Button from '@/app/_components/Button';
@@ -9,6 +10,11 @@ import styles from './EventList.module.css';
 import { useEvent } from '@/context/eventProvider';
 import EventResponsiveImage from './EventResponsiveImage';
 import { isPublicEventReady } from '@/shared/utils/eventPublicPolicy';
+import {
+  countEventsByStatusTab,
+  EventStatusTab,
+  filterEventsByStatusTab,
+} from './eventListStatus';
 
 const FILTER_OPTIONS = [
   { type: 'all', label: '전체' },
@@ -37,6 +43,7 @@ function EventListHeading() {
 }
 
 export default function EventList() {
+  const [statusTab, setStatusTab] = useState<EventStatusTab>('current');
   const {
     events,
     filteredEvents,
@@ -52,13 +59,21 @@ export default function EventList() {
 
   const activeFilterType: EventFilterButton = filter.eventType ?? 'all';
   const publicEvents = filteredEvents.filter(isPublicEventReady);
-  const totalPages = Math.max(1, Math.ceil(publicEvents.length / eventsPerPage));
-  const startIndex = (currentPage - 1) * eventsPerPage;
+  const statusFilteredEvents = filterEventsByStatusTab(publicEvents, statusTab);
+  const totalPages = Math.max(1, Math.ceil(statusFilteredEvents.length / eventsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * eventsPerPage;
   const endIndex = startIndex + eventsPerPage;
-  const displayedEvents = publicEvents.slice(startIndex, endIndex);
+  const displayedEvents = statusFilteredEvents.slice(startIndex, endIndex);
 
   const handleFilterChange = (type: EventFilterButton) => {
     setFilter(type === 'all' ? {} : { eventType: type });
+    setCurrentPage(1);
+  };
+
+  const handleStatusTabChange = (nextTab: EventStatusTab) => {
+    setStatusTab(nextTab);
+    setCurrentPage(1);
   };
 
   if (loading) {
@@ -103,10 +118,12 @@ export default function EventList() {
   const emptyStateMessage =
     events.length === 0
       ? '진행 중인 이벤트가 없습니다.'
+      : statusTab === 'ended' && statusFilteredEvents.length === 0
+      ? '종료된 이벤트가 없습니다.'
       : activeFilterType === 'all'
       ? '현재 노출할 이벤트가 없습니다.'
       : `"${FILTER_OPTIONS.find(option => option.type === activeFilterType)?.label}" 조건에 맞는 이벤트가 없습니다.`;
-  const showEmptyState = publicEvents.length === 0;
+  const showEmptyState = statusFilteredEvents.length === 0;
   const showProductRecoveryActions = events.length === 0 || activeFilterType === 'all';
 
   return (
@@ -126,6 +143,25 @@ export default function EventList() {
         </div>
       </section>
 
+      <div className={styles.statusTabs} aria-label="이벤트 상태 필터">
+        <button
+          type="button"
+          className={`${styles.statusTabButton} ${statusTab === 'current' ? styles.active : ''}`}
+          aria-pressed={statusTab === 'current'}
+          onClick={() => handleStatusTabChange('current')}
+        >
+          진행·예정 이벤트 {countEventsByStatusTab(publicEvents, 'current')}개
+        </button>
+        <button
+          type="button"
+          className={`${styles.statusTabButton} ${statusTab === 'ended' ? styles.active : ''}`}
+          aria-pressed={statusTab === 'ended'}
+          onClick={() => handleStatusTabChange('ended')}
+        >
+          종료된 이벤트 {countEventsByStatusTab(publicEvents, 'ended')}개
+        </button>
+      </div>
+
       <div className={styles.eventToolbar}>
         <div className={styles.filters} aria-label="이벤트 유형 필터">
           {FILTER_OPTIONS.map(option => (
@@ -140,7 +176,9 @@ export default function EventList() {
             </button>
           ))}
         </div>
-        <p className={styles.eventCount}>{publicEvents.length.toLocaleString()}개 이벤트</p>
+        <p className={styles.eventCount}>
+          {statusFilteredEvents.length.toLocaleString()}개 이벤트
+        </p>
       </div>
 
       {showEmptyState ? (
@@ -211,8 +249,8 @@ export default function EventList() {
               <button
                 type="button"
                 className={styles.pageButton}
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
+                disabled={safeCurrentPage === 1}
               >
                 이전
               </button>
@@ -221,8 +259,8 @@ export default function EventList() {
                 <button
                   type="button"
                   key={page}
-                  className={`${styles.pageButton} ${currentPage === page ? styles.active : ''}`}
-                  aria-current={currentPage === page ? 'page' : undefined}
+                  className={`${styles.pageButton} ${safeCurrentPage === page ? styles.active : ''}`}
+                  aria-current={safeCurrentPage === page ? 'page' : undefined}
                   onClick={() => setCurrentPage(page)}
                 >
                   {page}
@@ -232,8 +270,8 @@ export default function EventList() {
               <button
                 type="button"
                 className={styles.pageButton}
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
+                disabled={safeCurrentPage === totalPages}
               >
                 다음
               </button>

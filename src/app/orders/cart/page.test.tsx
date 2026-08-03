@@ -182,7 +182,11 @@ describe('OrderCartPage policy copy', () => {
     const { container } = render(<OrderCartPage />);
 
     expect(await screen.findByText('테스트 상품')).toBeInTheDocument();
+    expect(formatShippingPolicy()).toBe(
+      '일반 배송 3,000원 · 5만원 이상 또는 무료배송 쿠폰 사용 시 무료 · 특급 배송 5,000원',
+    );
     expect(container.textContent).toContain(formatShippingPolicy());
+    expect(container.textContent).not.toContain('쿠폰 할인 적용 후 상품금액');
     expect(container.textContent).toContain('특급 배송 옵션(데모)');
     expect(container.textContent).not.toMatch(
       /당일\/익일|당일 출고|구매 시 적립금|구매.*1%|골드 회원 추가 할인/,

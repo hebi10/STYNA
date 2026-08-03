@@ -44,7 +44,7 @@ export function formatSignupBenefit(): string {
 export function formatShippingPolicy(): string {
   return (
     `일반 배송 ${formatNumber(COMMERCE_POLICY.shipping.standardFee)}원 · ` +
-    `쿠폰 할인 적용 후 상품금액 ${formatNumber(COMMERCE_POLICY.shipping.freeThreshold)}원 이상 또는 ` +
+    `${COMMERCE_POLICY.shipping.freeThreshold / 10000}만원 이상 또는 ` +
     '무료배송 쿠폰 사용 시 무료 · ' +
     `특급 배송 ${formatNumber(COMMERCE_POLICY.shipping.expressFee)}원`
   );

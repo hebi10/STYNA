@@ -59,6 +59,7 @@ const formatDate = (date: Date) =>
     month: 'long',
     day: 'numeric',
     weekday: 'short',
+    timeZone: 'Asia/Seoul',
   });
 
 const hasHtmlContent = (content?: string | null) =>

@@ -398,8 +398,8 @@ describe("chat Function", () => {
     const systemPrompt = providerBody.messages[0].content as string;
 
     expect(systemPrompt).toContain("3,000원");
-    expect(systemPrompt).toContain("50,000원");
-    expect(systemPrompt).toContain("쿠폰 할인 적용 후 상품금액");
+    expect(systemPrompt).toContain("5만원 이상");
+    expect(systemPrompt).not.toContain("쿠폰 할인 적용 후 상품금액");
     expect(systemPrompt).toMatch(/특급 배송.*5,000원/);
     expect(systemPrompt).toContain("평일 10:00~18:00");
     expect(systemPrompt).not.toMatch(/09:00|10:00~19:00|10시~19시/);

@@ -51,7 +51,11 @@ jest.mock('@/app/_components/Button', () => ({
 }));
 
 jest.mock('@/shared/services/eventService', () => ({
-  getEventStatus: () => 'ongoing',
+  getEventStatus: (event: Event, referenceDate: Date = new Date()) => {
+    if (!event.isActive || referenceDate > event.endDate) return 'ended';
+    if (referenceDate < event.startDate) return 'upcoming';
+    return 'ongoing';
+  },
   getFeaturedEvent: (events: Event[]) => events[0],
 }));
 
@@ -74,8 +78,8 @@ const baseEvent = (overrides: Partial<Event>): Event => ({
   eligibilityType: 'none',
   rewardType: 'none',
   publicPolicyVerified: true,
-  startDate: new Date('2026-06-01T00:00:00+09:00'),
-  endDate: new Date('2026-06-30T23:59:59+09:00'),
+  startDate: new Date('2026-07-01T00:00:00+09:00'),
+  endDate: new Date('2026-08-31T23:59:59+09:00'),
   isActive: true,
   discountRate: 60,
   participantCount: 120,
@@ -118,7 +122,13 @@ const renderEventList = () => {
 };
 
 describe('EventList', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-07-31T12:00:00+09:00'));
+  });
+
   afterEach(() => {
+    jest.useRealTimers();
     jest.clearAllMocks();
   });
 
@@ -212,6 +222,53 @@ describe('EventList', () => {
     expect(screen.getByRole('button', { name: '1' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: '2' })).not.toHaveAttribute('aria-current');
     expect(screen.queryByRole('button', { name: '3' })).not.toBeInTheDocument();
+  });
+
+  test('진행·예정과 종료 이벤트를 탭으로 나누고 탭 전환 시 첫 페이지로 이동한다', () => {
+    const setCurrentPage = jest.fn();
+    const events = [
+      baseEvent({ id: 'ongoing', title: '진행 이벤트' }),
+      baseEvent({
+        id: 'upcoming',
+        title: '예정 이벤트',
+        startDate: new Date('2026-08-10T00:00:00+09:00'),
+        endDate: new Date('2026-08-20T23:59:59+09:00'),
+      }),
+      baseEvent({
+        id: 'ended',
+        title: '종료 이벤트',
+        startDate: new Date('2026-06-01T00:00:00+09:00'),
+        endDate: new Date('2026-06-30T23:59:59+09:00'),
+      }),
+    ];
+
+    useEvent.mockReturnValue({
+      events,
+      filteredEvents: events,
+      filter: {},
+      currentPage: 2,
+      eventsPerPage: 8,
+      loading: false,
+      error: null,
+      setFilter: jest.fn(),
+      setCurrentPage,
+      refreshEvents: jest.fn(),
+    });
+
+    render(<EventList />);
+
+    const currentTab = screen.getByRole('button', { name: '진행·예정 이벤트 2개' });
+    const endedTab = screen.getByRole('button', { name: '종료된 이벤트 1개' });
+
+    expect(currentTab).toHaveAttribute('aria-pressed', 'true');
+    expect(endedTab).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(endedTab);
+
+    expect(setCurrentPage).toHaveBeenCalledWith(1);
+    expect(endedTab).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('heading', { level: 2, name: '종료 이벤트' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 2, name: '진행 이벤트' })).not.toBeInTheDocument();
   });
 
   test('renders event-shaped skeleton cards while loading', () => {
