@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import styles from './page.module.css';
+import EditProductModal from './_components/EditProductModal';
 import { useProduct } from '@/context/productProvider';
 import { useAuth } from '@/context/authProvider';
 import { Product } from '@/shared/types/product';
@@ -28,6 +29,11 @@ export default function AdminProductsPage() {
   const itemsPerPage = 10;
   const hasLoadedRef = useRef(false);
   const isLoadingRef = useRef(false);
+  const editModal = (
+    <Suspense fallback={null}>
+      <EditProductModal />
+    </Suspense>
+  );
 
   // 카테고리 목록 로드
   useEffect(() => {
@@ -95,9 +101,12 @@ export default function AdminProductsPage() {
   // 로딩 중이거나 권한이 없으면 표시하지 않음 (layout에서 처리됨)
   if (authLoading || isUserDataLoading || !user || !isAdmin) {
     return (
-      <div className={styles.container}>
-        <div className={styles.loading}>데이터 로딩 중...</div>
-      </div>
+      <>
+        <div className={styles.container}>
+          <div className={styles.loading}>데이터 로딩 중...</div>
+        </div>
+        {editModal}
+      </>
     );
   }
 
@@ -170,27 +179,34 @@ export default function AdminProductsPage() {
 
   if (loading) {
     return (
-      <div className={styles.container}>
-        <div className={styles.loading}>상품 목록을 불러오는 중...</div>
-      </div>
+      <>
+        <div className={styles.container}>
+          <div className={styles.loading}>상품 목록을 불러오는 중...</div>
+        </div>
+        {editModal}
+      </>
     );
   }
 
   if (error && products.length === 0) {
     return (
-      <div className={styles.container}>
-        <div className={styles.loading} role="alert">
-          <p>{error}</p>
-          <button type="button" className={styles.refreshButton} onClick={handleForceRefresh}>
-            다시 시도
-          </button>
+      <>
+        <div className={styles.container}>
+          <div className={styles.loading} role="alert">
+            <p>{error}</p>
+            <button type="button" className={styles.refreshButton} onClick={handleForceRefresh}>
+              다시 시도
+            </button>
+          </div>
         </div>
-      </div>
+        {editModal}
+      </>
     );
   }
 
   return (
-    <div className={styles.container}>
+    <>
+      <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.title}>상품 관리</h1>
         <div className={styles.headerActions}>
@@ -330,7 +346,7 @@ export default function AdminProductsPage() {
                 <td>
                   <div className={styles.actions}>
                     <Link
-                      href={`/admin/dashboard/products/${product.id}/edit`}
+                      href={`/admin/dashboard/products?edit=${encodeURIComponent(product.id)}`}
                       className={styles.editButton}
                     >
                       수정
@@ -393,6 +409,8 @@ export default function AdminProductsPage() {
           </span>
         </div>
       </div>
-    </div>
+      </div>
+      {editModal}
+    </>
   );
 }

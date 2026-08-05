@@ -35,6 +35,7 @@
 - 디자인 시스템 QA : design-system-qa.md
 - 대시보드 정리 : dashboard.md
 - 관리자 상품 수정 Firebase 안전 모달 설계 : superpowers/specs/2026-08-05-admin-product-edit-modal-firebase-design.md
+- 관리자 상품 수정 Firebase 안전 모달 실행 계획 : superpowers/plans/2026-08-05-admin-product-edit-modal-firebase.md
 - 쿠폰/포인트 정책 정리 : coupon-system.md
 - 스토리지 구조 정리 : storage-structure.md
 - 이미지 전송 성능 : image-delivery-performance.md
