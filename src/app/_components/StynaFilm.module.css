@@ -27,7 +27,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
-  margin-top: 0.8rem;
+  margin-top: 0.5rem;
 }
 
 .headerActions {
@@ -40,7 +40,7 @@
 .title {
   margin: 0;
   font-size: clamp(2rem, 5vw, 4.5rem);
-  font-weight: 600;
+  font-weight: 500;
   line-height: 0.96;
   letter-spacing: -0.065em;
 }
@@ -69,10 +69,22 @@
 }
 
 .video {
-  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease-out;
+}
+
+.activeVideo {
+  opacity: 1;
+}
+
+.bufferedVideo {
+  opacity: 0;
 }
 
 .videoCaption {

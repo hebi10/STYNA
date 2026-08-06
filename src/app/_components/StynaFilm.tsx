@@ -7,6 +7,7 @@ import styles from './StynaFilm.module.css';
 
 const STORAGE_BUCKET = 'hebimall.firebasestorage.app';
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+type VideoSlot = 0 | 1;
 
 const storageUrl = (path: string) =>
   `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodeURIComponent(path)}?alt=media`;
@@ -52,17 +53,36 @@ export const STYNA_FILM_CHAPTERS = [
 
 export default function StynaFilm() {
   const sectionRef = useRef<HTMLElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRefs = useRef<Array<HTMLVideoElement | null>>([null, null]);
+  const activeSlotRef = useRef<VideoSlot>(0);
   const [chapterIndex, setChapterIndex] = useState(0);
+  const [activeSlot, setActiveSlot] = useState<VideoSlot>(0);
+  const [slotChapters, setSlotChapters] = useState<[number, number | null]>([0, null]);
+  const [loadingSlot, setLoadingSlot] = useState<VideoSlot | null>(null);
   const [isInView, setIsInView] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const chapter = STYNA_FILM_CHAPTERS[chapterIndex];
+  const activeChapterIndex = slotChapters[activeSlot] ?? 0;
+  const activeChapter = STYNA_FILM_CHAPTERS[activeChapterIndex];
 
   const resetFilm = () => {
+    videoRefs.current.forEach((video) => {
+      video?.pause();
+      if (video) {
+        video.currentTime = 0;
+      }
+    });
     setChapterIndex(0);
+    setActiveSlot(0);
+    setSlotChapters([0, null]);
+    setLoadingSlot(null);
     setHasCompleted(false);
   };
+
+  useEffect(() => {
+    activeSlotRef.current = activeSlot;
+  }, [activeSlot]);
 
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') {
@@ -92,12 +112,8 @@ export default function StynaFilm() {
       }
 
       setIsInView(false);
-      videoRef.current?.pause();
-      if (videoRef.current) {
-        videoRef.current.currentTime = 0;
-      }
       resetFilm();
-    }, { threshold: 0.45 });
+    }, { threshold: 0 });
 
     observer.observe(section);
     return () => observer.disconnect();
@@ -108,25 +124,75 @@ export default function StynaFilm() {
       return;
     }
 
-    void videoRef.current?.play().catch(() => undefined);
-  }, [chapterIndex, hasCompleted, isInView, prefersReducedMotion]);
+    void videoRefs.current[activeSlotRef.current]?.play().catch(() => undefined);
+  }, [hasCompleted, isInView, prefersReducedMotion]);
 
-  const showNextChapter = () => {
-    if (chapterIndex === STYNA_FILM_CHAPTERS.length - 1) {
+  const queueChapter = (nextChapterIndex: number) => {
+    if (nextChapterIndex === activeChapterIndex) {
+      const activeVideo = videoRefs.current[activeSlot];
+      if (activeVideo) {
+        activeVideo.currentTime = 0;
+        void activeVideo.play().catch(() => undefined);
+      }
+      setChapterIndex(nextChapterIndex);
+      setHasCompleted(false);
+      return;
+    }
+
+    const nextSlot: VideoSlot = activeSlot === 0 ? 1 : 0;
+    setChapterIndex(nextChapterIndex);
+    setSlotChapters((currentSlots) => {
+      const updatedSlots: [number, number | null] = [...currentSlots];
+      updatedSlots[nextSlot] = nextChapterIndex;
+      return updatedSlots;
+    });
+    setLoadingSlot(nextSlot);
+    setHasCompleted(false);
+  };
+
+  const showNextChapter = (currentChapterIndex: number) => {
+    if (currentChapterIndex === STYNA_FILM_CHAPTERS.length - 1) {
       setHasCompleted(true);
       return;
     }
 
-    setChapterIndex((currentIndex) => currentIndex + 1);
+    queueChapter(currentChapterIndex + 1);
   };
 
   const selectChapter = (index: number) => {
-    if (index === chapterIndex && videoRef.current) {
-      videoRef.current.currentTime = 0;
+    queueChapter(index);
+  };
+
+  const handleBufferedVideoCanPlay = (slot: VideoSlot) => {
+    if (slot !== loadingSlot || !isInView || prefersReducedMotion) {
+      return;
     }
 
-    setHasCompleted(false);
-    setChapterIndex(index);
+    void videoRefs.current[slot]?.play().catch(() => undefined);
+  };
+
+  const handleBufferedVideoPlaying = (slot: VideoSlot) => {
+    if (slot !== loadingSlot) {
+      return;
+    }
+
+    setActiveSlot(slot);
+    setLoadingSlot(null);
+  };
+
+  const handleBufferedVideoError = (slot: VideoSlot) => {
+    if (slot !== loadingSlot) {
+      return;
+    }
+
+    const failedChapterIndex = slotChapters[slot];
+    if (failedChapterIndex === null || failedChapterIndex === STYNA_FILM_CHAPTERS.length - 1) {
+      setLoadingSlot(null);
+      setHasCompleted(true);
+      return;
+    }
+
+    queueChapter(failedChapterIndex + 1);
   };
 
   return (
@@ -149,23 +215,40 @@ export default function StynaFilm() {
         </header>
 
         <div className={styles.videoFrame}>
-          <video
-            key={chapter.id}
-            ref={videoRef}
-            data-testid="styna-film-video"
-            className={styles.video}
-            src={chapter.videoSrc}
-            poster={chapter.posterSrc}
-            muted
-            playsInline
-            preload="metadata"
-            onEnded={showNextChapter}
-            onError={showNextChapter}
-            aria-label={`${chapter.name} 영상`}
-          />
+          {slotChapters.map((slotChapterIndex, slot) => {
+            if (slotChapterIndex === null) {
+              return null;
+            }
+
+            const slotNumber = slot as VideoSlot;
+            const slotChapter = STYNA_FILM_CHAPTERS[slotChapterIndex];
+            const isActiveSlot = slotNumber === activeSlot;
+            const isLoadingSlot = slotNumber === loadingSlot;
+
+            return (
+              <video
+                key={slotNumber}
+                ref={(video) => {
+                  videoRefs.current[slotNumber] = video;
+                }}
+                data-testid={isActiveSlot ? 'styna-film-video' : isLoadingSlot ? 'styna-film-next-video' : undefined}
+                className={`${styles.video} ${isActiveSlot ? styles.activeVideo : styles.bufferedVideo}`}
+                src={slotChapter.videoSrc}
+                poster={slotChapter.posterSrc}
+                muted
+                playsInline
+                preload={isActiveSlot ? 'metadata' : 'auto'}
+                onCanPlay={isLoadingSlot ? () => handleBufferedVideoCanPlay(slotNumber) : undefined}
+                onPlaying={isLoadingSlot ? () => handleBufferedVideoPlaying(slotNumber) : undefined}
+                onEnded={isActiveSlot ? () => showNextChapter(slotChapterIndex) : undefined}
+                onError={isActiveSlot ? () => showNextChapter(slotChapterIndex) : () => handleBufferedVideoError(slotNumber)}
+                aria-label={`${slotChapter.name} 영상`}
+              />
+            );
+          })}
           <div className={styles.videoCaption} aria-hidden="true">
-            <strong>{chapter.line}</strong>
-            <span>{chapter.name}</span>
+            <strong>{activeChapter.line}</strong>
+            <span>{activeChapter.name}</span>
           </div>
         </div>
 

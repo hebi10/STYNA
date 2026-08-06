@@ -22,6 +22,13 @@ function setViewportVisibility(isIntersecting: boolean) {
   });
 }
 
+async function startNextVideo() {
+  const nextVideo = await screen.findByTestId('styna-film-next-video');
+  fireEvent.canPlay(nextVideo);
+  fireEvent.playing(nextVideo);
+  return screen.getByTestId('styna-film-video');
+}
+
 beforeEach(() => {
   observerCallback = jest.fn();
   window.IntersectionObserver = jest.fn().mockImplementation((callback: IntersectionObserverCallback) => {
@@ -82,6 +89,7 @@ describe('StynaFilm', () => {
     setViewportVisibility(true);
 
     fireEvent.click(screen.getByRole('button', { name: '유틸리티 빅 토트백 영상 선택' }));
+    await startNextVideo();
 
     await waitFor(() => expect(screen.getByTestId('styna-film-video'))
       .toHaveAttribute('src', expect.stringContaining('utility-big-tote-bag')));
@@ -89,6 +97,24 @@ describe('StynaFilm', () => {
       .toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('link', { name: '유틸리티 빅 토트백 상품 보러가기' }))
       .toHaveAttribute('href', '/products/utility-big-tote-bag');
+  });
+
+  test('keeps the current video visible until the selected video starts playing', async () => {
+    render(<StynaFilm />);
+    setViewportVisibility(true);
+
+    const currentVideo = screen.getByTestId('styna-film-video');
+    fireEvent.click(screen.getByRole('button', { name: '유틸리티 빅 토트백 영상 선택' }));
+
+    const nextVideo = await screen.findByTestId('styna-film-next-video');
+    expect(currentVideo).toHaveAttribute('src', expect.stringContaining('cool-touch-oversized-shirt'));
+    expect(nextVideo).toHaveAttribute('src', expect.stringContaining('utility-big-tote-bag'));
+
+    fireEvent.canPlay(nextVideo);
+    fireEvent.playing(nextVideo);
+
+    expect(screen.getByTestId('styna-film-video'))
+      .toHaveAttribute('src', expect.stringContaining('utility-big-tote-bag'));
   });
 
   test('plays each chapter once in order and stops after the fourth video', async () => {
@@ -99,14 +125,17 @@ describe('StynaFilm', () => {
     expect(video).toHaveAttribute('src', expect.stringContaining('cool-touch-oversized-shirt'));
 
     fireEvent.ended(video);
+    await startNextVideo();
     await waitFor(() => expect(screen.getByTestId('styna-film-video'))
       .toHaveAttribute('src', expect.stringContaining('mesh-low-profile-sneakers')));
 
     fireEvent.ended(screen.getByTestId('styna-film-video'));
+    await startNextVideo();
     await waitFor(() => expect(screen.getByTestId('styna-film-video'))
       .toHaveAttribute('src', expect.stringContaining('utility-big-tote-bag')));
 
     fireEvent.ended(screen.getByTestId('styna-film-video'));
+    await startNextVideo();
     await waitFor(() => expect(screen.getByTestId('styna-film-video'))
       .toHaveAttribute('src', expect.stringContaining('light-zip-up-jacket')));
 
@@ -120,6 +149,7 @@ describe('StynaFilm', () => {
     render(<StynaFilm />);
     setViewportVisibility(true);
     fireEvent.ended(screen.getByTestId('styna-film-video'));
+    await startNextVideo();
     await waitFor(() => expect(screen.getByTestId('styna-film-video'))
       .toHaveAttribute('src', expect.stringContaining('mesh-low-profile-sneakers')));
 
