@@ -105,8 +105,8 @@ describe('Home shopping-first composition', () => {
       banner,
       category,
       featured,
-      stynaFilm,
       newArrivals,
+      stynaFilm,
       ranking,
       sale,
       styleNow,
@@ -118,8 +118,9 @@ describe('Home shopping-first composition', () => {
       Array.from(container.querySelectorAll('section')).indexOf(section!),
     );
     expect(positions).toEqual([...positions].sort((left, right) => left - right));
-    expect(featured.nextElementSibling).toBe(stynaFilm);
-    expect(stynaFilm.nextElementSibling).toBe(newArrivals);
+    expect(featured.nextElementSibling).toBe(newArrivals);
+    expect(newArrivals?.nextElementSibling).toBe(stynaFilm);
+    expect(stynaFilm.nextElementSibling).toBe(ranking);
     expect(styleNow.nextElementSibling).toBe(portfolio);
     expect(portfolio.nextElementSibling).toBeNull();
 
