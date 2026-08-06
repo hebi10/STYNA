@@ -24,6 +24,8 @@
 - STYNA FILM 무음 자동 재생 섹션 설계 : superpowers/specs/2026-08-06-styna-film-autoplay-design.md
 - STYNA FILM 무음 자동 재생 섹션 실행 계획 : superpowers/plans/2026-08-06-styna-film-autoplay.md
 - 메인 상단 배너 작업 영역 : main-banner.md
+- STYNA 공유 미리보기 OG 이미지 제작 기획 : superpowers/specs/2026-08-06-styna-og-image-design.md
+- STYNA 공유 미리보기 OG 이미지 구현 계획 : superpowers/plans/2026-08-06-styna-og-image.md
 - 메인 배너 가변 프리뷰·바 네비게이션 설계 : superpowers/specs/2026-08-06-main-banner-responsive-preview-design.md
 - 메인 배너 데스크톱 정사각형·모바일 세로형 구현 계획 : superpowers/plans/2026-08-06-main-banner-responsive-mobile-event.md
 - 메인 배너 드래그·무한 순환 안정화 설계 : superpowers/specs/2026-07-13-main-banner-drag-loop-design.md

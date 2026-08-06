@@ -15,8 +15,11 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <h1 className={styles.visuallyHidden}>STYNA 패션 쇼핑몰</h1>
+
+      {/* 카테고리 */}
       <MainBanner />
 
+      {/* 이번주 추천 상품 */}
       <section className={styles.categorySection}>
         <div className={styles.sectionContainer}>
           <div className={styles.compactHeader}>
@@ -33,14 +36,12 @@ export default function Home() {
           />
         </div>
       </section>
-
       <FeaturedProducts
         sectionClassName={styles.productBand}
         viewAllLabel="전체보기"
       />
 
-      <StynaFilm />
-
+    {/* 신상품 */}
       <section id="new-arrivals" className={styles.productBand}>
         <ProductSection
           className={styles.bandSection}
@@ -53,6 +54,9 @@ export default function Home() {
           viewAllLabel="전체보기"
         />
       </section>
+
+      {/* 영상 상품 추천 */}
+      <StynaFilm />
 
       <section id="best-ranking" className={styles.rankingBand}>
         <ProductSection
