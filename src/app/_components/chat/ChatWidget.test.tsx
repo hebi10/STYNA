@@ -204,14 +204,14 @@ describe('ChatWidget', () => {
     }
   });
 
-  test('keeps the initial chat window compact on desktop and mobile', () => {
+  test('uses a generous fixed chat height on desktop and mobile', () => {
     const css = readFileSync(
       resolve(process.cwd(), 'src/app/_components/chat/ChatWidget.module.css'),
       'utf8',
     );
 
-    expect(css).toMatch(/height:\s*min\(440px,\s*calc\(100dvh\s*-\s*5rem\)\)/);
-    expect(css).toMatch(/height:\s*min\(440px,\s*calc\(100dvh\s*-\s*5\.75rem\)\)/);
+    expect(css).toMatch(/height:\s*min\(600px,\s*calc\(100dvh\s*-\s*5rem\)\)/);
+    expect(css).toMatch(/@media\s*\(max-width:\s*480px\)\s*\{[\s\S]*?bottom:\s*calc\(0\.75rem\s*\+\s*env\(safe-area-inset-bottom\)\)[\s\S]*?height:\s*min\(600px,\s*calc\(100dvh\s*-\s*1\.5rem\)\)/);
   });
 
   test('renders an icon-only toggle with a labeled, enabled input', () => {
