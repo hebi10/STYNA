@@ -29,8 +29,8 @@ jest.mock('./AsyncStatePanel.module.css', () => ({
 
 jest.mock('next/link', () => ({
   __esModule: true,
-  default: ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <a href={href}>{children}</a>
+  default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
+    <a href={href} {...props}>{children}</a>
   ),
 }));
 
@@ -79,10 +79,38 @@ describe('FeaturedProducts', () => {
     render(<FeaturedProducts />);
 
     expect(screen.getByRole('heading', { name: '관리자 추천' })).toBeInTheDocument();
-    expect(screen.getAllByRole('article').map((item) => item.textContent)).toEqual([
-      '두 번째 관리자 추천',
-      '첫 번째 관리자 추천',
-    ]);
+    expect(screen.getByRole('link', { name: '두 번째 관리자 추천 상품 보기' }))
+      .toHaveAttribute('href', '/products/featured-2');
+    expect(screen.getByRole('link', { name: '첫 번째 관리자 추천 상품 보기' }))
+      .toHaveAttribute('href', '/products/featured-1');
+  });
+
+  test('shows a configurable mood image alongside at most three curated product links', () => {
+    jest.mocked(useQuery).mockReturnValue({
+      isLoading: false,
+      data: {
+        config: {
+          title: 'STYNA SELECT',
+          subtitle: '세 가지 선택',
+          description: '테스트 설명',
+          heroImage: '/style-now/autumn/style-now-autumn-main.webp',
+          isActive: true,
+        },
+        products: [
+          { id: 'select-1', name: '첫 번째 선택', brand: 'STYNA', price: 39000, images: [], stock: 2 },
+          { id: 'select-2', name: '두 번째 선택', brand: 'STYNA', price: 49000, images: [], stock: 2 },
+          { id: 'select-3', name: '세 번째 선택', brand: 'STYNA', price: 59000, images: [], stock: 2 },
+          { id: 'select-4', name: '노출하면 안 되는 선택', brand: 'STYNA', price: 69000, images: [], stock: 2 },
+        ],
+      },
+    } as never);
+
+    render(<FeaturedProducts />);
+
+    expect(screen.getByRole('img', { name: 'STYNA SELECT 무드 이미지' }))
+      .toHaveAttribute('src', expect.stringContaining('style-now-autumn-main.webp'));
+    expect(screen.getAllByRole('link', { name: /상품 보기$/ })).toHaveLength(3);
+    expect(screen.queryByText('노출하면 안 되는 선택')).not.toBeInTheDocument();
   });
 
   test('shows a compact recovery state for an active featured section with no products', () => {
@@ -167,7 +195,7 @@ describe('FeaturedProducts', () => {
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument();
   });
 
-  test('falls back to at most four public recommended products when the featured config fails', () => {
+  test('falls back to at most three public recommended products when the featured config fails', () => {
     jest.mocked(useQuery).mockReturnValue({
       isLoading: false,
       isError: true,
@@ -192,9 +220,9 @@ describe('FeaturedProducts', () => {
 
     render(<FeaturedProducts />);
 
-    expect(screen.getAllByRole('article')).toHaveLength(4);
+    expect(screen.getAllByRole('link', { name: /상품 보기$/ })).toHaveLength(3);
     expect(screen.getByText('대체 추천 1')).toBeInTheDocument();
-    expect(screen.queryByText('대체 추천 5')).not.toBeInTheDocument();
+    expect(screen.queryByText('대체 추천 4')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 

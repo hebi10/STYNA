@@ -2,10 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import Image from 'next/image';
 import { FeaturedProductService } from '@/shared/services/featuredProductService';
 import { useHomeProducts } from '@/shared/hooks/useProducts';
 import { productKeys } from '@/shared/hooks/queryKeys';
-import ProductCard from '@/app/products/_components/ProductCard';
+import { getProductPricing } from '@/shared/utils/productPricing';
 import AsyncStatePanel from './AsyncStatePanel';
 import styles from './FeaturedProducts.module.css';
 
@@ -32,7 +33,7 @@ export default function FeaturedProducts({
     staleTime: 5 * 60 * 1000,
   });
   const homeQuery = useHomeProducts();
-  const fallbackProducts = homeQuery.data?.recommendedProducts.slice(0, 4) ?? [];
+  const fallbackProducts = homeQuery.data?.recommendedProducts.slice(0, 3) ?? [];
   const isFallback = featuredQuery.isError && fallbackProducts.length > 0;
   const section = featuredQuery.data;
 
@@ -75,11 +76,14 @@ export default function FeaturedProducts({
     return null;
   }
 
-  const products = isFallback ? fallbackProducts : section!.products;
+  const products = (isFallback ? fallbackProducts : section!.products).slice(0, 3);
   const isEmpty = products.length === 0;
   const resolvedTitle = title || (isFallback ? '추천 상품' : section!.config.title);
   const resolvedSubtitle = subtitle || (isFallback ? undefined : section!.config.subtitle);
   const resolvedDescription = description || (isFallback ? undefined : section!.config.description);
+  const heroImage = isFallback
+    ? '/style-now/autumn/style-now-autumn-main.webp'
+    : section!.config.heroImage || '/style-now/autumn/style-now-autumn-main.webp';
 
   return (
     <section className={sectionClassNameCombined}>
@@ -110,24 +114,63 @@ export default function FeaturedProducts({
             </Link>
           </div>
         ) : (
-          <div className={styles.productGrid}>
-            {products.map((product) => (
-              <ProductCard
-                key={product.id}
-                id={product.id}
-                name={product.name}
-                brand={product.brand}
-                price={product.price}
-                originalPrice={product.originalPrice}
-                isNew={product.isNew}
-                isSale={product.isSale}
-                saleRate={product.saleRate}
-                rating={product.rating}
-                reviewCount={product.reviewCount}
-                image={product.mainImage || product.images[0]}
-                stock={product.stock}
+          <div className={styles.editorialLayout}>
+            <Link href="/recommend" className={styles.heroLink}>
+              <Image
+                src={heroImage}
+                alt={`${resolvedTitle} 무드 이미지`}
+                fill
+                sizes="(max-width: 768px) 100vw, 66vw"
+                className={styles.heroImage}
               />
-            ))}
+            </Link>
+
+            <div className={styles.productList}>
+              {products.map((product, index) => {
+                const pricing = getProductPricing({
+                  price: product.price,
+                  originalPrice: product.originalPrice,
+                  saleRate: product.saleRate,
+                });
+                const image = product.mainImage || product.images[0];
+
+                return (
+                  <Link
+                    key={product.id}
+                    href={`/products/${product.id}`}
+                    className={styles.productRow}
+                    aria-label={`${product.name} 상품 보기`}
+                  >
+                    <span className={styles.productNumber}>{String(index + 1).padStart(2, '0')}</span>
+                    <span className={styles.thumbnail}>
+                      {image ? (
+                        <Image
+                          src={image}
+                          alt=""
+                          fill
+                          sizes="96px"
+                          className={styles.thumbnailImage}
+                        />
+                      ) : (
+                        <span className={styles.thumbnailPlaceholder} aria-hidden="true" />
+                      )}
+                    </span>
+                    <span className={styles.productCopy}>
+                      <span className={styles.productBrand}>{product.brand}</span>
+                      <strong className={styles.productName}>{product.name}</strong>
+                      <span className={styles.priceLine}>
+                        {pricing.listPrice > pricing.salePrice && (
+                          <span className={styles.originalPrice}>
+                            {pricing.listPrice.toLocaleString('ko-KR')}원
+                          </span>
+                        )}
+                        <span>{pricing.salePrice.toLocaleString('ko-KR')}원</span>
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

@@ -35,7 +35,6 @@ export default function Home() {
 
       <FeaturedProducts
         sectionClassName={styles.productBand}
-        description="상의와 가방을 함께 살펴보는 스타일 조합"
         viewAllLabel="전체보기"
       />
 
@@ -84,9 +83,10 @@ export default function Home() {
           </Link>
         </div>
       </section>
+      
+      <StyleNowSection />
 
       <PortfolioDemoSection />
-      <StyleNowSection />
     </div>
   );
 }

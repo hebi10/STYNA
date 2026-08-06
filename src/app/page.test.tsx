@@ -83,6 +83,7 @@ describe('Home shopping-first composition', () => {
     expect(screen.queryByText('BEST RANKING')).not.toBeInTheDocument();
     expect(screen.queryByText('SEASON OFF')).not.toBeInTheDocument();
     expect(screen.queryByText('PORTFOLIO CONTACT')).not.toBeInTheDocument();
+    expect(screen.queryByText('상의와 가방을 함께 살펴보는 스타일 조합')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: '스타일나우' }))
       .toBeInTheDocument();
 

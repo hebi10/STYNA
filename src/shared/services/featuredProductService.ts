@@ -19,6 +19,7 @@ export interface FeaturedProductConfig {
   title: string;
   subtitle: string;
   description: string;
+  heroImage: string;
   isActive: boolean;
   maxCount: number;
   createdAt: Date;
@@ -36,11 +37,12 @@ export class FeaturedProductService {
   // 기본 추천 상품 설정
   private static defaultConfig: Omit<FeaturedProductConfig, 'id' | 'createdAt' | 'updatedAt'> = {
     productIds: [],
-    title: '추천 상품',
-    subtitle: '관리자가 등록한 상품',
-    description: '등록된 추천 상품을 확인해 보세요',
+    title: 'STYNA SELECT',
+    subtitle: '지금 가장 잘 어울리는 세 가지 아이템을 골랐습니다',
+    description: '한 가지 무드로 자연스럽게 이어지는 스타일을 만나보세요.',
+    heroImage: '/style-now/autumn/style-now-autumn-main.webp',
     isActive: true,
-    maxCount: 4
+    maxCount: 3
   };
 
   /**
@@ -59,8 +61,9 @@ export class FeaturedProductService {
           title: data.title || this.defaultConfig.title,
           subtitle: data.subtitle || this.defaultConfig.subtitle,
           description: data.description || this.defaultConfig.description,
+          heroImage: data.heroImage || this.defaultConfig.heroImage,
           isActive: data.isActive ?? this.defaultConfig.isActive,
-          maxCount: data.maxCount || this.defaultConfig.maxCount,
+          maxCount: Math.min(data.maxCount || this.defaultConfig.maxCount, this.defaultConfig.maxCount),
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date(),
         };
@@ -96,6 +99,7 @@ export class FeaturedProductService {
       title?: string;
       subtitle?: string;
       description?: string;
+      heroImage?: string;
       maxCount?: number;
       isActive?: boolean;
     }
@@ -106,7 +110,8 @@ export class FeaturedProductService {
         title: options?.title || this.defaultConfig.title,
         subtitle: options?.subtitle || this.defaultConfig.subtitle,
         description: options?.description || this.defaultConfig.description,
-        maxCount: options?.maxCount || this.defaultConfig.maxCount,
+        heroImage: options?.heroImage || this.defaultConfig.heroImage,
+        maxCount: Math.min(options?.maxCount || this.defaultConfig.maxCount, this.defaultConfig.maxCount),
         isActive: options?.isActive ?? this.defaultConfig.isActive,
         updatedAt: Timestamp.now(),
       };
@@ -170,8 +175,9 @@ export class FeaturedProductService {
           title: data.title || this.defaultConfig.title,
           subtitle: data.subtitle || this.defaultConfig.subtitle,
           description: data.description || this.defaultConfig.description,
+          heroImage: data.heroImage || this.defaultConfig.heroImage,
           isActive: data.isActive ?? this.defaultConfig.isActive,
-          maxCount: data.maxCount || this.defaultConfig.maxCount,
+          maxCount: Math.min(data.maxCount || this.defaultConfig.maxCount, this.defaultConfig.maxCount),
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date(),
         };

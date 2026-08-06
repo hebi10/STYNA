@@ -77,6 +77,7 @@ describe('FeaturedProductService.getFeaturedSection', () => {
     expect(ProductService.getPublicProductById).toHaveBeenCalledTimes(3);
     expect(section?.products.map((item) => item.id)).toEqual(['second', 'first']);
     expect(section?.config.title).toBe('편집 추천');
+    expect(section?.config.heroImage).toBe('/style-now/autumn/style-now-autumn-main.webp');
   });
 
   test('rejects when the featured config lookup fails', async () => {
