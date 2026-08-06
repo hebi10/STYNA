@@ -33,7 +33,7 @@
 
 .title {
   margin: 0;
-  font-weight: 600;
+  font-weight: 500;
   font-size: clamp(2rem, 3.4vw, 3rem);
   line-height: 1.08;
   letter-spacing: -0.032em;
@@ -181,10 +181,6 @@
 .heroImage {
   object-fit: cover;
   transition: transform 0.35s ease;
-}
-
-.heroLink:hover .heroImage {
-  transform: scale(1.025);
 }
 
 .heroLink:focus-visible,
