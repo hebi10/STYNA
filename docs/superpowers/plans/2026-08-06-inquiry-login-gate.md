@@ -35,7 +35,7 @@
 **Interfaces:**
 - Consumes: `useAuth(): { user, loading, userData, isUserDataLoading }` from `src/context/authProvider.tsx`
 - Consumes: existing login-page safe redirect behavior for `redirect=/cs/inquiry`
-- Produces: unauthenticated UI with `role="status"` during auth loading, a single `h1`, and a link named `로그인하고 문의하기`
+- Produces: unauthenticated UI with `role="status"` during auth loading, the customer-support h1 아래의 h2, and a link named `로그인하고 문의하기`
 
 - [ ] **Step 1: Add the failing guest-state component tests**
 
@@ -48,7 +48,7 @@
     render(<InquiryPage />);
 
     expect(screen.getByRole('status')).toHaveTextContent('로그인 상태를 확인하고 있습니다.');
-    expect(screen.queryByRole('heading', { name: '로그인 후 1:1 문의를 남길 수 있어요' }))
+    expect(screen.queryByRole('heading', { level: 2, name: '로그인 후 1:1 문의를 남길 수 있어요' }))
       .not.toBeInTheDocument();
   });
 
@@ -57,7 +57,7 @@
 
     render(<InquiryPage />);
 
-    expect(screen.getByRole('heading', { name: '로그인 후 1:1 문의를 남길 수 있어요' }))
+    expect(screen.getByRole('heading', { level: 2, name: '로그인 후 1:1 문의를 남길 수 있어요' }))
       .toBeInTheDocument();
     expect(screen.getByText('문의 작성과 답변 확인은 로그인한 회원만 이용할 수 있습니다.'))
       .toBeInTheDocument();
@@ -65,7 +65,7 @@
       .toHaveAttribute('href', '/auth/login?redirect=/cs/inquiry');
     expect(screen.getByRole('link', { name: '로그인하고 문의하기' }))
       .toHaveClass('loginButton');
-    expect(screen.getByRole('heading', { name: '로그인 후 1:1 문의를 남길 수 있어요' })
+    expect(screen.getByRole('heading', { level: 2, name: '로그인 후 1:1 문의를 남길 수 있어요' })
       .closest('section'))
       .toHaveClass('loginRequired');
     expect(screen.queryByRole('button', { name: '문의 등록' })).not.toBeInTheDocument();
@@ -96,7 +96,7 @@
       <div className={`${styles.inquiryContainer} ${styles.guestContainer}`}>
         <section className={styles.loginRequired} aria-labelledby="inquiry-login-title">
           <span className={styles.loginEyebrow}>1:1 INQUIRY</span>
-          <h1 id="inquiry-login-title">로그인 후 1:1 문의를 남길 수 있어요</h1>
+          <h2 id="inquiry-login-title">로그인 후 1:1 문의를 남길 수 있어요</h2>
           <p>문의 작성과 답변 확인은 로그인한 회원만 이용할 수 있습니다.</p>
           <Link href="/auth/login?redirect=/cs/inquiry" className={styles.loginButton}>
             로그인하고 문의하기

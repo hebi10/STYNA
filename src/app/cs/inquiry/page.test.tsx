@@ -41,6 +41,7 @@ function mockAuth(overrides: Record<string, unknown> = {}) {
       status: 'active',
       role: 'user',
     },
+    loading: false,
     isUserDataLoading: false,
     ...overrides,
     } as unknown as ReturnType<typeof useAuth>);
@@ -96,6 +97,36 @@ describe('Inquiry account identity', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  test('shows an authentication-check status before the auth state resolves', () => {
+    mockAuth({ user: null, loading: true, isUserDataLoading: true, userData: null });
+
+    render(<InquiryPage />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('로그인 상태를 확인하고 있습니다.');
+    expect(screen.queryByRole('heading', { level: 2, name: '로그인 후 1:1 문의를 남길 수 있어요' }))
+      .not.toBeInTheDocument();
+  });
+
+  test('guides a signed-out visitor to login and preserves the inquiry return path', () => {
+    mockAuth({ user: null, loading: false, isUserDataLoading: false, userData: null });
+
+    render(<InquiryPage />);
+
+    expect(screen.getByRole('heading', { level: 2, name: '로그인 후 1:1 문의를 남길 수 있어요' }))
+      .toBeInTheDocument();
+    expect(screen.getByText('문의 작성과 답변 확인은 로그인한 회원만 이용할 수 있습니다.'))
+      .toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '로그인하고 문의하기' }))
+      .toHaveAttribute('href', '/auth/login?redirect=/cs/inquiry');
+    expect(screen.getByRole('link', { name: '로그인하고 문의하기' }))
+      .toHaveClass('loginButton');
+    expect(screen.getByRole('heading', { level: 2, name: '로그인 후 1:1 문의를 남길 수 있어요' })
+      .closest('section'))
+      .toHaveClass('loginRequired');
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '문의 등록' })).not.toBeInTheDocument();
   });
 
   test('submits the authoritative user document email and name', async () => {

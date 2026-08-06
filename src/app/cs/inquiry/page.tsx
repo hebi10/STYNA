@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/authProvider';
 import { InquiryService } from '@/shared/services/inquiryService';
@@ -17,7 +18,7 @@ const CATEGORY_LABELS = {
 } as const;
 
 function InquiryPageContent() {
-  const { user, userData, isUserDataLoading } = useAuth();
+  const { user, userData, isUserDataLoading, loading: isAuthLoading } = useAuth();
   const userId = user?.uid ?? null;
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get('tab') === 'list' ? 'list' : 'write';
@@ -257,12 +258,28 @@ function InquiryPageContent() {
     }
   };
 
+  if (isAuthLoading) {
+    return (
+      <div className={`${styles.inquiryContainer} ${styles.authPending}`} role="status">
+        로그인 상태를 확인하고 있습니다.
+      </div>
+    );
+  }
+
   if (!user) {
     return (
-      <div className={styles.inquiryContainer}>
-        <div className={styles.formNote}>
-          1:1 문의를 이용하시려면 로그인이 필요합니다.
-        </div>
+      <div className={`${styles.inquiryContainer} ${styles.guestContainer}`}>
+        <section className={styles.loginRequired} aria-labelledby="inquiry-login-title">
+          <span className={styles.loginEyebrow}>1:1 INQUIRY</span>
+          <h2 id="inquiry-login-title">로그인 후 1:1 문의를 남길 수 있어요</h2>
+          <p>문의 작성과 답변 확인은 로그인한 회원만 이용할 수 있습니다.</p>
+          <Link href="/auth/login?redirect=/cs/inquiry" className={styles.loginButton}>
+            로그인하고 문의하기
+          </Link>
+          <span className={styles.loginHint}>
+            로그인 후 현재 페이지로 돌아와 문의를 바로 작성할 수 있습니다.
+          </span>
+        </section>
       </div>
     );
   }
