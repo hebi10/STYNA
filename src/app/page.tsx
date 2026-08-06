@@ -3,6 +3,7 @@ import MainBanner from './_components/MainBanner';
 import ProductSection from './_components/ProductSection';
 import DynamicCategorySection from './_components/DynamicCategorySection';
 import FeaturedProducts from './_components/FeaturedProducts';
+import StynaFilm from './_components/StynaFilm';
 import StyleNowSection from './_components/style-now/StyleNowSection';
 import PortfolioDemoSection from './_components/PortfolioDemoSection';
 import styles from './page.module.css';
@@ -37,6 +38,8 @@ export default function Home() {
         sectionClassName={styles.productBand}
         viewAllLabel="전체보기"
       />
+
+      <StynaFilm />
 
       <section id="new-arrivals" className={styles.productBand}>
         <ProductSection

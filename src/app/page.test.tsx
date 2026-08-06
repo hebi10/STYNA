@@ -28,6 +28,11 @@ jest.mock('./_components/FeaturedProducts', () => ({
   ),
 }));
 
+jest.mock('./_components/StynaFilm', () => ({
+  __esModule: true,
+  default: () => <section data-testid="home-styna-film">STYNA FILM</section>,
+}), { virtual: true });
+
 jest.mock('./_components/ProductSection', () => ({
   __esModule: true,
   default: ({ eyebrow, title, subtitle, type }: { eyebrow?: string; title: string; subtitle?: string; type: string }) => (
@@ -90,6 +95,7 @@ describe('Home shopping-first composition', () => {
     const banner = screen.getByTestId('home-banner');
     const category = screen.getByTestId('home-categories').closest('section') as HTMLElement | null;
     const featured = screen.getByTestId('home-featured');
+    const stynaFilm = screen.getByTestId('home-styna-film');
     const newArrivals = screen.getByTestId('home-new').closest('#new-arrivals') as HTMLElement | null;
     const ranking = screen.getByTestId('home-bestseller').closest('#best-ranking') as HTMLElement | null;
     const sale = screen.getByTestId('home-sale').closest('#sale-products') as HTMLElement | null;
@@ -99,11 +105,12 @@ describe('Home shopping-first composition', () => {
       banner,
       category,
       featured,
+      stynaFilm,
       newArrivals,
       ranking,
       sale,
-      portfolio,
       styleNow,
+      portfolio,
     ];
 
     expect(orderedSections.every((section) => section)).toBe(true);
@@ -111,8 +118,10 @@ describe('Home shopping-first composition', () => {
       Array.from(container.querySelectorAll('section')).indexOf(section!),
     );
     expect(positions).toEqual([...positions].sort((left, right) => left - right));
-    expect(portfolio.nextElementSibling).toBe(styleNow);
-    expect(styleNow.nextElementSibling).toBeNull();
+    expect(featured.nextElementSibling).toBe(stynaFilm);
+    expect(stynaFilm.nextElementSibling).toBe(newArrivals);
+    expect(styleNow.nextElementSibling).toBe(portfolio);
+    expect(portfolio.nextElementSibling).toBeNull();
 
     const saleSection = sale!;
     expect(within(saleSection).getByTestId('home-sale')).toBeInTheDocument();
