@@ -3,10 +3,10 @@
   position: fixed;
   right: max(0.75rem, env(safe-area-inset-right));
   bottom: calc(0.75rem + 44px + 0.5rem + env(safe-area-inset-bottom));
-  min-width: 88px;
+  width: 44px;
+  min-width: 44px;
   min-height: 44px;
-  width: auto;
-  padding: 0 0.75rem;
+  padding: 0;
   background: var(--color-white);
   border: 1px solid var(--black);
   border-radius: 2px;
@@ -30,11 +30,15 @@
   color: var(--color-white);
 }
 
-.buttonText {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  line-height: 1;
+.buttonIcon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: invert(1);
+}
+
+.fixedButton:hover .buttonIcon {
+  filter: none;
 }
 
 /* 반응형 디자인 */

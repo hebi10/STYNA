@@ -146,17 +146,17 @@ describe('ChatWidget', () => {
     expect(chatWindow).toHaveAttribute('aria-hidden', 'false');
     expect(chatWindow).not.toHaveAttribute('inert');
     expect(screen.getByRole('log')).toHaveAttribute('aria-live', 'polite');
-    expect(screen.getByRole('textbox', { name: '도움말 질문' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '주문/배송' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: '도움말 질문' })).not.toBeDisabled();
+    expect(screen.getByRole('textbox', { name: '도움말 질문' })).toHaveFocus();
   });
 
-  test('moves focus to the enabled input when direct question mode starts', () => {
+  test('opens with an enabled input and moves focus to it', () => {
     renderChatWidget();
 
     fireEvent.click(screen.getByRole('button', { name: '채팅 열기' }));
-    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
 
     expect(screen.getByRole('textbox', { name: '도움말 질문' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: '도움말 질문' })).not.toBeDisabled();
   });
 
   test('returns focus to the toggle when the window close button hides the chat', () => {
@@ -204,15 +204,26 @@ describe('ChatWidget', () => {
     }
   });
 
-  test('keeps message input disabled until direct question mode is requested', () => {
+  test('keeps the initial chat window compact on desktop and mobile', () => {
+    const css = readFileSync(
+      resolve(process.cwd(), 'src/app/_components/chat/ChatWidget.module.css'),
+      'utf8',
+    );
+
+    expect(css).toMatch(/height:\s*min\(440px,\s*calc\(100dvh\s*-\s*5rem\)\)/);
+    expect(css).toMatch(/height:\s*min\(440px,\s*calc\(100dvh\s*-\s*5\.75rem\)\)/);
+  });
+
+  test('renders an icon-only toggle with a labeled, enabled input', () => {
     renderChatWidget();
 
-    fireEvent.click(screen.getByLabelText('채팅 열기'));
+    const toggle = screen.getByLabelText('채팅 열기');
+    expect(toggle.querySelector('img')).toHaveAttribute(
+      'src',
+      '/icons/chat-help-icon.png',
+    );
 
-    expect(screen.getByPlaceholderText('직접 질문하기 선택 후 메시지를 입력하세요')).toBeDisabled();
-
-    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
-
+    fireEvent.click(toggle);
     expect(screen.getByPlaceholderText('메시지를 입력하세요...')).not.toBeDisabled();
   });
 
@@ -220,7 +231,6 @@ describe('ChatWidget', () => {
     renderChatWidget();
 
     fireEvent.click(screen.getByLabelText('채팅 열기'));
-    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
     fireEvent.change(screen.getByPlaceholderText('메시지를 입력하세요...'), {
       target: { value: '배송이 궁금합니다' },
     });
@@ -246,7 +256,6 @@ describe('ChatWidget', () => {
     renderChatWidget();
 
     fireEvent.click(screen.getByLabelText('채팅 열기'));
-    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
     fireEvent.change(screen.getByPlaceholderText('메시지를 입력하세요...'), {
       target: { value: '로그인 상담 요청' },
     });
@@ -274,7 +283,6 @@ describe('ChatWidget', () => {
     renderChatWidget();
 
     fireEvent.click(screen.getByLabelText('채팅 열기'));
-    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
     fireEvent.change(screen.getByPlaceholderText('메시지를 입력하세요...'), {
       target: { value: '토큰 실패 요청' },
     });
@@ -292,7 +300,6 @@ describe('ChatWidget', () => {
     renderChatWidget();
 
     fireEvent.click(screen.getByLabelText('채팅 열기'));
-    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
     fireEvent.change(screen.getByPlaceholderText('메시지를 입력하세요...'), {
       target: { value: '배송이 궁금합니다' },
     });
@@ -308,14 +315,13 @@ describe('ChatWidget', () => {
     });
   });
 
-  test('labels the feature as a demo chatbot without claiming a human handoff or SLA', () => {
+  test('uses shopping help copy without demo or portfolio framing', () => {
     const { container } = renderChatWidget();
 
     fireEvent.click(screen.getByLabelText('채팅 열기'));
-    fireEvent.click(screen.getByRole('button', { name: '직접 질문하기' }));
 
     expect(screen.getAllByText(/도움말 챗봇/).length).toBeGreaterThan(0);
-    expect(container.textContent).toContain('상담 요청을 저장하거나 전송하지 않습니다');
-    expect(container.textContent).not.toMatch(/실시간 상담|상담 연결 요청을 접수|다음 영업일.*답변/);
+    expect(container.textContent).toContain('궁금한 내용을 바로 입력하거나 빠른 도움말을 선택해 주세요.');
+    expect(container.textContent).not.toMatch(/데모|포트폴리오/);
   });
 });

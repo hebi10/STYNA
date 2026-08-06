@@ -9,10 +9,11 @@
 
 /* 채팅 토글 버튼 */
 .chatButton {
-  min-width: 88px;
+  width: 44px;
+  min-width: 44px;
   min-height: 44px;
   height: 44px;
-  padding: 0 0.75rem;
+  padding: 0;
   border-radius: 2px;
   background: var(--black);
   border: 1px solid var(--black);
@@ -28,6 +29,12 @@
   box-shadow: none;
   transition: background-color 0.15s, border-color 0.15s, color 0.15s,
     box-shadow 0.15s;
+}
+
+.chatButtonIcon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .chatButton:hover {
@@ -55,7 +62,7 @@
   bottom: 48px;
   right: 0;
   width: 380px;
-  height: min(620px, calc(100dvh - 5rem));
+  height: min(440px, calc(100dvh - 5rem));
   max-height: calc(100dvh - 5rem);
   background: var(--color-bg-primary);
   border-radius: 2px;
@@ -150,10 +157,6 @@
   background: var(--off-white);
   display: flex;
   flex-direction: column;
-}
-
-.chatWindow.agentConnected {
-  height: min(720px, calc(100dvh - 5rem));
 }
 
 .chatMessages::-webkit-scrollbar {
@@ -344,19 +347,6 @@
   color: var(--black);
 }
 
-.quickButton.connect {
-  grid-column: 1 / -1;
-  background: var(--black);
-  color: var(--color-white);
-  border-color: var(--black);
-  font-weight: 700;
-}
-
-.quickButton.connect:hover {
-  background: var(--action-hover);
-  border-color: var(--action-hover);
-}
-
 .quickButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -436,27 +426,6 @@
     bottom: calc(0.75rem + env(safe-area-inset-bottom));
   }
 
-  .chatButton {
-    min-width: 48px;
-    width: 48px;
-    max-width: 48px;
-    height: 44px;
-    padding: 0;
-    overflow: hidden;
-    font-size: 0;
-  }
-
-  .chatButton::before {
-    content: '챗봇';
-    font-size: 11px;
-    font-weight: 700;
-  }
-
-  .chatButton.open::before {
-    content: '×';
-    font-size: 18px;
-    font-weight: 500;
-  }
 }
 
 @media (max-width: 480px) {
@@ -466,27 +435,15 @@
     right: max(0.75rem, env(safe-area-inset-right));
     bottom: calc(4.75rem + env(safe-area-inset-bottom));
     width: auto;
-    height: min(640px, calc(100dvh - 5.75rem));
+    height: min(440px, calc(100dvh - 5.75rem));
     max-height: calc(100dvh - 5.75rem);
   }
 
-  .chatWindow.agentConnected {
-    height: min(720px, calc(100dvh - 5.75rem));
-  }
-  
   .chatWidget {
     right: max(0.75rem, env(safe-area-inset-right));
     bottom: calc(0.75rem + env(safe-area-inset-bottom));
   }
 
-  .chatButton {
-    min-width: 48px;
-    width: 48px;
-    max-width: calc(100vw - 1.5rem);
-    height: 44px;
-    padding: 0;
-  }
-  
   .quickButton {
     font-size: 0.75rem;
     padding: 0.35rem 0.6rem;

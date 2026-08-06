@@ -20,7 +20,6 @@
 .popup {
   background: var(--color-white);
   border-radius: 2px;
-  box-shadow: 0 12px 28px rgba(10, 10, 10, 0.14);
   border: 1px solid var(--black);
   max-width: 400px;
   width: 100%;
@@ -96,7 +95,7 @@
 
 /* 메인 컨텐츠 */
 .content {
-  padding: 1rem 1rem 0.25rem;
+  padding: 1rem;
 }
 
 /* 한 줄 소개 */
@@ -143,16 +142,6 @@
   color: var(--black);
 }
 
-/* 참고 사항 */
-.notice {
-  font-size: 0.72rem;
-  color: var(--text-soft);
-  margin: 0 0 1rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid var(--line);
-  line-height: 1.6;
-}
-
 /* 외부 링크 */
 .linkSection {
   display: flex;
@@ -194,51 +183,6 @@
   background: var(--action-hover);
 }
 
-/* 하단 */
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 1rem;
-  padding: 0.8rem 1rem;
-  border-top: 1px solid var(--line);
-  background: var(--off-white);
-}
-
-.dontShowButton {
-  background: transparent;
-  border: none;
-  padding: 0;
-  font-size: 0.72rem;
-  color: var(--text-soft);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  transition: color 0.15s ease;
-}
-
-.dontShowButton:hover {
-  color: var(--text-subtle);
-}
-
-.closeButtonSecondary {
-  min-height: 44px;
-  padding: 0.45rem 1rem;
-  background: var(--color-white);
-  color: var(--black);
-  border: 1px solid var(--line-strong);
-  border-radius: 2px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.closeButtonSecondary:hover {
-  border-color: var(--black);
-  background: var(--color-white);
-}
-
 .popup a:focus-visible,
 .popup button:focus-visible {
   outline: 2px solid currentColor;
@@ -262,13 +206,4 @@
     flex-direction: column;
   }
 
-  .footer {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .dontShowButton {
-    align-self: flex-start;
-  }
 }

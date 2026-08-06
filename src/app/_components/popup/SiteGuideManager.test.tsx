@@ -42,7 +42,13 @@ describe('SiteGuideManager shared guide event', () => {
   test('opens the popup from the fixed shopping guide trigger', () => {
     render(<SiteGuideManager />);
 
-    fireEvent.click(screen.getByRole('button', { name: '쇼핑 안내 열기' }));
+    const trigger = screen.getByRole('button', { name: '쇼핑 안내 열기' });
+    expect(trigger.querySelector('img')).toHaveAttribute(
+      'src',
+      '/icons/shopping-guide-icon.png',
+    );
+
+    fireEvent.click(trigger);
 
     expect(screen.getByRole('dialog', { name: '쇼핑 안내' })).toBeInTheDocument();
   });

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import SiteGuidePopup from './SiteGuidePopup';
 import styles from './SiteGuideManager.module.css';
@@ -63,7 +64,14 @@ const SiteGuideManager: React.FC = () => {
         aria-label="쇼핑 안내 열기"
         title="쇼핑 안내"
       >
-        <span className={styles.buttonText}>쇼핑 안내</span>
+        <Image
+          className={styles.buttonIcon}
+          src="/icons/shopping-guide-icon.png"
+          alt=""
+          width={24}
+          height={24}
+          unoptimized
+        />
       </button>
 
       {/* 팝업 */}

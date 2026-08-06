@@ -4,10 +4,8 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import styles from './SiteGuidePopup.module.css';
 import Link from 'next/link';
 import {
-  buildDemoDataNotice,
   formatShippingPolicy,
   formatSignupBenefit,
-  formatSupportHours,
 } from '@/shared/constants/commercePolicy';
 
 interface SiteGuidePopupProps {
@@ -128,7 +126,7 @@ const SiteGuidePopup: React.FC<SiteGuidePopupProps> = ({
         {/* 메인 컨텐츠 */}
         <div className={styles.content}>
           <p className={styles.intro}>
-            주문 전후에 자주 확인하는 쇼핑 정보를 모았습니다.
+            배송과 회원 혜택을 빠르게 확인하세요.
           </p>
 
           <ul className={styles.guideList}>
@@ -140,19 +138,7 @@ const SiteGuidePopup: React.FC<SiteGuidePopupProps> = ({
               <strong>회원 혜택</strong>
               {formatSignupBenefit()}
             </li>
-            <li>
-              <strong>데모 안내</strong>
-              {buildDemoDataNotice()}
-            </li>
-            <li>
-              <strong>포트폴리오 문의 안내</strong>
-              {formatSupportHours()}은 화면 구성용 참고 시간이며, 문의 기록은 하단 바로가기에서 확인할 수 있습니다.
-            </li>
           </ul>
-
-          <p className={styles.notice}>
-            1:1 문의 기록은 저장되지만 답변 여부와 시점은 보장하지 않습니다.
-          </p>
         </div>
 
         {/* 쇼핑 바로가기 */}
@@ -170,14 +156,6 @@ const SiteGuidePopup: React.FC<SiteGuidePopupProps> = ({
             1:1 문의
           </Link>
         </div>
-
-        {/* 하단 */}
-        <div className={styles.footer}>
-          <button className={styles.closeButtonSecondary} onClick={closeDialog}>
-            닫기
-          </button>
-        </div>
-
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { auth } from '@/shared/libs/firebase/firebase';
@@ -23,21 +24,14 @@ const QUICK_BUTTONS = [
   '교환/반품',
   '상품 문의',
   '쿠폰/혜택',
-  '직접 질문하기',
 ] as const;
 
 const INITIAL_BOT_TEXT = `STYNA 도움말 챗봇입니다.
 
-빠른 도움말을 선택하거나 직접 질문 모드를 시작해 주세요.
-답변은 포트폴리오 데모 안내이며 실제 상담 요청을 접수하지 않습니다.`;
-
-const DIRECT_QUESTION_TEXT = `챗봇 직접 질문 모드입니다.
-
-입력 내용은 안내 답변 생성에만 사용되며 상담 요청을 저장하거나 전송하지 않습니다.
-별도 문의는 1:1 문의 페이지를 이용해 주세요.`;
+궁금한 내용을 바로 입력하거나 빠른 도움말을 선택해 주세요.`;
 
 const ERROR_TEXT =
-  '죄송합니다. 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해 주시거나 포트폴리오 문의(sevim0104@naver.com)를 이용해 주세요.';
+  '죄송합니다. 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.';
 
 // ─── 타입 ──────────────────────────────────────────────
 export type ChatMode = 'idle' | 'active';
@@ -61,23 +55,6 @@ interface ChatAPIResponse {
 }
 
 // ─── 유틸리티 함수 ─────────────────────────────────────
-function isDirectQuestionCommand(text: string): boolean {
-  const normalized = text.trim().toLowerCase();
-  const compact = normalized.replace(/\s+/g, '');
-
-  if (compact === '직접질문하기' || compact === '상담원' + '연결') return true;
-
-  return [
-    '직접 질문하기',
-    '직접 질문',
-    '상담원 연결',
-    '상담 연결',
-    '상담원',
-    '실시간 상담',
-    '담당자 연결',
-  ].includes(normalized);
-}
-
 function createMessage(text: string, sender: 'user' | 'bot'): ChatMessage {
   return {
     id: `${Date.now()}-${sender}`,
@@ -164,12 +141,10 @@ const ChatWidget: React.FC = () => {
   const [chatMode, setChatMode] = useState<ChatMode>('idle');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
-  const [isDirectQuestionEnabled, setIsDirectQuestionEnabled] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const firstQuickButtonRef = useRef<HTMLButtonElement>(null);
   const chatToggleButtonRef = useRef<HTMLButtonElement>(null);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
   const isUserScrollingRef = useRef(false);
@@ -243,33 +218,25 @@ const ChatWidget: React.FC = () => {
 
     switch (chatMode) {
       case 'active':
-        return isDirectQuestionEnabled ? '직접 질문 모드' : '빠른 도움말 선택';
+        return '궁금한 내용을 입력해 주세요';
       default:
         return '도움말을 선택해 보세요';
     }
-  }, [isMounted, chatMutation.isPending, chatMode, isDirectQuestionEnabled]);
+  }, [isMounted, chatMutation.isPending, chatMode]);
 
   // ── 채팅 시작 ─────────────────────────────────────
   const startChat = useCallback(() => {
     setChatMode('active');
-    setIsDirectQuestionEnabled(false);
     setMessages([createMessage(INITIAL_BOT_TEXT, 'bot')]);
   }, []);
 
   useEffect(() => {
     if (!isOpen || chatMode === 'idle') return;
 
-    const frameId = window.requestAnimationFrame(() => {
-      if (isDirectQuestionEnabled) {
-        inputRef.current?.focus();
-        return;
-      }
-
-      firstQuickButtonRef.current?.focus();
-    });
+    const frameId = window.requestAnimationFrame(() => inputRef.current?.focus());
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [chatMode, isDirectQuestionEnabled, isOpen]);
+  }, [chatMode, isOpen]);
 
   // ── 채팅 리셋 ─────────────────────────────────────
   const resetChat = useCallback(() => {
@@ -282,20 +249,6 @@ const ChatWidget: React.FC = () => {
   const sendMessageCore = useCallback(
     (messageText: string) => {
       if (!messageText.trim() || chatMutation.isPending) return;
-
-      const isDirectQuestion = isDirectQuestionCommand(messageText);
-
-      // 직접 질문 모드는 API 호출 없이 데이터 처리 범위를 먼저 안내한다.
-      if (isDirectQuestion) {
-        setChatMode('active');
-        setIsDirectQuestionEnabled(true);
-        setMessages((prev) => [
-          ...prev,
-          createMessage(messageText, 'user'),
-          createMessage(DIRECT_QUESTION_TEXT, 'bot'),
-        ]);
-        return;
-      }
 
       const shouldUseAI = chatMode === 'active';
 
@@ -350,7 +303,7 @@ const ChatWidget: React.FC = () => {
   );
 
   // ── 파생 disabled 상태 ────────────────────────────
-  const isInputDisabled = chatMutation.isPending || chatMode === 'idle' || !isDirectQuestionEnabled;
+  const isInputDisabled = chatMutation.isPending || chatMode === 'idle';
   const isSendDisabled = !inputValue.trim() || isInputDisabled;
 
   const toggleChat = useCallback(() => {
@@ -384,9 +337,7 @@ const ChatWidget: React.FC = () => {
         aria-labelledby="help-chat-title"
         aria-hidden={!isOpen}
         inert={!isOpen}
-        className={`${styles.chatWindow} ${isOpen ? styles.open : ''} ${
-          isDirectQuestionEnabled ? styles.agentConnected : ''
-        }`}
+        className={`${styles.chatWindow} ${isOpen ? styles.open : ''}`}
       >
         {/* 헤더 */}
         <div className={styles.chatHeader}>
@@ -479,13 +430,12 @@ const ChatWidget: React.FC = () => {
         </div>
 
         {/* 빠른 선택 버튼 */}
-        {isChatActive && !isDirectQuestionEnabled && (
+        {isChatActive && (
           <div className={styles.quickButtons}>
-            {QUICK_BUTTONS.map((label, index) => (
+            {QUICK_BUTTONS.map((label) => (
               <button
                 key={label}
-                ref={index === 0 ? firstQuickButtonRef : undefined}
-                className={`${styles.quickButton} ${label === '직접 질문하기' ? styles.connect : ''}`}
+                className={styles.quickButton}
                 onClick={() => handleQuickButton(label)}
                 disabled={chatMutation.isPending}
               >
@@ -506,9 +456,9 @@ const ChatWidget: React.FC = () => {
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 placeholder={
-                  chatMode === 'active' && isDirectQuestionEnabled
+                  chatMode === 'active'
                     ? '메시지를 입력하세요...'
-                    : '직접 질문하기 선택 후 메시지를 입력하세요'
+                    : '도움말을 불러오는 중입니다'
                 }
                 disabled={isInputDisabled}
                 rows={1}
@@ -536,7 +486,16 @@ const ChatWidget: React.FC = () => {
         aria-expanded={isOpen}
         aria-controls="help-chat-window"
       >
-        {isOpen ? '×' : '도움말 챗봇'}
+        {isOpen ? '×' : (
+          <Image
+            className={styles.chatButtonIcon}
+            src="/icons/chat-help-icon.png"
+            alt=""
+            width={24}
+            height={24}
+            unoptimized
+          />
+        )}
       </button>
     </div>
   );
