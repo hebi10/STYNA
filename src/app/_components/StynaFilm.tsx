@@ -136,9 +136,14 @@ export default function StynaFilm() {
           <span className={styles.eyebrow}>STYNA FILM</span>
           <div className={styles.headingRow}>
             <h2 id="styna-film-title" className={styles.title}>THE EVERYDAY MOTION</h2>
-            <span className={styles.chapterCount} aria-label={`현재 ${chapterIndex + 1}번째 영상, 총 4개`}>
-              {String(chapterIndex + 1).padStart(2, '0')} — {String(STYNA_FILM_CHAPTERS.length).padStart(2, '0')}
-            </span>
+            <div className={styles.headerActions}>
+              <span className={styles.chapterCount} aria-label={`현재 ${chapterIndex + 1}번째 영상, 총 4개`}>
+                {String(chapterIndex + 1).padStart(2, '0')} — {String(STYNA_FILM_CHAPTERS.length).padStart(2, '0')}
+              </span>
+              <Link href={chapter.href} className={styles.productAction} aria-label={`${chapter.name} 상품 보러가기`}>
+                상품 보러가기
+              </Link>
+            </div>
           </div>
           <p className={styles.description}>일상에 자연스럽게 스며드는 네 가지 움직임을 담았습니다.</p>
         </header>
@@ -185,10 +190,6 @@ export default function StynaFilm() {
             </button>
           ))}
         </nav>
-
-        <Link href={chapter.href} className={styles.productAction} aria-label={`${chapter.name} 상품 보러가기`}>
-          상품 보러가기
-        </Link>
       </div>
     </section>
   );

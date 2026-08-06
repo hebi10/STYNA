@@ -67,6 +67,16 @@ describe('StynaFilm', () => {
     expect(screen.getByTestId('styna-film-video')).not.toHaveAttribute('controls');
   });
 
+  test('places the selected product action before the video selection strip', () => {
+    render(<StynaFilm />);
+
+    const action = screen.getByRole('link', { name: '쿨터치 오버핏 반팔 셔츠 상품 보러가기' });
+    const selectionStrip = screen.getByRole('navigation', { name: 'STYNA FILM 상품' });
+
+    expect(action.compareDocumentPosition(selectionStrip) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   test('changes the active video and product detail link when a chapter button is clicked', async () => {
     render(<StynaFilm />);
     setViewportVisibility(true);

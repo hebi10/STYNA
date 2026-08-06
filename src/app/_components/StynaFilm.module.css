@@ -30,6 +30,13 @@
   margin-top: 0.8rem;
 }
 
+.headerActions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .title {
   margin: 0;
   font-size: clamp(2rem, 5vw, 4.5rem);
@@ -56,7 +63,7 @@
 
 .videoFrame {
   position: relative;
-  aspect-ratio: 16 / 9;
+  height: clamp(18rem, 28vw, 22rem);
   overflow: hidden;
   background: #262c2f;
 }
@@ -171,13 +178,14 @@
   align-items: center;
   justify-content: center;
   min-height: 2.875rem;
-  margin-top: 0.75rem;
+  margin: 0;
   padding: 0.75rem 1.25rem;
   background: #ffffff;
   color: #101315;
   font-size: 0.82rem;
   font-weight: 700;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 @media (max-width: 768px) {
@@ -190,8 +198,33 @@
   }
 
   .headingRow {
-    align-items: start;
+    display: contents;
+  }
+
+  .header {
+    display: flex;
     flex-direction: column;
+  }
+
+  .eyebrow {
+    order: 1;
+  }
+
+  .title {
+    order: 2;
+    margin-top: 0.8rem;
+  }
+
+  .description {
+    order: 3;
+  }
+
+  .headerActions {
+    display: grid;
+    order: 4;
+    width: 100%;
+    margin-top: 1rem;
+    gap: 0.75rem;
   }
 
   .productStrip {
@@ -203,6 +236,11 @@
 
   .productAction {
     width: 100%;
+  }
+
+  .videoFrame {
+    height: auto;
+    aspect-ratio: 16 / 9;
   }
 }
 
