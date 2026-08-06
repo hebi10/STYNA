@@ -53,16 +53,32 @@ beforeEach(() => {
 });
 
 describe('StynaFilm', () => {
-  test('renders the four linked product chapters without native playback controls', () => {
+  test('renders four video selection buttons and one product detail link without native playback controls', () => {
     render(<StynaFilm />);
 
     expect(screen.getByRole('heading', { name: 'THE EVERYDAY MOTION' })).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: /상품 보기$/ })).toHaveLength(4);
-    expect(screen.getByRole('link', { name: '쿨터치 오버핏 반팔 셔츠 상품 보기' }))
+    expect(screen.getAllByRole('button', { name: /영상 선택$/ })).toHaveLength(4);
+    expect(screen.getByRole('button', { name: '쿨터치 오버핏 반팔 셔츠 영상 선택' }))
+      .toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('link', { name: '쿨터치 오버핏 반팔 셔츠 상품 보러가기' }))
       .toHaveAttribute('href', '/products/cool-touch-oversized-shirt');
     expect(screen.getByTestId('styna-film-video')).toHaveProperty('muted', true);
     expect(screen.getByTestId('styna-film-video')).toHaveAttribute('playsinline');
     expect(screen.getByTestId('styna-film-video')).not.toHaveAttribute('controls');
+  });
+
+  test('changes the active video and product detail link when a chapter button is clicked', async () => {
+    render(<StynaFilm />);
+    setViewportVisibility(true);
+
+    fireEvent.click(screen.getByRole('button', { name: '유틸리티 빅 토트백 영상 선택' }));
+
+    await waitFor(() => expect(screen.getByTestId('styna-film-video'))
+      .toHaveAttribute('src', expect.stringContaining('utility-big-tote-bag')));
+    expect(screen.getByRole('button', { name: '유틸리티 빅 토트백 영상 선택' }))
+      .toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('link', { name: '유틸리티 빅 토트백 상품 보러가기' }))
+      .toHaveAttribute('href', '/products/utility-big-tote-bag');
   });
 
   test('plays each chapter once in order and stops after the fourth video', async () => {

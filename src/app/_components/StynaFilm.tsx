@@ -120,6 +120,15 @@ export default function StynaFilm() {
     setChapterIndex((currentIndex) => currentIndex + 1);
   };
 
+  const selectChapter = (index: number) => {
+    if (index === chapterIndex && videoRef.current) {
+      videoRef.current.currentTime = 0;
+    }
+
+    setHasCompleted(false);
+    setChapterIndex(index);
+  };
+
   return (
     <section ref={sectionRef} className={styles.section} aria-labelledby="styna-film-title">
       <div className={styles.container}>
@@ -157,11 +166,13 @@ export default function StynaFilm() {
 
         <nav className={styles.productStrip} aria-label="STYNA FILM 상품">
           {STYNA_FILM_CHAPTERS.map((item, index) => (
-            <Link
+            <button
               key={item.id}
-              href={item.href}
-              className={`${styles.productLink} ${index === chapterIndex ? styles.activeProduct : ''}`}
-              aria-label={`${item.name} 상품 보기`}
+              type="button"
+              className={`${styles.productButton} ${index === chapterIndex ? styles.activeProduct : ''}`}
+              aria-label={`${item.name} 영상 선택`}
+              aria-pressed={index === chapterIndex}
+              onClick={() => selectChapter(index)}
             >
               <span className={styles.thumbnail}>
                 <Image src={item.posterSrc} alt="" fill sizes="56px" className={styles.thumbnailImage} />
@@ -171,9 +182,13 @@ export default function StynaFilm() {
                 <span className={styles.productBrand}>{item.brand}</span>
                 <strong className={styles.productName}>{item.name}</strong>
               </span>
-            </Link>
+            </button>
           ))}
         </nav>
+
+        <Link href={chapter.href} className={styles.productAction} aria-label={`${chapter.name} 상품 보러가기`}>
+          상품 보러가기
+        </Link>
       </div>
     </section>
   );
