@@ -131,8 +131,7 @@
         "*.local"
       ],
       "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR/..\" run deploy:prep",
-        "npm --prefix \"$RESOURCE_DIR/..\" run functions:build"
+        "scripts\\firebase-predeploy.cmd"
       ]
     }
   ],

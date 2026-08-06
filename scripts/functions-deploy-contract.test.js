@@ -22,11 +22,16 @@ describe('Firebase Functions deployment contract', () => {
       path.join(repositoryRoot, 'scripts', 'copy-next-to-functions.js'),
       'utf8',
     );
+    const windowsPredeployScript = fs.readFileSync(
+      path.join(repositoryRoot, 'scripts', 'firebase-predeploy.cmd'),
+      'utf8',
+    );
 
     expect(firebaseConfig.functions[0].predeploy).toEqual([
-      'npm --prefix "$RESOURCE_DIR/.." run deploy:prep',
-      'npm --prefix "$RESOURCE_DIR/.." run functions:build',
+      'scripts\\firebase-predeploy.cmd',
     ]);
+    expect(windowsPredeployScript).toContain('call npm run deploy:prep');
+    expect(windowsPredeployScript).toContain('call npm run functions:build');
     expect(packageJson.scripts['deploy:prep']).toBe(
       'npm run build && node scripts/copy-next-to-functions.js && node scripts/verify-functions-next-chat-boundary.js',
     );
