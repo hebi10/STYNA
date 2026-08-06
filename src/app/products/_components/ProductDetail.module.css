@@ -561,6 +561,7 @@
 @media (max-width: 768px) {
   .container {
     padding: var(--spacing-md);
+    padding-bottom: calc(5.75rem + env(safe-area-inset-bottom));
   }
   
   .productInfo {
@@ -569,8 +570,16 @@
   }
   
   .actions {
-    flex-direction: row; /* 모바일에서도 가로로 유지 */
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+    gap: var(--spacing-sm);
     align-items: stretch;
+    padding: var(--spacing-sm) max(var(--spacing-md), env(safe-area-inset-right)) calc(var(--spacing-sm) + env(safe-area-inset-bottom)) max(var(--spacing-md), env(safe-area-inset-left));
+    background: var(--off-white);
+    border-top: 1px solid var(--color-border-light);
   }
   
   .wishlistButton {
@@ -582,6 +591,55 @@
   .buyButton {
     flex: 1;
     min-height: 48px;
+  }
+
+  .options {
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) 0;
+  }
+
+  .summary {
+    gap: 0;
+    padding: 0;
+    background: var(--color-white);
+  }
+
+  .summaryItem {
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--color-border-light);
+  }
+
+  .summaryItem:last-child {
+    border-bottom: 0;
+  }
+
+  .summaryLabel {
+    flex: 0 0 3rem;
+    padding-top: 0.1rem;
+  }
+
+  .summaryValue {
+    flex: 1;
+    line-height: 1.55;
+  }
+
+  .relatedProducts {
+    margin-right: calc(-1 * var(--spacing-md));
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .relatedGrid {
+    width: max-content;
+    padding-right: var(--spacing-md);
+    scroll-snap-type: x proximity;
+  }
+
+  .relatedGrid > * {
+    flex: 0 0 9.25rem;
+    scroll-snap-align: start;
   }
   
   .tabHeaders {

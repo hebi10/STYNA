@@ -29,6 +29,8 @@ function selectorHasDeclaration(
 }
 
 describe('ProductDetail mobile touch targets', () => {
+  const mobileCss = css.slice(css.indexOf('@media (max-width: 768px)'));
+
   test('does not treat a later selector declaration as a size option declaration', () => {
     const source = '.sizeButton { color: black; } .unrelated { min-height: 44px; }';
 
@@ -56,5 +58,15 @@ describe('ProductDetail mobile touch targets', () => {
 
   test('keeps the inquiry action at least 44 pixels tall', () => {
     expect(selectorHasDeclaration('.inquiryButton', 'min-height', '44px')).toBe(true);
+  });
+
+  test('keeps purchase actions fixed to the mobile viewport bottom', () => {
+    expect(selectorHasDeclaration('.actions', 'position', 'fixed', mobileCss)).toBe(true);
+    expect(selectorHasDeclaration('.actions', 'bottom', '0', mobileCss)).toBe(true);
+  });
+
+  test('keeps related product cards horizontally scrollable on mobile', () => {
+    expect(selectorHasDeclaration('.relatedProducts', 'overflow-x', 'auto', mobileCss)).toBe(true);
+    expect(selectorHasDeclaration('.relatedGrid', 'width', 'max-content', mobileCss)).toBe(true);
   });
 });
