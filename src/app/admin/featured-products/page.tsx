@@ -22,7 +22,8 @@ export default function FeaturedProductManagePage() {
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [description, setDescription] = useState('');
-  const [maxCount, setMaxCount] = useState(4);
+  const [heroImage, setHeroImage] = useState('/style-now/autumn/style-now-autumn-main.webp');
+  const [maxCount] = useState(3);
   const [isActive, setIsActive] = useState(true);
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export default function FeaturedProductManagePage() {
         setTitle(configData.title);
         setSubtitle(configData.subtitle);
         setDescription(configData.description);
-        setMaxCount(configData.maxCount);
+        setHeroImage(configData.heroImage);
         setIsActive(configData.isActive);
 
         // 선택된 상품들 로드
@@ -111,6 +112,7 @@ export default function FeaturedProductManagePage() {
           title,
           subtitle,
           description,
+          heroImage,
           maxCount,
           isActive
         }
@@ -234,17 +236,14 @@ export default function FeaturedProductManagePage() {
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>최대 표시 개수</label>
-              <select
-                value={maxCount}
-                onChange={(e) => setMaxCount(Number(e.target.value))}
-                className={styles.select}
-              >
-                <option value={3}>3개</option>
-                <option value={4}>4개</option>
-                <option value={6}>6개</option>
-                <option value={8}>8개</option>
-              </select>
+              <label className={styles.label}>표시 상품 수</label>
+              <input
+                type="text"
+                value="3개 고정"
+                className={styles.input}
+                aria-label="표시 상품 수"
+                disabled
+              />
             </div>
 
             <div className={styles.formGroup}>
@@ -268,6 +267,18 @@ export default function FeaturedProductManagePage() {
               className={styles.textarea}
               placeholder="추천 상품 섹션 설명"
               rows={3}
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="featured-hero-image" className={styles.label}>무드 이미지 경로</label>
+            <input
+              id="featured-hero-image"
+              type="text"
+              value={heroImage}
+              onChange={(e) => setHeroImage(e.target.value)}
+              className={styles.input}
+              placeholder="/style-now/autumn/style-now-autumn-main.webp"
             />
           </div>
         </div>

@@ -11,9 +11,9 @@
 
 .header {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
-  gap: 1.75rem;
-  align-items: end;
+  grid-template-columns: minmax(0, 1.9fr) minmax(20rem, 1fr);
+  gap: 1.5rem;
+  align-items: start;
   margin-bottom: 2rem;
 }
 
@@ -50,17 +50,11 @@
 }
 
 .headerSide {
-  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 1rem;
-  justify-items: start;
-}
-
-.description {
-  margin: 0;
-  max-width: 28rem;
-  font-size: 0.94rem;
-  line-height: 1.75;
-  color: var(--text-subtle);
+  min-width: 0;
 }
 
 .viewAllButton {
@@ -84,6 +78,22 @@
   border-color: var(--black);
   color: var(--black);
   background: var(--surface);
+}
+
+.headerViewAll {
+  flex: 0 0 auto;
+  gap: 0.45rem;
+  min-height: 40px;
+  padding: 0.5rem 0 0.5rem 0.75rem;
+  border: 0;
+  background: transparent;
+  white-space: nowrap;
+}
+
+.headerViewAll:hover {
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 0.22em;
 }
 
 .emptyState {
@@ -191,7 +201,7 @@
 
 .productRow {
   display: grid;
-  grid-template-columns: auto 5.75rem minmax(0, 1fr);
+  grid-template-columns: auto 6.5rem minmax(0, 1fr) auto;
   gap: 0.85rem;
   align-items: center;
   min-height: 10.75rem;
@@ -259,6 +269,22 @@
   font-weight: 700;
 }
 
+.productAction {
+  display: grid;
+  align-self: stretch;
+  place-items: center end;
+  padding-left: 0.5rem;
+  color: var(--text-subtle);
+  font-size: 1.25rem;
+  line-height: 1;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.productRow:hover .productAction {
+  color: var(--black);
+  transform: translateX(0.2rem);
+}
+
 .originalPrice {
   color: var(--text-subtle);
   font-size: 0.78rem;
@@ -313,8 +339,12 @@
     width: 100%;
   }
 
+  .headerViewAll {
+    width: auto;
+  }
+
   .productRow {
-    grid-template-columns: auto 4.75rem minmax(0, 1fr);
+    grid-template-columns: auto 4.75rem minmax(0, 1fr) auto;
     gap: 0.7rem;
   }
 }

@@ -113,6 +113,29 @@ describe('FeaturedProducts', () => {
     expect(screen.queryByText('노출하면 안 되는 선택')).not.toBeInTheDocument();
   });
 
+  test('keeps only the full collection action at the top of the product panel', () => {
+    jest.mocked(useQuery).mockReturnValue({
+      isLoading: false,
+      data: {
+        config: {
+          title: 'STYNA SELECT',
+          subtitle: '세 가지 선택',
+          description: '전문 MD가 고른 세 가지 아이템',
+          heroImage: '/style-now/autumn/style-now-autumn-main.webp',
+          isActive: true,
+        },
+        products: [
+          { id: 'select-1', name: '첫 번째 선택', brand: 'STYNA', price: 39000, images: [], stock: 2 },
+        ],
+      },
+    } as never);
+
+    render(<FeaturedProducts viewAllLabel="전체보기" />);
+
+    expect(screen.getByRole('link', { name: '전체보기' })).toHaveTextContent('전체보기→');
+    expect(screen.queryByText('전문 MD가 고른 세 가지 아이템')).not.toBeInTheDocument();
+  });
+
   test('shows a compact recovery state for an active featured section with no products', () => {
     jest.mocked(useQuery).mockReturnValue({
       isLoading: false,

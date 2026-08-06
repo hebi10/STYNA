@@ -41,12 +41,22 @@ const finishTrackTransition = (track: HTMLElement) => {
   fireEvent(track, transitionEnd);
 };
 
-const setReducedMotion = (matches: boolean) => {
+const setMediaPreferences = ({
+  reducedMotion = false,
+  mobile = false,
+}: {
+  reducedMotion?: boolean;
+  mobile?: boolean;
+} = {}) => {
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     writable: true,
     value: jest.fn().mockImplementation((query: string) => ({
-      matches: query === '(prefers-reduced-motion: reduce)' ? matches : false,
+      matches: query === '(prefers-reduced-motion: reduce)'
+        ? reducedMotion
+        : query === '(max-width: 767px)'
+          ? mobile
+          : false,
       media: query,
       onchange: null,
       addEventListener: jest.fn(),
@@ -113,7 +123,7 @@ const expectedCards = [
 
 describe('MainBanner', () => {
   beforeEach(() => {
-    setReducedMotion(false);
+    setMediaPreferences();
   });
 
   afterEach(() => {
@@ -138,6 +148,25 @@ describe('MainBanner', () => {
 
     expect(links.some((link) => link.getAttribute('href')?.startsWith('/events/'))).toBe(false);
     expect(links.some((link) => link.getAttribute('href')?.startsWith('/categories/'))).toBe(false);
+  });
+
+  test('renders five portrait event slides on mobile', () => {
+    setMediaPreferences({ mobile: true });
+    const { container } = render(<MainBanner />);
+
+    expect(container.querySelectorAll('.mobileBannerCard')).toHaveLength(7);
+    expect(screen.getByRole('link', { name: '라스트 서머 세일 셀렉션 이벤트 보기' }))
+      .toHaveAttribute('href', '/events/event-2026-08-summer-sale-edit');
+    expect(screen.getByAltText('라스트 서머 세일 셀렉션 이벤트 배너'))
+      .toHaveAttribute('data-priority', 'true');
+  });
+
+  test('renders five segment buttons instead of visual pagination dots', () => {
+    const { container } = render(<MainBanner />);
+
+    expect(container.querySelectorAll('.paginationSegment')).toHaveLength(5);
+    expect(container.querySelectorAll('.paginationDot')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: '1번 배너 보기' })).toHaveAttribute('aria-current', 'true');
   });
 
   test('preloads only the first LCP candidate while keeping adjacent slide images non-priority', () => {
@@ -269,7 +298,7 @@ describe('MainBanner', () => {
   });
 
   test('starts paused and navigates without transition lock for reduced motion', () => {
-    setReducedMotion(true);
+    setMediaPreferences({ reducedMotion: true });
     jest.useFakeTimers();
     const { container } = render(<MainBanner />);
     const track = container.querySelector<HTMLElement>('.bannerTrack');
@@ -298,15 +327,17 @@ describe('MainBanner', () => {
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
       writable: true,
-      value: jest.fn().mockImplementation(() => ({
+      value: jest.fn().mockImplementation((query: string) => ({
         matches: false,
-        media: '(prefers-reduced-motion: reduce)',
+        media: query,
         onchange: null,
         addEventListener: (
           _type: string,
           listener: (event: MediaQueryListEvent) => void,
         ) => {
-          motionChangeListener = listener;
+          if (query === '(prefers-reduced-motion: reduce)') {
+            motionChangeListener = listener;
+          }
         },
         removeEventListener: jest.fn(),
         addListener: jest.fn(),
@@ -336,15 +367,17 @@ describe('MainBanner', () => {
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
       writable: true,
-      value: jest.fn().mockImplementation(() => ({
+      value: jest.fn().mockImplementation((query: string) => ({
         matches: false,
-        media: '(prefers-reduced-motion: reduce)',
+        media: query,
         onchange: null,
         addEventListener: (
           _type: string,
           listener: (event: MediaQueryListEvent) => void,
         ) => {
-          motionChangeListener = listener;
+          if (query === '(prefers-reduced-motion: reduce)') {
+            motionChangeListener = listener;
+          }
         },
         removeEventListener: jest.fn(),
         addListener: jest.fn(),
@@ -485,7 +518,7 @@ describe('MainBanner', () => {
 
     await waitFor(() => {
       expect(track?.style.getPropertyValue('--track-index')).toBe('3');
-      expect(container.querySelectorAll('.paginationDot')[2]).toHaveAttribute('aria-current', 'true');
+      expect(container.querySelectorAll('.paginationSegment')[2]).toHaveAttribute('aria-current', 'true');
       expect(
         Array.from(container.querySelectorAll<HTMLImageElement>('img'))
           .filter((image) => image.dataset.priority === 'true'),

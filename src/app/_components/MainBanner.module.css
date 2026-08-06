@@ -1,4 +1,7 @@
 .bannerSection {
+  --side-preview: 20%;
+  --active-slide-width: 60%;
+  --stage-height: min(30vw, 576px);
   overflow: hidden;
   background: #050505;
 }
@@ -7,7 +10,7 @@
   position: relative;
   width: 100%;
   max-width: 1920px;
-  height: clamp(260px, 43vw, 760px);
+  height: var(--stage-height);
   margin: 0 auto;
   overflow: hidden;
   background: #050505;
@@ -24,30 +27,28 @@
   display: flex;
   width: 100%;
   height: 100%;
-  transform: translateX(calc(7% - (var(--track-index) * 86%) + var(--drag-offset)));
+  transform: translateX(calc(var(--side-preview) - (var(--track-index) * var(--active-slide-width)) + var(--drag-offset)));
   transition: transform 0.58s cubic-bezier(0.22, 0.61, 0.36, 1);
   will-change: transform;
 }
 
-.bannerTrackJumping {
-  transition: none;
-}
-
-.bannerTrackDragging {
-  transition: none;
-}
-
+.bannerTrackJumping,
+.bannerTrackDragging,
 .bannerTrackReducedMotion {
   transition: none;
 }
 
-.bannerPair {
+.bannerPair,
+.mobileBannerSlide {
   position: relative;
-  display: grid;
-  flex: 0 0 86%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex: 0 0 var(--active-slide-width);
   height: 100%;
   overflow: hidden;
+}
+
+.bannerPair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .bannerPair::after {
@@ -64,17 +65,20 @@
   background: rgba(0, 0, 0, 0);
 }
 
-.bannerCard {
+.bannerCard,
+.mobileBannerCard {
   position: relative;
   display: block;
   height: 100%;
   overflow: hidden;
   background: #111;
+  color: #fff;
   text-decoration: none;
 }
 
-.bannerCard:focus-visible {
-  z-index: 3;
+.bannerCard:focus-visible,
+.mobileBannerCard:focus-visible {
+  z-index: 5;
   outline: 2px solid #fff;
   outline-offset: -4px;
 }
@@ -83,87 +87,103 @@
   object-fit: cover;
 }
 
-.navButton {
+.mobileBannerCard::after {
+  content: "";
   position: absolute;
-  top: 50%;
-  z-index: 4;
-  display: inline-flex;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 48%, rgba(0, 0, 0, 0.54) 100%);
+  pointer-events: none;
+}
+
+.mobileBannerCopy {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.4rem;
+  left: 1.25rem;
+  z-index: 2;
+  display: grid;
+  gap: 0.38rem;
+}
+
+.mobileBannerCopy strong {
+  font-size: clamp(1.35rem, 5.4vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.18;
+}
+
+.mobileBannerCopy span {
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.bannerControls {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  background: rgba(0, 0, 0, 0.34);
-  color: #fff;
-  cursor: pointer;
-  font-size: 2.5rem;
-  line-height: 1;
-  transform: translateY(-50%);
+  width: 100%;
+  max-width: 1920px;
+  min-height: 64px;
+  margin: 0 auto;
+  padding: 0.5rem max(1rem, 7vw);
+  background: #fff;
+  color: #111;
 }
 
-.navButton span {
-  display: block;
-  transform: translateY(-0.06em);
-}
-
-.navButton::before {
-  display: none;
-}
-
-.prevButton {
-  left: calc(7% + 1rem);
-}
-
-.prevButton::before {
-  transform: rotate(-135deg);
-}
-
-.nextButton {
-  right: calc(7% + 1rem);
-}
-
-.nextButton::before {
-  transform: rotate(45deg);
-}
-
+.navButton,
 .autoPlayButton {
-  position: absolute;
-  bottom: 0.35rem;
-  left: calc(7% + 0.5rem);
-  z-index: 5;
   display: inline-flex;
+  flex: 0 0 44px;
   align-items: center;
   justify-content: center;
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  background: rgba(0, 0, 0, 0.62);
-  color: #fff;
+  border: 0;
+  background: transparent;
+  color: #111;
   cursor: pointer;
+}
+
+.navButton {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.navButton span {
+  display: block;
+  transform: translateY(-0.15em);
+}
+
+.navButton:disabled,
+.autoPlayButton:disabled,
+.paginationSegment:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.navButton:focus-visible,
+.autoPlayButton:focus-visible,
+.paginationSegment:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: -2px;
+}
+
+.autoPlayButton {
   font-size: 0.72rem;
 }
 
-.autoPlayButton:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
-}
-
 .pagination {
-  position: absolute;
-  right: 0;
-  bottom: 1.15rem;
-  left: 0;
-  z-index: 4;
   display: flex;
-  justify-content: center;
-  gap: 0.62rem;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  gap: 0.38rem;
 }
 
-.paginationDot {
+.paginationSegment {
   position: relative;
-  width: 44px;
+  flex: 1;
+  min-width: 0;
   height: 44px;
   padding: 0;
   border: 0;
@@ -171,68 +191,61 @@
   cursor: pointer;
 }
 
-.paginationDot::before {
+.paginationSegment::before {
   content: "";
   position: absolute;
   top: 50%;
-  left: 50%;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.42);
-  transform: translate(-50%, -50%);
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: #d5d5d5;
+  transform: translateY(-50%);
 }
 
-.activeDot::before {
-  background: #fff;
+.activeSegment::before {
+  background: #111;
 }
 
-@media (max-width: 1100px) {
-  .bannerStage {
-    height: clamp(220px, 43vw, 520px);
-  }
-
-  .navButton {
-    width: 40px;
-    height: 40px;
-  }
-
-  .navButton::before {
-    width: 12px;
-    height: 12px;
-  }
-
-  .prevButton {
-    left: calc(7% + 0.55rem);
-  }
-
-  .nextButton {
-    right: calc(7% + 0.55rem);
+@media (max-width: 1599px) {
+  .bannerSection {
+    --side-preview: 15%;
+    --active-slide-width: 70%;
+    --stage-height: min(35vw, 560px);
   }
 }
 
-@media (max-width: 768px) {
-  .bannerStage {
-    height: clamp(178px, 43vw, 320px);
+@media (max-width: 1279px) {
+  .bannerSection {
+    --side-preview: 7%;
+    --active-slide-width: 86%;
+    --stage-height: min(43vw, 520px);
   }
 
-  .navButton {
-    display: none;
+  .bannerControls {
+    padding-right: max(0.75rem, 7vw);
+    padding-left: max(0.75rem, 7vw);
+  }
+}
+
+@media (max-width: 767px) {
+  .bannerSection {
+    --side-preview: 0%;
+    --active-slide-width: 100%;
+    --stage-height: min(133.333vw, 760px);
+  }
+
+  .bannerControls {
+    min-height: 56px;
+    padding: 0.25rem 0.35rem;
+  }
+
+  .navButton,
+  .autoPlayButton {
+    flex-basis: 44px;
   }
 
   .pagination {
-    bottom: 0;
-    gap: 0;
-  }
-
-  .paginationDot::before {
-    width: 7px;
-    height: 7px;
-  }
-
-  .autoPlayButton {
-    bottom: 0;
-    left: 0.4rem;
+    gap: 0.2rem;
   }
 }
 

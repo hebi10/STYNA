@@ -14,7 +14,6 @@ interface FeaturedProductsProps {
   eyebrow?: string;
   title?: string;
   subtitle?: string;
-  description?: string;
   sectionClassName?: string;
   viewAllLabel?: string;
 }
@@ -23,7 +22,6 @@ export default function FeaturedProducts({
   eyebrow,
   title,
   subtitle,
-  description,
   sectionClassName = '',
   viewAllLabel = '전체 보기',
 }: FeaturedProductsProps) {
@@ -80,7 +78,6 @@ export default function FeaturedProducts({
   const isEmpty = products.length === 0;
   const resolvedTitle = title || (isFallback ? '추천 상품' : section!.config.title);
   const resolvedSubtitle = subtitle || (isFallback ? undefined : section!.config.subtitle);
-  const resolvedDescription = description || (isFallback ? undefined : section!.config.description);
   const heroImage = isFallback
     ? '/style-now/autumn/style-now-autumn-main.webp'
     : section!.config.heroImage || '/style-now/autumn/style-now-autumn-main.webp';
@@ -94,14 +91,12 @@ export default function FeaturedProducts({
             <h2 className={styles.title}>{resolvedTitle}</h2>
             {resolvedSubtitle ? <p className={styles.subtitle}>{resolvedSubtitle}</p> : null}
           </div>
-          {(resolvedDescription || !isEmpty) && (
+          {!isEmpty && (
             <div className={styles.headerSide}>
-              {resolvedDescription ? <p className={styles.description}>{resolvedDescription}</p> : null}
-              {!isEmpty && (
-                <Link href="/recommend" className={styles.viewAllButton}>
-                  {viewAllLabel}
-                </Link>
-              )}
+              <Link href="/recommend" className={`${styles.viewAllButton} ${styles.headerViewAll}`}>
+                <span>{viewAllLabel}</span>
+                <span aria-hidden="true">→</span>
+              </Link>
             </div>
           )}
         </div>
@@ -167,6 +162,7 @@ export default function FeaturedProducts({
                         <span>{pricing.salePrice.toLocaleString('ko-KR')}원</span>
                       </span>
                     </span>
+                    <span className={styles.productAction} aria-hidden="true">→</span>
                   </Link>
                 );
               })}

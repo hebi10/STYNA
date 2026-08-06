@@ -19,7 +19,13 @@
 - 이벤트 목록 클린 갤러리 설계 : superpowers/specs/2026-07-15-event-list-clean-gallery-design.md
 - 이벤트 목록 클린 갤러리 실행 계획 : superpowers/plans/2026-07-15-event-list-clean-gallery.md
 - 메인 랭킹 UI 점검 : main-ranking-ui.md
+- STYNA SELECT 편집형 추천 상품 설계 : superpowers/specs/2026-08-06-styna-select-editorial-design.md
+- STYNA SELECT 편집형 추천 상품 실행 계획 : superpowers/plans/2026-08-06-styna-select-editorial.md
+- STYNA FILM 무음 자동 재생 섹션 설계 : superpowers/specs/2026-08-06-styna-film-autoplay-design.md
+- STYNA FILM 무음 자동 재생 섹션 실행 계획 : superpowers/plans/2026-08-06-styna-film-autoplay.md
 - 메인 상단 배너 작업 영역 : main-banner.md
+- 메인 배너 가변 프리뷰·바 네비게이션 설계 : superpowers/specs/2026-08-06-main-banner-responsive-preview-design.md
+- 메인 배너 데스크톱 정사각형·모바일 세로형 구현 계획 : superpowers/plans/2026-08-06-main-banner-responsive-mobile-event.md
 - 메인 배너 드래그·무한 순환 안정화 설계 : superpowers/specs/2026-07-13-main-banner-drag-loop-design.md
 - 메인 배너 드래그·무한 순환 안정화 실행 계획 : superpowers/plans/2026-07-13-main-banner-drag-loop.md
 - 마이페이지 UI 점검 : mypage-ui.md

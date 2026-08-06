@@ -29,6 +29,14 @@ type BannerPair = {
   right: BannerCard;
 };
 
+type MobileBanner = {
+  id: string;
+  href: string;
+  image: string;
+  title: string;
+  description: string;
+};
+
 const bannerPairs: BannerPair[] = [
   {
     id: 'cool-touch-office',
@@ -113,6 +121,50 @@ const carouselPairs = [
   bannerPairs[0],
 ];
 
+const mobileBanners: MobileBanner[] = [
+  {
+    id: 'summer-sale-edit',
+    href: '/events/event-2026-08-summer-sale-edit',
+    image: '/main/mobile-event-banner/summer-sale-edit.webp',
+    title: '라스트 서머 세일 셀렉션',
+    description: '가벼운 여름 스타일을 만나보세요.',
+  },
+  {
+    id: 'prefall-layering-new',
+    href: '/events/event-2026-08-prefall-layering-new',
+    image: '/main/mobile-event-banner/prefall-layering-new.webp',
+    title: '프리폴 레이어링 신상',
+    description: '계절 사이를 위한 새 스타일.',
+  },
+  {
+    id: 'late-summer-style',
+    href: '/events/event-2026-08-late-summer-style',
+    image: '/main/mobile-event-banner/late-summer-style.webp',
+    title: '늦여름 데일리 리셋',
+    description: '지금 입기 좋은 데일리 셀렉션.',
+  },
+  {
+    id: 'bag-accessory-sale',
+    href: '/events/event-2026-08-bag-accessory-sale',
+    image: '/main/mobile-event-banner/bag-accessory-sale.webp',
+    title: '데일리 백 & 액세서리 세일',
+    description: '매일 함께할 포인트 아이템.',
+  },
+  {
+    id: 'daily-bag-new',
+    href: '/events/event-2026-08-daily-bag-new',
+    image: '/main/mobile-event-banner/daily-bag-new.webp',
+    title: '데일리 백 신상품',
+    description: '새 시즌의 가방을 확인하세요.',
+  },
+];
+
+const mobileCarouselBanners = [
+  mobileBanners[mobileBanners.length - 1],
+  ...mobileBanners,
+  mobileBanners[0],
+];
+
 export default function MainBanner() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [trackIndex, setTrackIndex] = useState(1);
@@ -126,6 +178,7 @@ export default function MainBanner() {
   const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(true);
   const [isHoverPaused, setIsHoverPaused] = useState(false);
   const [isFocusPaused, setIsFocusPaused] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const pointerStartXRef = useRef<number | null>(null);
   const didDragRef = useRef(false);
 
@@ -159,6 +212,20 @@ export default function MainBanner() {
     const handleChange = (event: MediaQueryListEvent) => updateMotionPreference(event.matches);
 
     updateMotionPreference(mediaQuery.matches);
+    mediaQuery.addEventListener?.('change', handleChange);
+    return () => mediaQuery.removeEventListener?.('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const updateViewport = (matches: boolean) => setIsMobileViewport(matches);
+    const handleChange = (event: MediaQueryListEvent) => updateViewport(event.matches);
+
+    updateViewport(mediaQuery.matches);
     mediaQuery.addEventListener?.('change', handleChange);
     return () => mediaQuery.removeEventListener?.('change', handleChange);
   }, []);
@@ -414,47 +481,85 @@ export default function MainBanner() {
           onClickCapture={handleBannerClickCapture}
         >
           <div
-            className={`${styles.bannerTrack} ${isJumping ? styles.bannerTrackJumping : ''} ${isDragging ? styles.bannerTrackDragging : ''} ${prefersReducedMotion ? styles.bannerTrackReducedMotion : ''}`}
+            className={`${styles.bannerTrack} ${isMobileViewport ? styles.mobileTrack : ''} ${isJumping ? styles.bannerTrackJumping : ''} ${isDragging ? styles.bannerTrackDragging : ''} ${prefersReducedMotion ? styles.bannerTrackReducedMotion : ''}`}
             style={trackStyle}
             onTransitionEnd={handleTrackTransitionEnd}
           >
-            {carouselPairs.map((pair, index) => {
-              const realIndex = (index - 1 + bannerPairs.length) % bannerPairs.length;
-              const isActive = realIndex === activeIndex && index === trackIndex;
-              const shouldRenderImages = Math.abs(index - trackIndex) <= 1;
+            {isMobileViewport
+              ? mobileCarouselBanners.map((banner, index) => {
+                const realIndex = (index - 1 + mobileBanners.length) % mobileBanners.length;
+                const isActive = realIndex === activeIndex && index === trackIndex;
+                const shouldRenderImage = Math.abs(index - trackIndex) <= 1;
 
-              return (
-                <article
-                  key={`${pair.id}-${index}`}
-                  className={`${styles.bannerPair} ${isActive ? styles.activePair : ''}`}
-                  aria-hidden={!isActive}
-                >
-                  {[pair.left, pair.right].map((card, cardIndex) => (
+                return (
+                  <article
+                    key={`${banner.id}-${index}`}
+                    className={`${styles.mobileBannerSlide} ${isActive ? styles.activePair : ''}`}
+                    aria-hidden={!isActive}
+                  >
                     <Link
-                      key={card.id}
-                      href={card.href}
-                      className={styles.bannerCard}
-                      aria-label={card.alt}
+                      href={banner.href}
+                      className={styles.mobileBannerCard}
+                      aria-label={`${banner.title} 이벤트 보기`}
                       tabIndex={isActive ? 0 : -1}
                     >
-                    {shouldRenderImages ? (
-                      <Image
-                        src={card.image}
-                        alt={card.alt}
-                        fill
-                        priority={index === 1 && cardIndex === 0}
-                        sizes="(min-width: 1920px) 826px, 43vw"
-                        className={styles.bannerImage}
-                      />
-                    ) : null}
+                      {shouldRenderImage ? (
+                        <Image
+                          src={banner.image}
+                          alt={`${banner.title} 이벤트 배너`}
+                          fill
+                          priority={index === 1}
+                          sizes="100vw"
+                          className={styles.bannerImage}
+                        />
+                      ) : null}
+                      <span className={styles.mobileBannerCopy}>
+                        <strong>{banner.title}</strong>
+                        <span>{banner.description}</span>
+                      </span>
                     </Link>
-                  ))}
-                </article>
-              );
-            })}
+                  </article>
+                );
+              })
+              : carouselPairs.map((pair, index) => {
+                const realIndex = (index - 1 + bannerPairs.length) % bannerPairs.length;
+                const isActive = realIndex === activeIndex && index === trackIndex;
+                const shouldRenderImages = Math.abs(index - trackIndex) <= 1;
+
+                return (
+                  <article
+                    key={`${pair.id}-${index}`}
+                    className={`${styles.bannerPair} ${isActive ? styles.activePair : ''}`}
+                    aria-hidden={!isActive}
+                  >
+                    {[pair.left, pair.right].map((card, cardIndex) => (
+                      <Link
+                        key={card.id}
+                        href={card.href}
+                        className={styles.bannerCard}
+                        aria-label={card.alt}
+                        tabIndex={isActive ? 0 : -1}
+                      >
+                        {shouldRenderImages ? (
+                          <Image
+                            src={card.image}
+                            alt={card.alt}
+                            fill
+                            priority={index === 1 && cardIndex === 0}
+                            sizes="(min-width: 1920px) 826px, 43vw"
+                            className={styles.bannerImage}
+                          />
+                        ) : null}
+                      </Link>
+                    ))}
+                  </article>
+                );
+              })}
           </div>
         </div>
+      </div>
 
+      <div className={styles.bannerControls}>
         <button
           type="button"
           className={`${styles.navButton} ${styles.prevButton}`}
@@ -464,6 +569,19 @@ export default function MainBanner() {
         >
           <span aria-hidden="true">‹</span>
         </button>
+        <div className={styles.pagination} aria-label="배너 순서">
+          {bannerPairs.map((pair, index) => (
+            <button
+              key={pair.id}
+              type="button"
+              className={`${styles.paginationSegment} ${index === activeIndex ? styles.activeSegment : ''}`}
+              aria-label={`${index + 1}번 배너 보기`}
+              aria-current={index === activeIndex}
+              disabled={isAnimating}
+              onClick={() => showSlide(index)}
+            />
+          ))}
+        </div>
         <button
           type="button"
           className={`${styles.navButton} ${styles.nextButton}`}
@@ -473,7 +591,6 @@ export default function MainBanner() {
         >
           <span aria-hidden="true">›</span>
         </button>
-
         <button
           type="button"
           className={styles.autoPlayButton}
@@ -484,20 +601,6 @@ export default function MainBanner() {
         >
           <span aria-hidden="true">{isAutoPlayEnabled ? 'Ⅱ' : '▶'}</span>
         </button>
-
-        <div className={styles.pagination} aria-label="배너 순서">
-          {bannerPairs.map((pair, index) => (
-            <button
-              key={pair.id}
-              type="button"
-              className={`${styles.paginationDot} ${index === activeIndex ? styles.activeDot : ''}`}
-              aria-label={`${index + 1}번 배너 보기`}
-              aria-current={index === activeIndex}
-              disabled={isAnimating}
-              onClick={() => showSlide(index)}
-            />
-          ))}
-        </div>
       </div>
     </section>
   );
