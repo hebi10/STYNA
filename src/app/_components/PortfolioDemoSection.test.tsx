@@ -17,7 +17,7 @@ jest.mock('./PortfolioDemoSection.module.css', () => ({
 }));
 
 describe('PortfolioDemoSection', () => {
-  test('keeps portfolio disclosure in one section and opens the shopping guide', () => {
+  test('presents the portfolio as a shopping showcase and opens the shopping guide', () => {
     const listener = jest.fn();
     window.addEventListener(OPEN_SITE_GUIDE_EVENT, listener);
 
@@ -25,12 +25,18 @@ describe('PortfolioDemoSection', () => {
 
     expect(container.querySelectorAll('section')).toHaveLength(1);
     expect(screen.getByText('PORTFOLIO DEMO')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '포트폴리오 데모 안내' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '포트폴리오로 구현한 쇼핑몰' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '쇼핑 경험' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '운영 기능' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '데모 환경' })).toBeInTheDocument();
     expect(screen.getByText(SITE_INFO.demoNotice)).toBeInTheDocument();
     expect(screen.getByText(buildDemoDataNotice())).toBeInTheDocument();
     expect(screen.getByText(formatSignupBenefit())).toBeInTheDocument();
     expect(screen.getByText(
-      '일반 회원 화면에서는 쇼핑과 주문 흐름을 확인할 수 있으며, 관리자 화면에서는 상품, 이벤트, 쿠폰 관리 화면을 확인할 수 있습니다.',
+      '상품 탐색, 장바구니, 주문 흐름을 직접 확인할 수 있습니다.',
+    )).toBeInTheDocument();
+    expect(screen.getByText(
+      '관리자 화면에서 상품, 이벤트, 쿠폰 관리 기능을 확인할 수 있습니다.',
     )).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '구현 범위 자세히 보기' }));
@@ -52,6 +58,9 @@ describe('PortfolioDemoSection', () => {
     expect(css).toContain('var(--black)');
     expect(css).toContain('var(--action)');
     expect(css).toContain('var(--action-hover)');
+    expect(css).toContain('grid-template-columns: repeat(3, minmax(0, 1fr))');
+    expect(css).toContain('@media (max-width: 768px)');
+    expect(css).toContain('grid-template-columns: 1fr');
     expect(css).not.toMatch(/#[0-9a-f]{3,8}/i);
     expect(css).not.toMatch(/box-shadow|border-radius/);
   });

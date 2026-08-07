@@ -1,5 +1,5 @@
 .section {
-  padding: 2.5rem 1rem;
+  padding: 4rem 1rem;
   background: var(--surface-raised);
   border-top: 1px solid var(--line);
 }
@@ -9,8 +9,12 @@
   margin: 0 auto;
 }
 
+.summary {
+  max-width: 44rem;
+}
+
 .eyebrow {
-  margin: 0 0 0.45rem;
+  margin: 0 0 0.5rem;
   color: var(--text-subtle);
   font-size: 0.72rem;
   font-weight: 800;
@@ -21,36 +25,51 @@
 .title {
   margin: 0;
   color: var(--text);
-  font-size: 1.2rem;
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
   font-weight: 800;
-  line-height: 1.35;
+  line-height: 1.3;
+  letter-spacing: -0.03em;
+}
+
+.intro {
+  margin: 0.85rem 0 0;
+  color: var(--text-subtle);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.capabilities {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.capability {
+  min-width: 0;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+}
+
+.capability h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.4;
   letter-spacing: -0.02em;
 }
 
-.notice,
-.benefit,
-.scope p {
-  max-width: 48rem;
-  margin: 0.8rem 0 0;
+.capability p {
+  margin: 0.7rem 0 0;
   color: var(--text-subtle);
-  font-size: 0.9rem;
-  line-height: 1.75;
+  font-size: 0.88rem;
+  line-height: 1.7;
 }
 
-.benefit {
+.capability .benefit {
   color: var(--black);
   font-weight: 700;
-}
-
-.scope {
-  max-width: 48rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--line);
-}
-
-.scope p {
-  margin-top: 0;
 }
 
 .guideButton {
@@ -78,7 +97,13 @@
 
 @media (max-width: 768px) {
   .section {
-    padding: 2rem 0.75rem;
+    padding: 2.5rem 0.75rem;
+  }
+
+  .capabilities {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
   }
 
   .guideButton {
@@ -90,5 +115,9 @@
   .section {
     padding-right: 0.625rem;
     padding-left: 0.625rem;
+  }
+
+  .capability {
+    padding: 1rem;
   }
 }
