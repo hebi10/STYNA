@@ -19,6 +19,7 @@
 - 이벤트 목록 클린 갤러리 설계 : superpowers/specs/2026-07-15-event-list-clean-gallery-design.md
 - 이벤트 목록 클린 갤러리 실행 계획 : superpowers/plans/2026-07-15-event-list-clean-gallery.md
 - 메인 랭킹 UI 점검 : main-ranking-ui.md
+- 포트폴리오 데모 쇼케이스 안내 설계 : superpowers/specs/2026-08-07-portfolio-demo-showcase-design.md
 - STYNA SELECT 편집형 추천 상품 설계 : superpowers/specs/2026-08-06-styna-select-editorial-design.md
 - STYNA SELECT 편집형 추천 상품 실행 계획 : superpowers/plans/2026-08-06-styna-select-editorial.md
 - STYNA FILM 무음 자동 재생 섹션 설계 : superpowers/specs/2026-08-06-styna-film-autoplay-design.md
