@@ -1,12 +1,12 @@
 /* 고정 버튼 스타일 */
 .fixedButton {
   position: fixed;
-  right: max(0.75rem, env(safe-area-inset-right));
-  bottom: calc(0.75rem + 48px + 0.5rem + env(safe-area-inset-bottom));
-  width: 48px;
-  min-width: 48px;
-  min-height: 48px;
-  height: 48px;
+  right: max(1.25rem, env(safe-area-inset-right));
+  bottom: calc(1.25rem + 52px + 0.5rem + env(safe-area-inset-bottom));
+  width: 52px;
+  min-width: 52px;
+  min-height: 52px;
+  height: 52px;
   padding: 0;
   background: var(--color-white);
   border: 1px solid var(--black);
@@ -32,8 +32,8 @@
 }
 
 .buttonIcon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   filter: invert(1);
 }
@@ -49,6 +49,7 @@
   }
 
   .fixedButton {
+    right: max(0.75rem, env(safe-area-inset-right));
     bottom: calc(0.75rem + 44px + 0.5rem + env(safe-area-inset-bottom));
     width: 44px;
     min-width: 44px;

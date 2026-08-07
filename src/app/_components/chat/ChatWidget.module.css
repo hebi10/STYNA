@@ -1,18 +1,18 @@
 /* ChatWidget - storefront support style */
 .chatWidget {
   position: fixed;
-  bottom: calc(0.75rem + env(safe-area-inset-bottom));
-  right: max(0.75rem, env(safe-area-inset-right));
+  bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  right: max(1.25rem, env(safe-area-inset-right));
   z-index: 1000;
   font-family: inherit;
 }
 
 /* 채팅 토글 버튼 */
 .chatButton {
-  width: 48px;
-  min-width: 48px;
-  min-height: 48px;
-  height: 48px;
+  width: 52px;
+  min-width: 52px;
+  min-height: 52px;
+  height: 52px;
   padding: 0;
   border-radius: 2px;
   background: var(--black);
@@ -32,8 +32,8 @@
 }
 
 .chatButtonIcon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
 }
 
@@ -59,7 +59,7 @@
 /* 채팅 창 */
 .chatWindow {
   position: absolute;
-  bottom: 52px;
+  bottom: 56px;
   right: 0;
   width: 380px;
   height: min(600px, calc(100dvh - 5rem));

@@ -220,8 +220,9 @@ describe('ChatWidget', () => {
       'utf8',
     );
 
-    expect(css).toMatch(/\.chatButton\s*\{[\s\S]*?width:\s*48px[\s\S]*?height:\s*48px/);
-    expect(css).toMatch(/\.chatButtonIcon\s*\{[\s\S]*?width:\s*28px[\s\S]*?height:\s*28px/);
+    expect(css).toMatch(/\.chatWidget\s*\{[\s\S]*?bottom:\s*calc\(1\.25rem\s*\+\s*env\(safe-area-inset-bottom\)\)[\s\S]*?right:\s*max\(1\.25rem,\s*env\(safe-area-inset-right\)\)/);
+    expect(css).toMatch(/\.chatButton\s*\{[\s\S]*?width:\s*52px[\s\S]*?height:\s*52px/);
+    expect(css).toMatch(/\.chatButtonIcon\s*\{[\s\S]*?width:\s*32px[\s\S]*?height:\s*32px/);
     expect(css).toMatch(/@media\s*\(max-width:\s*640px\)\s*\{[\s\S]*?\.chatButton\s*\{[\s\S]*?width:\s*44px[\s\S]*?height:\s*44px/);
     expect(css).toMatch(/@media\s*\(max-width:\s*640px\)\s*\{[\s\S]*?\.chatButtonIcon\s*\{[\s\S]*?width:\s*24px[\s\S]*?height:\s*24px/);
   });
