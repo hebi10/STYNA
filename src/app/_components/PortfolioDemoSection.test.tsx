@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { SITE_INFO } from '@/shared/constants/siteInfo';
 import {
   buildDemoDataNotice,
@@ -29,6 +29,9 @@ describe('PortfolioDemoSection', () => {
     expect(screen.getByRole('heading', { name: '쇼핑 경험' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '운영 기능' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '데모 환경' })).toBeInTheDocument();
+    const capabilityList = screen.getByRole('list', { name: '구현 범위' });
+    expect(within(capabilityList).getAllByRole('listitem')).toHaveLength(3);
+    expect(container.querySelectorAll('article')).toHaveLength(0);
     expect(screen.getByText(SITE_INFO.demoNotice)).toBeInTheDocument();
     expect(screen.getByText(buildDemoDataNotice())).toBeInTheDocument();
     expect(screen.getByText(formatSignupBenefit())).toBeInTheDocument();
@@ -52,13 +55,11 @@ describe('PortfolioDemoSection', () => {
     );
 
     expect(css).toContain('var(--surface-raised)');
-    expect(css).toContain('var(--line)');
-    expect(css).toContain('var(--text-subtle)');
     expect(css).toContain('var(--text)');
     expect(css).toContain('var(--black)');
     expect(css).toContain('var(--action)');
     expect(css).toContain('var(--action-hover)');
-    expect(css).toContain('grid-template-columns: repeat(3, minmax(0, 1fr))');
+    expect(css).toContain('var(--swatch-beige)');
     expect(css).toContain('@media (max-width: 768px)');
     expect(css).toContain('grid-template-columns: 1fr');
     expect(css).not.toMatch(/#[0-9a-f]{3,8}/i);

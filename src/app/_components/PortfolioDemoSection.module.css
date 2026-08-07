@@ -1,21 +1,26 @@
 .section {
-  padding: 4rem 1rem;
-  background: var(--surface-raised);
-  border-top: 1px solid var(--line);
+  padding: 5rem 1rem;
+  background: var(--swatch-beige);
 }
 
 .content {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(3rem, 8vw, 7rem);
   max-width: 1200px;
   margin: 0 auto;
 }
 
 .summary {
-  max-width: 44rem;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .eyebrow {
-  margin: 0 0 0.5rem;
-  color: var(--text-subtle);
+  margin: 0 0 0.75rem;
+  color: var(--black);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -23,59 +28,79 @@
 }
 
 .title {
+  max-width: 10ch;
   margin: 0;
   color: var(--text);
-  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-size: clamp(2.25rem, 4.6vw, 4rem);
   font-weight: 800;
-  line-height: 1.3;
-  letter-spacing: -0.03em;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
 }
 
 .intro {
-  margin: 0.85rem 0 0;
-  color: var(--text-subtle);
+  max-width: 30rem;
+  margin: 1.25rem 0 0;
+  color: var(--text);
   font-size: 0.95rem;
-  line-height: 1.7;
+  line-height: 1.75;
 }
 
 .capabilities {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-top: 2rem;
+  align-self: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .capability {
-  min-width: 0;
-  padding: 1.25rem;
-  border: 1px solid var(--line);
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.35fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  padding: 1.3rem 0;
+}
+
+.capability + .capability::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: var(--black);
+  content: '';
+  opacity: 0.18;
 }
 
 .capability h3 {
   margin: 0;
-  color: var(--text);
-  font-size: 1rem;
+  color: var(--black);
+  font-size: 0.9rem;
   font-weight: 800;
-  line-height: 1.4;
+  line-height: 1.6;
   letter-spacing: -0.02em;
 }
 
 .capability p {
-  margin: 0.7rem 0 0;
-  color: var(--text-subtle);
+  margin: 0;
+  color: var(--text);
   font-size: 0.88rem;
   line-height: 1.7;
 }
 
+.capability p + p {
+  margin-top: 0.65rem;
+}
+
 .capability .benefit {
-  color: var(--black);
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 500;
 }
 
 .guideButton {
   min-height: 44px;
-  margin-top: 1.25rem;
-  padding: 0.65rem 1rem;
+  margin-top: 2rem;
+  padding: 0.7rem 1rem;
   border: 1px solid var(--action);
   background: var(--action);
   color: var(--surface-raised);
@@ -97,13 +122,17 @@
 
 @media (max-width: 768px) {
   .section {
-    padding: 2.5rem 0.75rem;
+    padding: 3.5rem 0.75rem;
   }
 
-  .capabilities {
+  .content {
     grid-template-columns: 1fr;
-    gap: 0.5rem;
-    margin-top: 1.5rem;
+    gap: 2rem;
+  }
+
+  .title {
+    max-width: 12ch;
+    font-size: clamp(2rem, 10vw, 3rem);
   }
 
   .guideButton {
@@ -113,11 +142,12 @@
 
 @media (max-width: 480px) {
   .section {
-    padding-right: 0.625rem;
-    padding-left: 0.625rem;
+    padding: 3rem 0.625rem;
   }
 
   .capability {
-    padding: 1rem;
+    grid-template-columns: minmax(5.5rem, 0.35fr) minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 1.1rem 0;
   }
 }

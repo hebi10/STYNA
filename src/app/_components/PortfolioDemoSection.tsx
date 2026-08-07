@@ -20,33 +20,35 @@ export default function PortfolioDemoSection() {
           <p className={styles.intro}>
             상품 탐색부터 주문과 운영 화면까지 연결한 커머스 프로젝트입니다.
           </p>
+          <button
+            type="button"
+            className={styles.guideButton}
+            onClick={openSiteGuide}
+          >
+            구현 범위 자세히 보기
+          </button>
         </header>
 
-        <div className={styles.capabilities}>
-          <article className={styles.capability}>
+        <ul className={styles.capabilities} aria-label="구현 범위">
+          <li className={styles.capability}>
             <h3>쇼핑 경험</h3>
             <p>상품 탐색, 장바구니, 주문 흐름을 직접 확인할 수 있습니다.</p>
-          </article>
-          <article className={styles.capability}>
+          </li>
+          <li className={styles.capability}>
             <h3>운영 기능</h3>
             <p>
               관리자 화면에서 상품, 이벤트, 쿠폰 관리 기능을 확인할 수 있습니다.
             </p>
-          </article>
-          <article className={styles.capability}>
+          </li>
+          <li className={styles.capability}>
             <h3>데모 환경</h3>
-            <p>{SITE_INFO.demoNotice}</p>
-            <p>{buildDemoDataNotice()}</p>
-            <p className={styles.benefit}>{formatSignupBenefit()}</p>
-          </article>
-        </div>
-        <button
-          type="button"
-          className={styles.guideButton}
-          onClick={openSiteGuide}
-        >
-          구현 범위 자세히 보기
-        </button>
+            <div>
+              <p>{SITE_INFO.demoNotice}</p>
+              <p>{buildDemoDataNotice()}</p>
+              <p className={styles.benefit}>{formatSignupBenefit()}</p>
+            </div>
+          </li>
+        </ul>
       </div>
     </section>
   );

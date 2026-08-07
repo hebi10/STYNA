@@ -1,5 +1,7 @@
 # 포트폴리오 데모 쇼케이스 구현 계획
 
+> **2026-08-07 수정:** 최초 3열 카드 구현은 사용자 검토 후 폐기했다. 최종 구현은 `--swatch-beige` 배경의 좌우 분할형 클로징 배너와 세 개의 목록 행을 사용한다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 홈 최하단 포트폴리오 고지를 쇼핑몰형 쇼케이스 정보 구역으로 재구성한다.
