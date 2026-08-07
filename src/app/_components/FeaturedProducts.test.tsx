@@ -108,7 +108,7 @@ describe('FeaturedProducts', () => {
     render(<FeaturedProducts />);
 
     expect(screen.getByRole('img', { name: 'STYNA SELECT 무드 이미지' }))
-      .toHaveAttribute('src', expect.stringContaining('style-now-autumn-main.webp'));
+      .toHaveAttribute('src', expect.stringContaining('featured-products-editorial.png'));
     expect(screen.getAllByRole('link', { name: /상품 보기$/ })).toHaveLength(3);
     expect(screen.queryByText('노출하면 안 되는 선택')).not.toBeInTheDocument();
   });

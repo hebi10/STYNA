@@ -10,6 +10,17 @@ import { getProductPricing } from '@/shared/utils/productPricing';
 import AsyncStatePanel from './AsyncStatePanel';
 import styles from './FeaturedProducts.module.css';
 
+const FEATURED_HERO_IMAGE = '/images/featured-products-editorial.png';
+const LEGACY_FEATURED_HERO_IMAGE = '/style-now/autumn/style-now-autumn-main.webp';
+
+function resolveFeaturedHeroImage(heroImage?: string) {
+  if (!heroImage || heroImage === LEGACY_FEATURED_HERO_IMAGE) {
+    return FEATURED_HERO_IMAGE;
+  }
+
+  return heroImage;
+}
+
 interface FeaturedProductsProps {
   eyebrow?: string;
   title?: string;
@@ -78,9 +89,9 @@ export default function FeaturedProducts({
   const isEmpty = products.length === 0;
   const resolvedTitle = title || (isFallback ? '추천 상품' : section!.config.title);
   const resolvedSubtitle = subtitle || (isFallback ? undefined : section!.config.subtitle);
-  const heroImage = isFallback
-    ? '/style-now/autumn/style-now-autumn-main.webp'
-    : section!.config.heroImage || '/style-now/autumn/style-now-autumn-main.webp';
+  const heroImage = resolveFeaturedHeroImage(
+    isFallback ? undefined : section!.config.heroImage,
+  );
 
   return (
     <section className={sectionClassNameCombined}>
