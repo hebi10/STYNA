@@ -24,6 +24,17 @@ jest.mock('next/link', () => ({
 }));
 
 describe('Footer', () => {
+  test('uses the ink navy closing surface with readable footer colors', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'src/app/_components/footer/Footer.module.css'),
+      'utf8',
+    );
+
+    expect(source).toContain('background-color: #101315;');
+    expect(source).toContain('--footer-foreground: #f7f8fa;');
+    expect(source).toContain('--footer-muted: #b9c1ca;');
+  });
+
   test('keeps every footer destination on the mobile 44px hit-target class', () => {
     render(<Footer />);
     const links = screen.getAllByRole('link');
