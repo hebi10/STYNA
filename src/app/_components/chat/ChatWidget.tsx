@@ -141,6 +141,7 @@ const ChatWidget: React.FC = () => {
   const [chatMode, setChatMode] = useState<ChatMode>('idle');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
+  const [showQuickButtons, setShowQuickButtons] = useState(true);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -228,6 +229,7 @@ const ChatWidget: React.FC = () => {
   const startChat = useCallback(() => {
     setChatMode('active');
     setMessages([createMessage(INITIAL_BOT_TEXT, 'bot')]);
+    setShowQuickButtons(true);
   }, []);
 
   useEffect(() => {
@@ -266,9 +268,12 @@ const ChatWidget: React.FC = () => {
 
   // ── 텍스트 입력 → 전송 ────────────────────────────
   const sendMessage = useCallback(() => {
-    sendMessageCore(inputValue.trim());
+    const messageText = inputValue.trim();
+    if (!messageText || chatMutation.isPending) return;
+
+    sendMessageCore(messageText);
     setInputValue('');
-  }, [inputValue, sendMessageCore]);
+  }, [chatMutation.isPending, inputValue, sendMessageCore]);
 
   // ── 빠른 선택 버튼 → 전송 ─────────────────────────
   const handleQuickButton = useCallback(
@@ -294,6 +299,9 @@ const ChatWidget: React.FC = () => {
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setInputValue(e.target.value);
+      if (e.target.value.trim()) {
+        setShowQuickButtons(false);
+      }
 
       const textarea = e.target;
       textarea.style.height = 'auto';
@@ -430,7 +438,7 @@ const ChatWidget: React.FC = () => {
         </div>
 
         {/* 빠른 선택 버튼 */}
-        {isChatActive && (
+        {isChatActive && showQuickButtons && (
           <div className={styles.quickButtons}>
             {QUICK_BUTTONS.map((label) => (
               <button

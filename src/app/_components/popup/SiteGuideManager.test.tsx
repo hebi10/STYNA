@@ -121,8 +121,10 @@ describe('SiteGuideManager shared guide event', () => {
     );
 
     expect(chatCss).toMatch(/bottom:\s*calc\([^;]*env\(safe-area-inset-bottom\)\)/);
-    expect(guideCss).toMatch(/bottom:\s*calc\([^;]*44px[^;]*env\(safe-area-inset-bottom\)\)/);
-    expect(guideCss).toMatch(/min-height:\s*44px/);
+    expect(guideCss).toMatch(/bottom:\s*calc\([^;]*48px[^;]*env\(safe-area-inset-bottom\)\)/);
+    expect(guideCss).toMatch(/width:\s*48px/);
+    expect(guideCss).toMatch(/min-height:\s*48px/);
+    expect(guideCss).toMatch(/@media\s*\(max-width:\s*640px\)\s*\{[\s\S]*?width:\s*44px[\s\S]*?min-height:\s*44px/);
     expect(guideCss).toMatch(/@media\s*\(max-width:\s*640px\)\s*\{[\s\S]*?\.mobileSuppressed\s*\{[\s\S]*?display:\s*none/);
   });
 

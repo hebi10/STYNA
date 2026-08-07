@@ -214,6 +214,37 @@ describe('ChatWidget', () => {
     expect(css).toMatch(/@media\s*\(max-width:\s*480px\)\s*\{[\s\S]*?bottom:\s*calc\(0\.75rem\s*\+\s*env\(safe-area-inset-bottom\)\)[\s\S]*?height:\s*min\(600px,\s*calc\(100dvh\s*-\s*1\.5rem\)\)/);
   });
 
+  test('uses larger chat controls on desktop while keeping the mobile size', () => {
+    const css = readFileSync(
+      resolve(process.cwd(), 'src/app/_components/chat/ChatWidget.module.css'),
+      'utf8',
+    );
+
+    expect(css).toMatch(/\.chatButton\s*\{[\s\S]*?width:\s*48px[\s\S]*?height:\s*48px/);
+    expect(css).toMatch(/\.chatButtonIcon\s*\{[\s\S]*?width:\s*28px[\s\S]*?height:\s*28px/);
+    expect(css).toMatch(/@media\s*\(max-width:\s*640px\)\s*\{[\s\S]*?\.chatButton\s*\{[\s\S]*?width:\s*44px[\s\S]*?height:\s*44px/);
+    expect(css).toMatch(/@media\s*\(max-width:\s*640px\)\s*\{[\s\S]*?\.chatButtonIcon\s*\{[\s\S]*?width:\s*24px[\s\S]*?height:\s*24px/);
+  });
+
+  test('keeps quick buttons after a quick selection', () => {
+    renderChatWidget();
+
+    fireEvent.click(screen.getByLabelText('채팅 열기'));
+    fireEvent.click(screen.getByRole('button', { name: '주문/배송' }));
+    expect(screen.getByRole('button', { name: '교환/반품' })).toBeInTheDocument();
+  });
+
+  test('hides quick buttons when direct text input begins', () => {
+    renderChatWidget();
+
+    fireEvent.click(screen.getByLabelText('채팅 열기'));
+
+    const input = screen.getByPlaceholderText('메시지를 입력하세요...');
+    fireEvent.change(input, { target: { value: '직접 문의합니다' } });
+
+    expect(screen.queryByRole('button', { name: '주문/배송' })).not.toBeInTheDocument();
+  });
+
   test('renders an icon-only toggle with a labeled, enabled input', () => {
     renderChatWidget();
 

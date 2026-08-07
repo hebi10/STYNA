@@ -9,10 +9,10 @@
 
 /* 채팅 토글 버튼 */
 .chatButton {
-  width: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  height: 44px;
+  width: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  height: 48px;
   padding: 0;
   border-radius: 2px;
   background: var(--black);
@@ -32,8 +32,8 @@
 }
 
 .chatButtonIcon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
 }
 
@@ -59,7 +59,7 @@
 /* 채팅 창 */
 .chatWindow {
   position: absolute;
-  bottom: 48px;
+  bottom: 52px;
   right: 0;
   width: 380px;
   height: min(600px, calc(100dvh - 5rem));
@@ -424,6 +424,18 @@
   .chatWidget {
     right: max(0.75rem, env(safe-area-inset-right));
     bottom: calc(0.75rem + env(safe-area-inset-bottom));
+  }
+
+  .chatButton {
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    height: 44px;
+  }
+
+  .chatButtonIcon {
+    width: 24px;
+    height: 24px;
   }
 
 }

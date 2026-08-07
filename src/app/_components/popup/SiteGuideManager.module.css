@@ -2,10 +2,11 @@
 .fixedButton {
   position: fixed;
   right: max(0.75rem, env(safe-area-inset-right));
-  bottom: calc(0.75rem + 44px + 0.5rem + env(safe-area-inset-bottom));
-  width: 44px;
-  min-width: 44px;
-  min-height: 44px;
+  bottom: calc(0.75rem + 48px + 0.5rem + env(safe-area-inset-bottom));
+  width: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  height: 48px;
   padding: 0;
   background: var(--color-white);
   border: 1px solid var(--black);
@@ -31,8 +32,8 @@
 }
 
 .buttonIcon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
   filter: invert(1);
 }
@@ -45,6 +46,19 @@
 @media (max-width: 640px) {
   .mobileSuppressed {
     display: none;
+  }
+
+  .fixedButton {
+    bottom: calc(0.75rem + 44px + 0.5rem + env(safe-area-inset-bottom));
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    height: 44px;
+  }
+
+  .buttonIcon {
+    width: 24px;
+    height: 24px;
   }
 }
 
