@@ -59,7 +59,7 @@ describe('PortfolioDemoSection', () => {
     expect(css).toContain('var(--black)');
     expect(css).toContain('var(--action)');
     expect(css).toContain('var(--action-hover)');
-    expect(css).toContain('var(--swatch-beige)');
+    expect(css).toContain('var(--off-white)');
     expect(css).toContain('@media (max-width: 768px)');
     expect(css).toContain('grid-template-columns: 1fr');
     expect(css).not.toMatch(/#[0-9a-f]{3,8}/i);

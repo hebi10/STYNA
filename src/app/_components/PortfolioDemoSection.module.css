@@ -1,6 +1,6 @@
 .section {
   padding: 5rem 1rem;
-  background: #f7f7f7
+  background: var(--off-white);
 }
 
 .content {
