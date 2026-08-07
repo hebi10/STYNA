@@ -17,13 +17,13 @@
   border-radius: 2px;
 }
 
-.header {
+.noticeBar {
   padding: 0.9rem 1rem;
   color: var(--surface-raised);
   background: var(--black);
 }
 
-.header h2 {
+.noticeBar h2 {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;

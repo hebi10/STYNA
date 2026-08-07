@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import AdminDataChangeWarning from './AdminDataChangeWarning';
 
 jest.mock('./AdminDataChangeWarning.module.css', () => ({
@@ -34,5 +36,15 @@ describe('AdminDataChangeWarning', () => {
     rerender(<AdminDataChangeWarning onClose={onClose} />);
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(3);
+  });
+
+  test('uses a title-area class that does not match the admin header reset rule', () => {
+    const css = readFileSync(
+      resolve(process.cwd(), 'src/app/admin/_components/AdminDataChangeWarning.module.css'),
+      'utf8',
+    );
+
+    expect(css).toMatch(/\.noticeBar\s*\{[\s\S]*background:\s*var\(--black\)/);
+    expect(css).not.toMatch(/\.header\b/);
   });
 });

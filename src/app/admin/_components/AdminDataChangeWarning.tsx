@@ -89,7 +89,7 @@ export default function AdminDataChangeWarning({ onClose }: AdminDataChangeWarni
         onClick={(event) => event.stopPropagation()}
         onKeyDown={handleTabKey}
       >
-        <header className={styles.header}>
+        <header className={styles.noticeBar}>
           <h2 id="admin-data-change-warning-title">데이터 수정 전 안내</h2>
         </header>
 
