@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/authProvider';
 import { useDashboardData, useDashboardFormatters } from '@/shared/hooks/useDashboardQuery';
 import { SimpleQnAService } from '@/shared/services/simpleQnAService';
+import AdminDataChangeWarning from './_components/AdminDataChangeWarning';
 import Chart from './_components/Chart';
 import ErrorBoundary from './_components/ErrorBoundary';
 import LoadingSpinner from './_components/LoadingSpinner';
@@ -12,8 +13,13 @@ import { getCategoryNames } from '@/shared/utils/categoryUtils';
 import styles from './page.module.css';
 
 export default function AdminDashboard() {
+  const [isDataChangeWarningOpen, setIsDataChangeWarningOpen] = useState(true);
+
   return (
     <ErrorBoundary>
+      {isDataChangeWarningOpen && (
+        <AdminDataChangeWarning onClose={() => setIsDataChangeWarningOpen(false)} />
+      )}
       <DashboardContent />
     </ErrorBoundary>
   );

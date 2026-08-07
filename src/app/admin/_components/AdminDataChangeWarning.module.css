@@ -1,0 +1,94 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(10, 10, 10, 0.48);
+}
+
+.dialog {
+  width: min(100%, 400px);
+  overflow-y: auto;
+  background: var(--surface-raised);
+  border: 1px solid var(--black);
+  border-radius: 2px;
+}
+
+.header {
+  padding: 0.9rem 1rem;
+  color: var(--surface-raised);
+  background: var(--black);
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.content {
+  padding: 1rem;
+  color: var(--black);
+}
+
+.content p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.content p + p {
+  margin-top: 0.4rem;
+  font-weight: 700;
+}
+
+.content span {
+  display: block;
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+  color: var(--text-subtle);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.actions {
+  padding: 0 1rem 1rem;
+}
+
+.confirmButton {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.65rem 0.85rem;
+  color: var(--surface-raised);
+  background: var(--black);
+  border: 1px solid var(--black);
+  border-radius: 2px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.confirmButton:hover {
+  background: var(--action-hover);
+}
+
+.confirmButton:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .overlay {
+    align-items: flex-end;
+    padding: 0.75rem;
+  }
+
+  .dialog {
+    max-height: calc(100dvh - 1.5rem);
+  }
+}
