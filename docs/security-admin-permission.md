@@ -76,7 +76,8 @@
 - 공개 관리자 데모는 `demo_admin` 사용자 문서 역할과 `demoAdmin: true` custom claim을 함께 사용한다. 이 역할은 엄격 관리자 조건을 만족하지 않으므로 Firestore·Storage·관리 Functions의 관리자 읽기·쓰기를 얻지 못한다.
 - 관리자 셸은 데모 주체일 때 실제 하위 관리 화면을 마운트하지 않고, 실제 데이터 조회 없이 개인정보가 없는 읽기 전용 요약만 표시한다.
 - 실제 관리자 쓰기는 Firebase 재인증으로 갱신된 ID token의 `auth_time`이 현재 시각 기준 5분 이내인 경우에만 Firestore Rules·Storage Rules·`adminUsers`·`coupon`·`points` Functions에서 허용한다.
-- `npm run provision:demo-admin:dry-run`은 `PORTFOLIO_DEMO_ADMIN_UID`를 기준으로 데모 역할 전환 가능 여부만 확인한다. `--execute`는 다른 활성 실제 관리자가 1명 이상 있을 때만 claim·문서 role 변경과 refresh token 폐기를 수행한다.
+- `npm run provision:demo-admin:dry-run`은 `PORTFOLIO_DEMO_ADMIN_UID`를 우선 사용하고, UID가 없으면 `PORTFOLIO_DEMO_ADMIN_EMAIL` 또는 공개 데모 로그인 계정의 기본 이메일로 대상을 조회한다. UID와 이메일을 함께 지정하면 동일 계정인지 확인하며, 요약과 오류에는 UID·이메일·토큰을 출력하지 않는다.
+- `--execute`는 다른 활성 실제 관리자가 1명 이상 있을 때만 claim·문서 role 변경과 refresh token 폐기를 수행한다. dry-run과 execute 모두 대상 프로젝트를 확인하고, execute와 배포는 승인 후에만 실행한다.
 
 ## 2026-07-10 서버 권한 경계 보강
 - 일반 사용자의 쿠폰 `issue` 액션을 차단하고, 직접 발급은 관리자·이벤트 보상 transaction만 사용한다.

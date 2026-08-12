@@ -124,3 +124,14 @@ scripts/seed-coupons.js               # import-safe seed CLI
 - `action: "issue"`는 관리자만 사용할 수 있는 직접 발급 기능이다. 일반 회원은 쿠폰 코드 등록만 할 수 있다.
 - `functions/src/domain/couponIssuance.ts`가 중복·활성·만료·한도 확인과 `user_coupons`/`usedCount` 쓰기를 공통 transaction으로 제공한다.
 - 자동 쿠폰 이벤트는 `rewardCouponId`를 설정하고, 이벤트 참여 transaction 안에서 쿠폰을 한 번만 지급한다.
+
+## 2026-08-12 운영 데이터 감사·승인 계획
+
+- `node scripts/operational-data-audit.js analyze`는 Firestore를 읽기만 하며, 만료된 활성 쿠폰과 `user_coupons` 상태, 쿠폰 마스터 `usedCount`와 발급 목록 수의 불일치를 점검한다.
+- 콘솔 JSON에는 문서 ID와 사용자 값 대신 비가역 참조 hash와 사유만 출력한다. 실제 문서 ID·현재 값·제안 값·근거는 로컬 `tmp/operational-data-plan.json`에서 승인자가 확인한다.
+- 만료일이 지난 쿠폰 마스터의 `isActive: false`와 해당 사용 가능 쿠폰의 `status: "기간만료"`만 기계적 작업으로 계획한다. 요약 수 불일치는 이력 정책 확인 전까지 수동 검토로 남긴다.
+- 계획 hash는 `node scripts/operational-data-remediation.js hash --plan tmp/operational-data-plan.json`으로 다시 계산할 수 있다. 실행은 정확히 승인한 SHA-256과 계획 파일을 모두 전달해야 하며, hash·대상 프로젝트·현재 값 중 하나라도 달라지면 어떤 write도 시작하지 않는다.
+
+```powershell
+node scripts/operational-data-remediation.js execute --plan tmp/operational-data-plan.json --sha256 <approved-hash>
+```

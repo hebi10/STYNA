@@ -146,6 +146,27 @@ describe('CheckoutPage recovery state', () => {
     expect(screen.queryByText('등록된 배송지가 없습니다')).not.toBeInTheDocument();
   });
 
+  test('shows the original product amount separately from the product discount', async () => {
+    sessionStorage.setItem('orderData', JSON.stringify({
+      items: [{
+        productId: 'product-1',
+        size: 'M',
+        color: 'black',
+        quantity: 1,
+        price: 59000,
+        discountAmount: 20000,
+      }],
+      deliveryOption: 'standard',
+    }));
+
+    render(<CheckoutPage />);
+
+    const productAmountRow = (await screen.findByText('상품 금액')).parentElement;
+    expect(productAmountRow).toHaveTextContent('상품 금액79,000원');
+    expect(screen.getByText('상품 할인').parentElement).toHaveTextContent('상품 할인-20,000원');
+    expect(screen.getByRole('button', { name: '59,000원 주문 접수하기' })).toBeInTheDocument();
+  });
+
   test('discloses the exact demo payment and Firebase persistence boundary', async () => {
     sessionStorage.setItem('orderData', JSON.stringify({
       items: [{

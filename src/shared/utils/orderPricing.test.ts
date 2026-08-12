@@ -33,6 +33,34 @@ const baseCouponView = (coupon: Partial<UserCouponView['coupon']>): UserCouponVi
 describe('orderPricing', () => {
   const now = new Date('2026-05-12T00:00:00.000Z');
 
+  test('separates original subtotal from the discounted sale subtotal', () => {
+    const discountedItem = {
+      productId: 'p1',
+      originalPrice: 79000,
+      salePrice: 59000,
+      price: 59000,
+      discountAmount: 20000,
+      quantity: 1,
+      isAvailable: true,
+    };
+
+    const preview = calculateOrderPreview({
+      items: [discountedItem],
+      deliveryOption: 'standard',
+      selectedCoupon: null,
+      requestedPointAmount: 0,
+      pointBalance: 0,
+      now,
+    });
+
+    expect(preview).toMatchObject({
+      originalSubtotal: 79000,
+      productDiscountAmount: 20000,
+      subtotal: 59000,
+      finalAmount: 59000,
+    });
+  });
+
   test('uses discounted cart unit price as subtotal and does not subtract product discount again', () => {
     const preview = calculateOrderPreview({
       items: [

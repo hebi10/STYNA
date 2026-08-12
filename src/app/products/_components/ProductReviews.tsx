@@ -4,28 +4,30 @@ import React, { useEffect, useState } from 'react';
 import { useReview } from '@/context/reviewProvider';
 import { useAuth } from '@/context/authProvider';
 import { ReviewEligibilityOption, ReviewService } from '@/shared/services/reviewService';
-import { ReviewSummary } from '@/shared/types/review';
 import { formatDate } from '@/shared/utils/dateFormat';
 import styles from './ProductReviews.module.css';
 
 interface ProductReviewsProps {
   productId: string;
-  onSummaryChange?: (summary: ReviewSummary | null) => void;
 }
 
-export default function ProductReviews({ productId, onSummaryChange }: ProductReviewsProps) {
+export default function ProductReviews({ productId }: ProductReviewsProps) {
   const { 
     productReviews, 
-    reviewSummary, 
+    reviewSummaryByProductId,
     hasMoreReviews,
     loading, 
     error,
     loadProductReviews,
     loadMoreProductReviews,
-    loadReviewSummary,
     createReview,
     deleteReview
   } = useReview();
+  const reviewSummaryState = reviewSummaryByProductId[productId] ?? {
+    status: 'loading' as const,
+    summary: null,
+  };
+  const reviewSummary = reviewSummaryState.summary;
   
   const { user } = useAuth();
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -42,12 +44,7 @@ export default function ProductReviews({ productId, onSummaryChange }: ProductRe
 
   useEffect(() => {
     loadProductReviews(productId);
-    loadReviewSummary(productId);
-  }, [productId, loadProductReviews, loadReviewSummary]);
-
-  useEffect(() => {
-    onSummaryChange?.(reviewSummary);
-  }, [onSummaryChange, reviewSummary]);
+  }, [productId, loadProductReviews]);
 
   const getOptionKey = (option: ReviewEligibilityOption) => (
     JSON.stringify([option.orderId, option.productId, option.size, option.color])
@@ -137,10 +134,6 @@ export default function ProductReviews({ productId, onSummaryChange }: ProductRe
     return '★'.repeat(rating) + '☆'.repeat(5 - rating);
   };
 
-  if (error) {
-    return <div className={styles.error}>{error}</div>;
-  }
-
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -160,8 +153,11 @@ export default function ProductReviews({ productId, onSummaryChange }: ProductRe
         <p className={styles.submitError} role="alert">{submitError}</p>
       )}
 
-      {/* 리뷰 요약 */}
-      {reviewSummary && (
+      {reviewSummaryState.status === 'error' ? (
+        <div className={styles.error}>리뷰를 불러오지 못했습니다. 다시 시도해 주세요.</div>
+      ) : reviewSummaryState.status === 'loading' ? (
+        <div className={styles.loading}>리뷰 확인 중...</div>
+      ) : reviewSummary && (
         <div className={styles.summary}>
           <div className={styles.averageRating}>
             <span className={styles.rating}>{reviewSummary.averageRating}</span>
@@ -281,15 +277,19 @@ export default function ProductReviews({ productId, onSummaryChange }: ProductRe
         </form>
       )}
 
-      {/* 리뷰 목록 */}
-      <div className={styles.reviewList}>
-        {loading && productReviews.length === 0 ? (
-          <div className={styles.loading}>리뷰를 불러오는 중...</div>
-        ) : productReviews.length === 0 ? (
-          <div className={styles.empty}>아직 리뷰가 없습니다. 첫 리뷰를 작성해보세요!</div>
-        ) : (
-          <>
-            {productReviews.map((review) => (
+      {reviewSummaryState.status === 'ready' && (
+        <div className={styles.reviewList}>
+          {error ? (
+            <div className={styles.error}>리뷰를 불러오지 못했습니다. 다시 시도해 주세요.</div>
+          ) : loading && productReviews.length === 0 ? (
+            <div className={styles.loading}>리뷰를 불러오는 중...</div>
+          ) : productReviews.length === 0 && (reviewSummary?.totalReviews ?? 0) > 0 ? (
+            <div className={styles.error}>리뷰를 불러오지 못했습니다. 다시 시도해 주세요.</div>
+          ) : productReviews.length === 0 ? (
+            <div className={styles.empty}>아직 리뷰가 없습니다. 첫 리뷰를 작성해보세요!</div>
+          ) : (
+            <>
+              {productReviews.map((review) => (
               <div key={review.id} className={styles.reviewItem}>
                 <div className={styles.reviewHeader}>
                   <div className={styles.userInfo}>
@@ -331,18 +331,19 @@ export default function ProductReviews({ productId, onSummaryChange }: ProductRe
               </div>
             ))}
 
-            {hasMoreReviews && (
-              <button 
-                className={styles.loadMoreButton}
-                onClick={() => loadMoreProductReviews(productId)}
-                disabled={loading}
-              >
-                {loading ? '로딩 중...' : '더 보기'}
-              </button>
-            )}
-          </>
-        )}
-      </div>
+              {hasMoreReviews && (
+                <button
+                  className={styles.loadMoreButton}
+                  onClick={() => loadMoreProductReviews(productId)}
+                  disabled={loading}
+                >
+                  {loading ? '로딩 중...' : '더 보기'}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

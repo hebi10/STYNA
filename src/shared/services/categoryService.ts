@@ -49,8 +49,8 @@ export class CategoryService {
         try {
           const data = doc.data();
           
-          // isActive가 true인 것만 필터링 (클라이언트 사이드에서)
-          if (data.isActive === true) {
+          // 기존 문서는 isActive 필드가 없을 수 있으므로, 명시적으로 비활성화한 경우만 제외한다.
+          if (data.isActive !== false) {
             categories.push({
               id: doc.id,
               ...data,

@@ -1,11 +1,12 @@
-import { cache } from 'react';
-import { notFound, redirect } from 'next/navigation';
-import PageHeader from '@/app/_components/PageHeader';
-import ProductList from '@/app/products/_components/ProductList';
-import { CategoryService } from '@/shared/services/categoryService';
+import { redirect } from 'next/navigation';
+import { CategoryProvider } from '@/context/categoryProvider';
 import { createPublicPageMetadata } from '@/shared/constants/routeMetadata';
-import { getCategoryIdCandidates, normalizeCategoryId, toCategoryPath } from '@/shared/utils/categoryRouting';
-import styles from './page.module.css';
+import { getDefaultCategoryNames } from '@/shared/utils/categoryUtils';
+import { normalizeCategoryId, toCategoryPath } from '@/shared/utils/categoryRouting';
+import CategoryRouteContent from './CategoryRouteContent';
+
+// Firestore 카테고리 변경을 빌드 결과에 고정하지 않고 요청 시점에 조회한다.
+export const dynamic = 'force-dynamic';
 
 interface CategoryPageProps {
   params: Promise<{
@@ -13,23 +14,12 @@ interface CategoryPageProps {
   }>;
 }
 
-const getActiveCategories = cache(() => CategoryService.getCategories());
-
-const getActiveCategory = cache(async (categoryId: string) => {
-  const categories = await getActiveCategories();
-  const candidates = getCategoryIdCandidates(categoryId);
-
-  return candidates
-    .map((candidateId) => categories.find((category) => category.id.toLowerCase() === candidateId))
-    .find((category) => category !== undefined) ?? null;
-});
-
 export async function generateMetadata({ params }: CategoryPageProps) {
   const { category } = await params;
   const normalizedCategory = normalizeCategoryId(category);
-  const activeCategory = await getActiveCategory(normalizedCategory);
+  const categoryName = getDefaultCategoryNames()[normalizedCategory];
 
-  if (!activeCategory) {
+  if (!categoryName) {
     return {
       title: '카테고리를 찾을 수 없습니다 | STYNA',
       robots: { index: false, follow: false },
@@ -37,9 +27,8 @@ export async function generateMetadata({ params }: CategoryPageProps) {
   }
 
   return createPublicPageMetadata({
-    title: `${activeCategory.name} | STYNA`,
-    description: activeCategory.description
-      ?? `${activeCategory.name} 카테고리의 STYNA 상품을 둘러보세요.`,
+    title: `${categoryName} | STYNA`,
+    description: `${categoryName} 카테고리의 STYNA 상품을 둘러보세요.`,
     pathname: toCategoryPath(normalizedCategory),
   });
 }
@@ -52,24 +41,9 @@ export default async function DynamicCategoryPage({ params }: CategoryPageProps)
     redirect(toCategoryPath(normalizedCategory));
   }
 
-  const activeCategory = await getActiveCategory(normalizedCategory);
-
-  if (!activeCategory) {
-    notFound();
-  }
-
   return (
-    <div className={styles.container}>
-      <PageHeader
-        title={activeCategory.name}
-        description={`${activeCategory.name} 카테고리의 현재 판매 상품을 확인하세요.`}
-        breadcrumb={[
-          { label: '홈', href: '/' },
-          { label: '카테고리', href: '/categories' },
-          { label: activeCategory.name },
-        ]}
-      />
-      <ProductList initialCategory={activeCategory.id} lockCategory />
-    </div>
+    <CategoryProvider>
+      <CategoryRouteContent categoryId={normalizedCategory} />
+    </CategoryProvider>
   );
 }

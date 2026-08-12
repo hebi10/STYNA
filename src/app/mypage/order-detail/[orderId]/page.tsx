@@ -12,6 +12,10 @@ import {
   getDeliveryPresentation,
   getDeliverySearchHref,
 } from '@/shared/utils/orderPostPurchase';
+import {
+  formatPaymentMethod,
+  formatProductOptionValue,
+} from '@/shared/utils/productDisplayValue';
 import styles from './page.module.css';
 
 interface OrderDetailPageProps {
@@ -117,6 +121,8 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
       minute: '2-digit',
     }).format(new Date(date));
   };
+
+  const hasVerifiedCouponDiscount = Boolean(order?.userCouponId && order.discountAmount && order.discountAmount > 0);
 
   const handleCancelOrder = async () => {
     if (!order) return;
@@ -249,7 +255,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
                 <div className={styles.productBrand}>{product.brand}</div>
                 <div className={styles.productName}>{product.productName}</div>
                 <div className={styles.productOptions}>
-                  색상: {product.color} / 사이즈: {product.size} / 수량: {product.quantity}개
+                  색상: {formatProductOptionValue(product.color)} / 사이즈: {formatProductOptionValue(product.size)} / 수량: {product.quantity}개
                 </div>
                 <div className={styles.productPrice}>
                   {formatCurrency(product.price * product.quantity)}
@@ -273,10 +279,10 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             <span>상품 금액</span>
             <span>{formatCurrency(order.totalAmount || order.finalAmount)}</span>
           </div>
-          {order.discountAmount && order.discountAmount > 0 && (
+          {hasVerifiedCouponDiscount && (
             <div className={styles.paymentRow}>
-              <span>할인 금액</span>
-              <span className={styles.discountText}>-{formatCurrency(order.discountAmount)}</span>
+              <span>쿠폰 할인</span>
+              <span className={styles.discountText}>-{formatCurrency(order.discountAmount ?? 0)}</span>
             </div>
           )}
           <div className={styles.paymentRow}>
@@ -290,7 +296,7 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
           {order.paymentMethod && (
             <div className={styles.paymentRow}>
               <span>결제 방법</span>
-              <span>{order.paymentMethod}</span>
+              <span>{formatPaymentMethod(order.paymentMethod)}</span>
             </div>
           )}
         </div>

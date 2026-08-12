@@ -3,17 +3,33 @@ import ProductReviews from './ProductReviews';
 import { ReviewService } from '@/shared/services/reviewService';
 
 const createReview = jest.fn();
+const loadProductReviews = jest.fn();
+const loadMoreProductReviews = jest.fn();
+const loadReviewSummary = jest.fn();
+let reviewContext = {
+  productReviews: [],
+  reviewSummaryByProductId: {
+    'product-1': {
+      status: 'ready' as const,
+      summary: {
+        averageRating: 0,
+        totalReviews: 0,
+        ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+        recommendationRate: 0,
+      },
+    },
+  },
+  hasMoreReviews: false,
+  loading: false,
+  error: null,
+};
 
 jest.mock('@/context/reviewProvider', () => ({
   useReview: () => ({
-    productReviews: [],
-    reviewSummary: null,
-    hasMoreReviews: false,
-    loading: false,
-    error: null,
-    loadProductReviews: jest.fn(),
-    loadMoreProductReviews: jest.fn(),
-    loadReviewSummary: jest.fn(),
+    ...reviewContext,
+    loadProductReviews,
+    loadMoreProductReviews,
+    loadReviewSummary,
     createReview,
     deleteReview: jest.fn(),
   }),
@@ -36,6 +52,23 @@ jest.mock('./ProductReviews.module.css', () => new Proxy({}, {
 describe('ProductReviews verified purchase flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    reviewContext = {
+      productReviews: [],
+      reviewSummaryByProductId: {
+        'product-1': {
+          status: 'ready',
+          summary: {
+            averageRating: 0,
+            totalReviews: 0,
+            ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+            recommendationRate: 0,
+          },
+        },
+      },
+      hasMoreReviews: false,
+      loading: false,
+      error: null,
+    };
     jest.spyOn(window, 'alert').mockImplementation(() => undefined);
     jest.mocked(ReviewService.getEligibleReviewOptions).mockResolvedValue([{
       orderId: 'order-1',
@@ -44,6 +77,29 @@ describe('ProductReviews verified purchase flow', () => {
       size: 'M',
       color: 'black',
     }]);
+  });
+
+  test('shows a retry prompt when a nonzero summary has no first page reviews', () => {
+    reviewContext = {
+      ...reviewContext,
+      reviewSummaryByProductId: {
+        'product-1': {
+          status: 'ready',
+          summary: {
+            averageRating: 4,
+            totalReviews: 1,
+            ratingDistribution: { 5: 0, 4: 1, 3: 0, 2: 0, 1: 0 },
+            recommendationRate: 100,
+          },
+        },
+      },
+    };
+
+    render(<ProductReviews productId="product-1" />);
+
+    expect(screen.getByText('리뷰를 불러오지 못했습니다. 다시 시도해 주세요.')).toBeInTheDocument();
+    expect(screen.queryByText('아직 리뷰가 없습니다. 첫 리뷰를 작성해보세요!')).not.toBeInTheDocument();
+    expect(loadReviewSummary).not.toHaveBeenCalled();
   });
 
   afterEach(() => {

@@ -9,6 +9,8 @@ export interface CheckoutItem {
   brand?: string;
   price: number;
   discountAmount?: number;
+  originalPrice?: number;
+  salePrice?: number;
 }
 
 export interface CheckoutDraft {
@@ -16,6 +18,7 @@ export interface CheckoutDraft {
   selectedCoupon?: string;
   deliveryOption: "standard" | "express";
   pricingPreview?: {
+    originalSubtotal: number;
     subtotal: number;
     productDiscountAmount: number;
     couponDiscount: number;

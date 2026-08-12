@@ -215,6 +215,28 @@ describe('OrderCartPage policy copy', () => {
     });
   });
 
+  test('shows the original product amount separately from the product discount', async () => {
+    const cartResult = jest.mocked(useCart)('user-1');
+    jest.mocked(useCart).mockReturnValue({
+      ...cartResult,
+      data: {
+        ...cartResult.data!,
+        items: [{
+          ...cartResult.data!.items[0],
+          price: 59000,
+          discountAmount: 20000,
+        }],
+      },
+    } as unknown as ReturnType<typeof useCart>);
+
+    render(<OrderCartPage />);
+
+    const productAmountRow = (await screen.findByText('상품금액')).parentElement;
+    expect(productAmountRow).toHaveTextContent('상품금액79,000원');
+    expect(screen.getByText('상품할인').parentElement).toHaveTextContent('상품할인-20,000원');
+    expect(screen.getByRole('button', { name: '59,000원 결제하기' })).toBeInTheDocument();
+  });
+
   test('adds a usable coupon outside the overview through the full order lookup', async () => {
     mockGetAvailableCouponsForOrder.mockResolvedValue([
       makeUserCoupon('older-coupon', '오래된 쿠폰', 5000),

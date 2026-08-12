@@ -127,6 +127,8 @@ export default function CheckoutPage() {
 
   const pricingItems = useMemo(() => orderData?.items.map((item) => ({
     productId: item.productId,
+    originalPrice: item.originalPrice ?? item.price + (item.discountAmount ?? 0),
+    salePrice: item.salePrice ?? item.price,
     price: item.price,
     discountAmount: item.discountAmount,
     quantity: item.quantity,
@@ -159,6 +161,7 @@ export default function CheckoutPage() {
   }, [orderData, pointBalance, pricingItems, selectedCouponView, usePoints]);
 
   const subtotal = orderPreview?.subtotal ?? 0;
+  const originalSubtotal = orderPreview?.originalSubtotal ?? 0;
   const discountAmount = orderPreview?.productDiscountAmount ?? 0;
   const couponDiscount = orderPreview?.couponDiscount ?? 0;
   const deliveryFee = orderPreview?.deliveryFee ?? 0;
@@ -601,7 +604,7 @@ export default function CheckoutPage() {
               <div className={styles.summaryItems}>
                 <div className={styles.summaryItem}>
                   <span>상품 금액</span>
-                  <span>{subtotal.toLocaleString()}원</span>
+                  <span>{originalSubtotal.toLocaleString()}원</span>
                 </div>
                 <div className={styles.summaryItem}>
                   <span>상품 할인</span>

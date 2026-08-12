@@ -116,6 +116,7 @@
 - 스타일나우 시즌 콘텐츠 실행 계획 : superpowers/plans/2026-07-27-style-now-season-content.md
 - 스타일나우 계절 카테고리·상세 화면 설계 : superpowers/specs/2026-07-28-style-now-category-pages-design.md
 - 스타일나우 계절 카테고리·상세 화면 실행 계획 : superpowers/plans/2026-07-28-style-now-category-pages.md
+- 운영 재검수 잔여 문제 해결 실행 계획 : superpowers/plans/2026-08-12-production-readiness-remediation.md
 - 스타일나우 이미지 생성 명령어 84개 : style-now-image-generation-commands.md
 - 주문·권한 정합성 설계 : superpowers/specs/2026-07-10-security-integrity-design.md
 - 주문·권한 정합성 실행 계획 : superpowers/plans/2026-07-10-security-integrity.md

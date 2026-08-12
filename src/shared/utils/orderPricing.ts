@@ -6,6 +6,8 @@ export type OrderPricingDeliveryOption = 'standard' | 'express';
 
 export interface OrderPricingItem {
   productId: string;
+  originalPrice?: number;
+  salePrice?: number;
   price: number;
   discountAmount?: number;
   quantity: number;
@@ -27,6 +29,7 @@ export interface CouponAvailability {
 }
 
 export interface OrderPreview {
+  originalSubtotal: number;
   subtotal: number;
   productDiscountAmount: number;
   couponDiscount: number;
@@ -127,12 +130,28 @@ export function calculateDeliveryFee(
 
 export function calculateOrderPreview(params: CalculateOrderPreviewParams): OrderPreview {
   const items = params.items.filter((item) => item.isAvailable !== false);
+  const originalSubtotal = items.reduce(
+    (sum, item) => {
+      const salePrice = toNonNegativeInteger(item.salePrice ?? item.price);
+      const originalPrice = toNonNegativeInteger(
+        item.originalPrice ?? salePrice + toNonNegativeInteger(item.discountAmount)
+      );
+      return sum + Math.max(salePrice, originalPrice) * toNonNegativeInteger(item.quantity);
+    },
+    0
+  );
   const subtotal = items.reduce(
-    (sum, item) => sum + toNonNegativeInteger(item.price) * toNonNegativeInteger(item.quantity),
+    (sum, item) => sum + toNonNegativeInteger(item.salePrice ?? item.price) * toNonNegativeInteger(item.quantity),
     0
   );
   const productDiscountAmount = items.reduce(
-    (sum, item) => sum + toNonNegativeInteger(item.discountAmount) * toNonNegativeInteger(item.quantity),
+    (sum, item) => {
+      const salePrice = toNonNegativeInteger(item.salePrice ?? item.price);
+      const originalPrice = toNonNegativeInteger(
+        item.originalPrice ?? salePrice + toNonNegativeInteger(item.discountAmount)
+      );
+      return sum + Math.max(0, originalPrice - salePrice) * toNonNegativeInteger(item.quantity);
+    },
     0
   );
 
@@ -151,6 +170,7 @@ export function calculateOrderPreview(params: CalculateOrderPreviewParams): Orde
   const pointUsed = Math.min(toNonNegativeInteger(params.requestedPointAmount), maxUsablePoints);
 
   return {
+    originalSubtotal,
     subtotal,
     productDiscountAmount,
     couponDiscount: coupon.discount,

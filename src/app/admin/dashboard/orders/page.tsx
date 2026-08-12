@@ -7,6 +7,7 @@ import styles from "./page.module.css";
 import { OrderService } from "@/shared/services/orderService";
 import { Order, OrderStatus } from "@/shared/types/order";
 import { createCsv } from "@/shared/utils/csv";
+import { formatPaymentMethod } from "@/shared/utils/productDisplayValue";
 import { downloadOrdersCsv } from "./downloadOrdersCsv";
 
 interface OrderStats {
@@ -197,7 +198,7 @@ export default function AdminOrdersPage() {
         order.shippingAddress?.recipient || '',
         order.products.reduce((sum, product) => sum + product.quantity, 0),
         order.finalAmount,
-        order.paymentMethod,
+        formatPaymentMethod(order.paymentMethod),
         formatDate(order.createdAt),
         getStatusText(order.status)
       ]);
@@ -341,7 +342,7 @@ export default function AdminOrdersPage() {
                     </td>
                     <td>{order.products.reduce((sum, product) => sum + product.quantity, 0)}개</td>
                     <td><strong>{formatCurrency(order.finalAmount)}</strong></td>
-                    <td>{order.paymentMethod}</td>
+                    <td>{formatPaymentMethod(order.paymentMethod)}</td>
                     <td>{formatDate(order.createdAt)}</td>
                     <td>
                       <span className={`${styles.orderStatus} ${styles[order.status]}`}>

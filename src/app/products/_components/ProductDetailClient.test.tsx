@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ProductDetailClient from './ProductDetailClient';
 import { Product } from '@/shared/types/product';
 import {
@@ -11,6 +11,27 @@ import {
   PRODUCT_INTENT_STORAGE_KEY,
   saveProductIntent,
 } from '@/shared/utils/productIntent';
+
+const loadReviewSummary = jest.fn();
+let reviewSummaryByProductId: Record<string, {
+  status: 'loading' | 'ready' | 'error';
+  summary: {
+    totalReviews: number;
+    averageRating: number;
+    ratingDistribution: Record<1 | 2 | 3 | 4 | 5, number>;
+    recommendationRate: number;
+  } | null;
+}> = {
+  'product-1': {
+    status: 'ready',
+    summary: {
+      averageRating: 0,
+      totalReviews: 0,
+      ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      recommendationRate: 0,
+    },
+  },
+};
 
 const push = jest.fn();
 const addRecentProduct = jest.fn();
@@ -39,6 +60,13 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('@/context/authProvider', () => ({
   useAuth: () => ({ user: mockUser }),
+}));
+
+jest.mock('@/context/reviewProvider', () => ({
+  useReview: () => ({
+    reviewSummaryByProductId,
+    loadReviewSummary,
+  }),
 }));
 
 jest.mock('@/shared/hooks/useUserActivityQueries', () => ({
@@ -82,19 +110,7 @@ jest.mock('./ProductCard', () => function MockProductCard() {
   return <div data-testid="product-card" />;
 });
 
-let onReviewSummaryChange: ((summary: {
-  totalReviews: number;
-  averageRating: number;
-  ratingDistribution: Record<1 | 2 | 3 | 4 | 5, number>;
-  recommendationRate: number;
-} | null) => void) | undefined;
-
-jest.mock('./ProductReviews', () => function MockProductReviews({
-  onSummaryChange,
-}: {
-  onSummaryChange?: typeof onReviewSummaryChange;
-}) {
-  onReviewSummaryChange = onSummaryChange;
+jest.mock('./ProductReviews', () => function MockProductReviews() {
   return <div data-testid="product-reviews" />;
 });
 
@@ -184,28 +200,35 @@ describe('ProductDetailClient review summary', () => {
     jest.clearAllMocks();
     mockWishlistItems = [];
     mockActivityHooks();
-    onReviewSummaryChange = undefined;
+    reviewSummaryByProductId = {
+      'product-1': {
+        status: 'ready',
+        summary: {
+          averageRating: 0,
+          totalReviews: 0,
+          ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+          recommendationRate: 0,
+        },
+      },
+    };
   });
 
-  test('uses the loaded review summary for the product header and review tab count', async () => {
+  test('renders a zero loaded summary instead of the stale product review count', () => {
     render(<ProductDetailClient product={product} />);
 
-    expect(screen.getByText('4.5 (13개 리뷰)')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '리뷰 (13)' }));
+    expect(screen.getByText('0 (0개 리뷰)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '리뷰 (0)' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '리뷰 (13)' })).not.toBeInTheDocument();
+    expect(loadReviewSummary).toHaveBeenCalledWith('product-1');
+  });
 
-    act(() => {
-      onReviewSummaryChange?.({
-        averageRating: 0,
-        totalReviews: 0,
-        ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
-        recommendationRate: 0,
-      });
-    });
+  test('shows a retry-safe summary error without the stale product review count', () => {
+    reviewSummaryByProductId = { 'product-1': { status: 'error', summary: null } };
 
-    await waitFor(() => {
-      expect(screen.getByText('0 (0개 리뷰)')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '리뷰 (0)' })).toBeInTheDocument();
-    });
+    render(<ProductDetailClient product={product} />);
+
+    expect(screen.getByRole('button', { name: '리뷰 정보 확인 필요' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '리뷰 (13)' })).not.toBeInTheDocument();
   });
 });
 
@@ -231,10 +254,49 @@ describe('ProductDetailClient detail images', () => {
   test('names color swatches for assistive technology', () => {
     render(<ProductDetailClient product={product} />);
 
-    expect(screen.getByRole('button', { name: 'white gold 색상 선택' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '화이트 골드 색상 선택' })).toBeInTheDocument();
   });
 
-  test('uses denormalized product review stats without fetching review documents', () => {
+  test('shows an honest empty state instead of an empty size table', () => {
+    render(<ProductDetailClient product={product} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '사이즈 가이드' }));
+
+    expect(screen.getByText('등록된 실측 치수 정보가 없습니다.')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  test('renders the existing size table when a measurement is registered', () => {
+    const productWithMeasurements: Product = {
+      ...product,
+      details: {
+        ...product.details,
+        sizes: { M: { chest: 52, length: 70 } },
+      },
+    };
+
+    render(<ProductDetailClient product={productWithMeasurements} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '사이즈 가이드' }));
+
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '가슴둘레' })).toBeInTheDocument();
+    expect(screen.getByText('52cm')).toBeInTheDocument();
+  });
+
+  test('uses the shared ready review summary without fetching review documents', () => {
+    reviewSummaryByProductId = {
+      'product-1': {
+        status: 'ready',
+        summary: {
+          averageRating: 4.5,
+          totalReviews: 13,
+          ratingDistribution: { 5: 8, 4: 5, 3: 0, 2: 0, 1: 0 },
+          recommendationRate: 100,
+        },
+      },
+    };
+
     render(<ProductDetailClient product={product} />);
 
     expect(screen.getByText('4.5 (13개 리뷰)')).toBeInTheDocument();
@@ -328,7 +390,7 @@ describe('ProductDetailClient login intent', () => {
     render(<ProductDetailClient product={product} />);
 
     fireEvent.click(screen.getByRole('button', { name: '13호' }));
-    fireEvent.click(screen.getByRole('button', { name: 'white gold 색상 선택' }));
+    fireEvent.click(screen.getByRole('button', { name: '화이트 골드 색상 선택' }));
     fireEvent.click(screen.getByRole('button', { name: buttonName }));
 
     expect(JSON.parse(sessionStorage.getItem(PRODUCT_INTENT_STORAGE_KEY) || '{}')).toMatchObject({

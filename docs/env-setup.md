@@ -93,6 +93,8 @@ const firebaseConfig = await getFirebaseConfig();
 | `NEXT_PUBLIC_API_URL` | 선택 | API 기본 URL (기본값: `/api`) |
 | `NEXT_PUBLIC_USE_FIREBASE_EMULATOR` | 선택 | Firebase 에뮬레이터 사용 여부 |
 | `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | 포트폴리오 데모 배포에서만 | 정확히 `true`일 때 로그인 화면의 일반 회원·읽기 전용 관리자 빠른 로그인을 노출 |
+| `PORTFOLIO_DEMO_ADMIN_UID` | 데모 관리자 프로비저닝 시 선택 | 설정하면 해당 UID를 우선 조회하며, 이메일도 함께 설정된 경우 동일 계정인지 검증 |
+| `PORTFOLIO_DEMO_ADMIN_EMAIL` | 데모 관리자 프로비저닝 시 선택 | UID가 없을 때 이메일 조회에 사용하며, 생략 시 공개 데모 로그인 계정의 기본 이메일 사용 |
 
 `NEXT_PUBLIC_` 접두사 변수는 클라이언트에 노출되므로 민감한 키에는 사용하지 않습니다.
 
@@ -100,6 +102,7 @@ const firebaseConfig = await getFirebaseConfig();
 
 - `.env.local`은 `.gitignore`에 포함되어 있으며 Git에 커밋하지 않습니다.
 - `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true`는 포트폴리오 데모 배포에서만 사용합니다. 일반 개발·운영 배포에서는 생략하거나 `false`로 둡니다.
+- `PORTFOLIO_DEMO_ADMIN_UID`와 `PORTFOLIO_DEMO_ADMIN_EMAIL`은 서버 측 프로비저닝 스크립트에서만 읽으며 값은 로그에 남기지 않습니다. 실제 역할 변경은 dry-run으로 다른 활성 실제 관리자 존재를 확인하고 승인받은 뒤 실행합니다.
 - `OPENAI_API_KEY`와 `CHAT_RATE_LIMIT_SALT`는 `chat` Function에서만 사용합니다. `NEXT_PUBLIC_` 접두사를 붙이지 않습니다.
 - `CHAT_RATE_LIMIT_SALT`는 OpenAI API 키와 다른 임의 값을 사용하며 로그·응답·문서에 실제 값을 남기지 않습니다.
 - 원본 UID, 익명 session ID, IP는 rate-limit 문서나 로그에 남기지 않고 HMAC 결과만 저장합니다.

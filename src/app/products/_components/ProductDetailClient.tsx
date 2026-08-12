@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/shared/types/product';
-import { ReviewSummary } from '@/shared/types/review';
 import { useAuth } from '@/context/authProvider';
+import { useReview } from '@/context/reviewProvider';
 import { useAddToCart } from '@/shared/hooks/useCart';
 import { useRelatedProducts } from '@/shared/hooks/useProducts';
 import {
@@ -13,6 +13,10 @@ import {
   useWishlistActivity,
 } from '@/shared/hooks/useUserActivityQueries';
 import { getProductColorValue } from '@/shared/utils/productColor';
+import {
+  formatProductOptionValue,
+  hasSizeMeasurements,
+} from '@/shared/utils/productDisplayValue';
 import { getProductPricing } from '@/shared/utils/productPricing';
 import { calculateDeliveryFee } from '@/shared/utils/orderPricing';
 import {
@@ -35,6 +39,7 @@ interface Props {
 export default function ProductDetailClient({ product }: Props) {
   const router = useRouter();
   const { user } = useAuth();
+  const { reviewSummaryByProductId, loadReviewSummary } = useReview();
   const { wishlistItems, addToWishlist, removeFromWishlist } = useWishlistActivity();
   const { addRecentProduct } = useRecentProductTracking();
   const { data: relatedProducts = [] } = useRelatedProducts(product.id, 4);
@@ -89,7 +94,6 @@ export default function ProductDetailClient({ product }: Props) {
   const [isProductQnAsLoading, setIsProductQnAsLoading] = useState(false);
   const [productQnAsError, setProductQnAsError] = useState<string | null>(null);
   const [resumeIntentFeedback, setResumeIntentFeedback] = useState<string | null>(null);
-  const [loadedReviewSummary, setLoadedReviewSummary] = useState<ReviewSummary | null>(null);
   const hasResumedIntentRef = useRef(false);
 
   // 찜 상태 확인
@@ -102,9 +106,14 @@ export default function ProductDetailClient({ product }: Props) {
     setOptimisticWishlisted(null);
   }, [product.id, user?.uid, storedWishlisted]);
 
+  const reviewSummaryState = reviewSummaryByProductId[product.id] ?? {
+    status: 'loading' as const,
+    summary: null,
+  };
+
   useEffect(() => {
-    setLoadedReviewSummary(null);
-  }, [product.id]);
+    void loadReviewSummary(product.id);
+  }, [loadReviewSummary, product.id]);
 
   useEffect(() => {
     if (activeTab !== 'qna') {
@@ -363,9 +372,12 @@ export default function ProductDetailClient({ product }: Props) {
   const displayPrice = pricing.salePrice;
 
   const inStock = product.stock > 0;
+  const sizeMeasurements = product.details?.sizes ?? {};
+  const hasRegisteredSizeMeasurements = hasSizeMeasurements(sizeMeasurements);
 
-  const displayRating = loadedReviewSummary?.averageRating ?? product.rating ?? 0;
-  const displayReviewCount = loadedReviewSummary?.totalReviews ?? product.reviewCount ?? 0;
+  const reviewLabel = reviewSummaryState.status === 'ready'
+    ? `리뷰 (${reviewSummaryState.summary?.totalReviews ?? 0})`
+    : reviewSummaryState.status === 'error' ? '리뷰 정보 확인 필요' : '리뷰 확인 중';
 
   useEffect(() => {
     if (
@@ -484,13 +496,15 @@ export default function ProductDetailClient({ product }: Props) {
           <div className={styles.rating}>
             <div className={styles.stars}>
               {Array.from({ length: 5 }, (_, i) => (
-                <span key={i} className={i < Math.floor(displayRating) ? styles.filled : styles.empty}>
+                <span key={i} className={i < Math.floor(reviewSummaryState.summary?.averageRating ?? 0) ? styles.filled : styles.empty}>
                   ★
                 </span>
               ))}
             </div>
             <span className={styles.ratingText}>
-              {displayRating} ({displayReviewCount}개 리뷰)
+              {reviewSummaryState.status === 'ready'
+                ? `${reviewSummaryState.summary?.averageRating ?? 0} (${reviewSummaryState.summary?.totalReviews ?? 0}개 리뷰)`
+                : reviewLabel}
             </span>
           </div>
 
@@ -554,8 +568,8 @@ export default function ProductDetailClient({ product }: Props) {
                       key={color}
                       className={`${styles.colorButton} ${selectedColor === color ? styles.selected : ''}`}
                       onClick={() => setSelectedColor(color)}
-                      title={color}
-                      aria-label={`${color} 색상 선택`}
+                      title={formatProductOptionValue(color)}
+                      aria-label={`${formatProductOptionValue(color)} 색상 선택`}
                       disabled={!inStock}
                       style={{ backgroundColor: getProductColorValue(color) }}
                     />
@@ -696,7 +710,7 @@ export default function ProductDetailClient({ product }: Props) {
             className={`${styles.tabHeader} ${activeTab === 'review' ? styles.active : ''}`}
             onClick={() => setActiveTab('review')}
           >
-            리뷰 ({displayReviewCount})
+            {reviewLabel}
           </button>
           <button
             className={`${styles.tabHeader} ${activeTab === 'qna' ? styles.active : ''}`}
@@ -715,7 +729,7 @@ export default function ProductDetailClient({ product }: Props) {
               <div className={styles.productDetails}>
                 <div className={styles.detailItem}>
                   <span className={styles.detailLabel}>소재</span>
-                  <span className={styles.detailValue}>{product.details?.material || '정보 없음'}</span>
+                  <span className={styles.detailValue}>{formatProductOptionValue(product.details?.material)}</span>
                 </div>
                 <div className={styles.detailItem}>
                   <span className={styles.detailLabel}>원산지</span>
@@ -752,41 +766,45 @@ export default function ProductDetailClient({ product }: Props) {
           {activeTab === 'size' && (
             <div className={styles.sizeGuide}>
               <h3>사이즈 가이드</h3>
-              <div className={styles.sizeTable}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>사이즈</th>
-                      {Object.values(product.details.sizes)[0] && Object.keys(Object.values(product.details.sizes)[0]).map(key => (
-                        <th key={key}>
-                          {key === 'chest' ? '가슴둘레' :
-                           key === 'length' ? '총장' :
-                           key === 'shoulder' ? '어깨너비' :
-                           key === 'waist' ? '허리둘레' :
-                           key === 'thigh' ? '허벅지둘레' :
-                           key === 'width' ? '너비' :
-                           key === 'height' ? '높이' : key}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(product.details.sizes).map(([size, measurements]) => (
-                      <tr key={size}>
-                        <td>{size}</td>
-                        {Object.entries(measurements).map(([key, value]) => (
-                          <td key={key}>{value ? `${value}cm` : '-'}</td>
+              {hasRegisteredSizeMeasurements ? (
+                <div className={styles.sizeTable}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>사이즈</th>
+                        {Object.values(sizeMeasurements)[0] && Object.keys(Object.values(sizeMeasurements)[0]).map(key => (
+                          <th key={key}>
+                            {key === 'chest' ? '가슴둘레' :
+                             key === 'length' ? '총장' :
+                             key === 'shoulder' ? '어깨너비' :
+                             key === 'waist' ? '허리둘레' :
+                             key === 'thigh' ? '허벅지둘레' :
+                             key === 'width' ? '너비' :
+                             key === 'height' ? '높이' : key}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {Object.entries(sizeMeasurements).map(([size, measurements]) => (
+                        <tr key={size}>
+                          <td>{size}</td>
+                          {Object.entries(measurements).map(([key, value]) => (
+                            <td key={key}>{value ? `${value}cm` : '-'}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p>등록된 실측 치수 정보가 없습니다.</p>
+              )}
             </div>
           )}
 
           {activeTab === 'review' && (
-            <ProductReviews productId={product.id} onSummaryChange={setLoadedReviewSummary} />
+            <ProductReviews productId={product.id} />
           )}
 
           {activeTab === 'qna' && (

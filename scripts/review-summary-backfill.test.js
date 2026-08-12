@@ -95,21 +95,21 @@ describe('review summary backfill', () => {
     expect(reconcile).not.toHaveBeenCalled();
   });
 
-  test('blocks execute when invalid or orphan reviews make a partial backfill unsafe', async () => {
+  test('blocks execute when three orphan reviews make a partial backfill unsafe', async () => {
     const runtime = createAnalyzeRuntime({
       products: [document('product-1', {})],
-      reviews: [document('review-1', {
+      reviews: ['review-1', 'review-2', 'review-3'].map((id) => document(id, {
         productId: 'missing-product',
         rating: 5,
         isRecommended: true,
-      })],
+      })),
     });
 
     await expect(runReviewSummaryBackfill(
       { execute: true },
       runtime,
       jest.fn(),
-    )).rejects.toThrow('Backfill preconditions failed');
+    )).rejects.toThrow('orphan reviews=3');
   });
 
   test('blocks execute when the migration target was not cross-checked', async () => {

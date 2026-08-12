@@ -46,6 +46,23 @@ npm run migrate:review-summary:execute
 - execute watermark는 실행 머신 시계가 아니라 `migrationRuns` 문서에 확정된 Firestore 서버 시각을 사용한다. 로컬 시계 오차가 후속 리뷰 트리거를 막지 않는다.
 - 마이그레이션 런타임은 보고된 프로젝트, 초기화된 Admin 앱, 로컬 서비스 계정의 대상 프로젝트가 모두 같은지 먼저 검증한다. 하나라도 다르면 읽기·쓰기 전에 중단한다.
 
+### 고아 리뷰 처리
+
+- 고아 리뷰가 하나라도 있으면 `migrate:review-summary:execute`는 차단된다. 부분 집계 결과로 상품 통계를 확정하지 않는다.
+- 아래 분석 명령은 읽기 전용이며, 출력에는 문서 ID, `productId`, `createdAt`만 포함한다. 리뷰 본문·작성자 정보 등 개인정보는 출력하지 않는다.
+
+```powershell
+node scripts/review-orphan-remediation.js analyze
+```
+
+- 삭제는 운영 승인 후 정확히 확인한 문서 ID 목록과 `--execute`가 함께 있을 때만 가능하다. 상품 ID 문자열 패턴이나 추정 규칙으로 삭제 대상을 만들지 않는다.
+
+```powershell
+node scripts/review-orphan-remediation.js delete --ids review-a,review-b,review-c --execute
+```
+
+- 삭제 직전 스크립트는 지정한 모든 문서가 여전히 고아 리뷰인지 다시 읽어 확인한다. 누락됐거나 정상 상품을 참조하게 된 문서가 하나라도 있으면 어떤 문서도 삭제하지 않는다.
+
 ## 배포·잔여 위험
 
 - Functions, Firestore Rules 배포와 백필 실행은 별도 운영 승인 후 진행해야 한다.
@@ -54,3 +71,10 @@ npm run migrate:review-summary:execute
 - 백필 분석은 기존 리뷰 전체를 읽는다. 운영 데이터 규모와 예상 읽기 비용을 먼저 확인해야 한다.
 - 현재 분석기는 읽은 상품·리뷰를 한 프로세스 메모리에 유지한다. 데이터가 매우 커지기 전 페이지 단위 분석으로 확장해야 한다.
 - 리뷰 쓰기가 매우 잦은 시간에는 백필을 피하고, 완료 뒤 analyze를 다시 실행해 `staleProductCount`가 0인지 확인한다.
+- 2026-08-12 읽기 전용 분석 결과: 상품 178개 중 98개의 통계가 오래되었고, 삭제된 상품을 참조하는 고아 리뷰 3건이 발견됐다. 고아 리뷰의 처리 방침을 정한 뒤에만 백필을 실행할 수 있다.
+
+## 2026-08-12 운영 데이터 remediation 제외 경계
+
+- `scripts/operational-data-audit.js`와 `scripts/operational-data-remediation.js`는 리뷰 문서·리뷰 통계의 수정 또는 삭제 작업을 만들지 않는다.
+- 고아 리뷰 확인과 집계 정합성은 위의 `review-orphan-remediation.js analyze`, `review-summary-backfill.js analyze` 읽기 전용 흐름을 각각 사용한다.
+- 리뷰 삭제와 통계 백필은 운영 승인 범위가 서로 다르므로 운영 데이터 계획 hash 승인만으로 실행할 수 없다. 각 전용 명령의 별도 승인·재검증 절차를 유지한다.

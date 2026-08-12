@@ -5,12 +5,17 @@ import { ReviewService, ReviewSubmission } from "@/shared/services/reviewService
 import { Review, ReviewSummary } from "@/shared/types/review";
 import { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 
+export type ReviewSummaryLoadState = {
+  status: 'loading' | 'ready' | 'error';
+  summary: ReviewSummary | null;
+};
+
 interface ReviewContextType {
   // 상태
   productReviews: Review[];
   allReviews: Review[];
   currentReview: Review | null;
-  reviewSummary: ReviewSummary | null;
+  reviewSummaryByProductId: Record<string, ReviewSummaryLoadState>;
   userReviews: Review[];
   
   // 페이지네이션
@@ -58,7 +63,7 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   const [productReviews, setProductReviews] = useState<Review[]>([]);
   const [allReviews, setAllReviews] = useState<Review[]>([]);
   const [currentReview, setCurrentReview] = useState<Review | null>(null);
-  const [reviewSummary, setReviewSummary] = useState<ReviewSummary | null>(null);
+  const [reviewSummaryByProductId, setReviewSummaryByProductId] = useState<Record<string, ReviewSummaryLoadState>>({});
   const [userReviews, setUserReviews] = useState<Review[]>([]);
   
   // 페이지네이션
@@ -72,6 +77,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   const isLoadingRef = useRef(false);
   const hasMoreReviewsRef = useRef(false);
   const lastDocRef = useRef<QueryDocumentSnapshot<DocumentData> | undefined>(undefined);
+  const productReviewRequestRef = useRef(0);
+  const reviewSummaryRequestRef = useRef<Record<string, number>>({});
   
   // 전체 통계
   const [reviewStatistics, setReviewStatistics] = useState({
@@ -86,6 +93,16 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
 
   // 상품별 리뷰 로드
   const loadProductReviews = useCallback(async (productId: string, reset: boolean = true) => {
+    const requestGeneration = ++productReviewRequestRef.current;
+
+    if (reset) {
+      setProductReviews([]);
+      setHasMoreReviews(false);
+      hasMoreReviewsRef.current = false;
+      setLastDoc(undefined);
+      lastDocRef.current = undefined;
+    }
+
     try {
       isLoadingRef.current = true;
       setLoading(true);
@@ -96,6 +113,10 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
         10, 
         reset ? undefined : lastDocRef.current
       );
+
+      if (requestGeneration !== productReviewRequestRef.current) {
+        return;
+      }
 
       if (reset) {
         setProductReviews(reviews);
@@ -111,12 +132,17 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
       hasMoreReviewsRef.current = hasMore;
 
     } catch (err) {
+      if (requestGeneration !== productReviewRequestRef.current) {
+        return;
+      }
       const errorMessage = err instanceof Error ? err.message : '리뷰를 불러오는데 실패했습니다.';
       setError(errorMessage);
  console.error('상품 리뷰 로드 실패:', err);
     } finally {
-      isLoadingRef.current = false;
-      setLoading(false);
+      if (requestGeneration === productReviewRequestRef.current) {
+        isLoadingRef.current = false;
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -134,6 +160,8 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
       return;
     }
     
+    const requestGeneration = ++productReviewRequestRef.current;
+
     try {
       isLoadingRef.current = true;
       setLoading(true);
@@ -145,6 +173,10 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
         lastDocRef.current
       );
 
+      if (requestGeneration !== productReviewRequestRef.current) {
+        return;
+      }
+
       setProductReviews(prev => [...prev, ...reviews]);
       setHasMoreReviews(hasMore);
       setLastDoc(newLastDoc);
@@ -154,12 +186,17 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
       lastDocRef.current = newLastDoc;
 
     } catch (err) {
+      if (requestGeneration !== productReviewRequestRef.current) {
+        return;
+      }
       const errorMessage = err instanceof Error ? err.message : '더 많은 리뷰를 불러오는데 실패했습니다.';
       setError(errorMessage);
  console.error('더 많은 상품 리뷰 로드 실패:', err);
     } finally {
-      isLoadingRef.current = false;
-      setLoading(false);
+      if (requestGeneration === productReviewRequestRef.current) {
+        isLoadingRef.current = false;
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -205,16 +242,30 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
 
   // 리뷰 요약 정보 로드
   const loadReviewSummary = useCallback(async (productId: string) => {
-    try {
-      setError(null);
+    const requestGeneration = (reviewSummaryRequestRef.current[productId] || 0) + 1;
+    reviewSummaryRequestRef.current[productId] = requestGeneration;
+    setReviewSummaryByProductId((previous) => ({
+      ...previous,
+      [productId]: { status: 'loading', summary: null },
+    }));
 
+    try {
       const summary = await ReviewService.getReviewSummary(productId);
-      setReviewSummary(summary);
+      setReviewSummaryByProductId((previous) => {
+        if (reviewSummaryRequestRef.current[productId] !== requestGeneration) {
+          return previous;
+        }
+        return { ...previous, [productId]: { status: 'ready', summary } };
+      });
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '리뷰 요약 정보를 불러오는데 실패했습니다.';
-      setError(errorMessage);
- console.error('리뷰 요약 로드 실패:', err);
+      console.error('리뷰 요약 로드 실패:', err);
+      setReviewSummaryByProductId((previous) => {
+        if (reviewSummaryRequestRef.current[productId] !== requestGeneration) {
+          return previous;
+        }
+        return { ...previous, [productId]: { status: 'error', summary: null } };
+      });
     }
   }, []);
 
@@ -324,7 +375,7 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
     setProductReviews([]);
     setAllReviews([]);
     setCurrentReview(null);
-    setReviewSummary(null);
+    setReviewSummaryByProductId({});
     setUserReviews([]);
     setHasMoreReviews(false);
     setLastDoc(undefined);
@@ -344,7 +395,7 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
     productReviews,
     allReviews,
     currentReview,
-    reviewSummary,
+    reviewSummaryByProductId,
     userReviews,
     
     // 페이지네이션

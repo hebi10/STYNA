@@ -1,41 +1,33 @@
 import { render, screen } from '@testing-library/react';
-import DynamicCategoryPage, { generateMetadata } from './page';
-import { CategoryService } from '@/shared/services/categoryService';
-import { notFound, redirect } from 'next/navigation';
-import type { Category } from '@/shared/types/category';
+import DynamicCategoryPage, { dynamic, generateMetadata } from './page';
+import { redirect } from 'next/navigation';
 
 jest.mock('next/navigation', () => ({
   redirect: jest.fn(() => {
     throw new Error('NEXT_REDIRECT');
   }),
-  notFound: jest.fn(() => {
-    throw new Error('NEXT_NOT_FOUND');
-  }),
+}));
+
+jest.mock('@/context/categoryProvider', () => ({
+  CategoryProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="category-provider">{children}</div>
+  ),
 }));
 
 jest.mock('@/shared/services/categoryService', () => ({
   CategoryService: {
-    getCategories: jest.fn(),
+    getCategories: jest.fn().mockResolvedValue([]),
   },
 }));
 
-jest.mock('@/app/_components/PageHeader', () => ({
+jest.mock('./CategoryRouteContent', () => ({
   __esModule: true,
-  default: ({ title }: { title: string }) => <h1>{title}</h1>,
+  default: ({ categoryId }: { categoryId: string }) => <div data-testid="category-route" data-category={categoryId} />,
 }));
 
 jest.mock('@/app/products/_components/ProductList', () => ({
   __esModule: true,
-  default: ({ initialCategory, lockCategory }: {
-    initialCategory: string;
-    lockCategory: boolean;
-  }) => (
-    <div
-      data-testid="product-list"
-      data-category={initialCategory}
-      data-locked={String(lockCategory)}
-    />
-  ),
+  default: () => null,
 }));
 
 jest.mock('./page.module.css', () => ({
@@ -44,36 +36,23 @@ jest.mock('./page.module.css', () => ({
 }));
 
 describe('dynamic category page', () => {
-  const category = (id: string, name: string): Category => ({
-    id,
-    name,
-    slug: id,
-    path: `/categories/${id}`,
-    productCount: 1,
-    isActive: true,
-    order: 1,
-    createdAt: new Date('2026-07-01T00:00:00.000Z'),
-    updatedAt: new Date('2026-07-01T00:00:00.000Z'),
-  });
-
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.mocked(CategoryService.getCategories).mockResolvedValue([
-      category('bags', '가방'),
-      category('tops', '상의'),
-    ]);
   });
 
-  test('uses the shared cursor product list with a locked category', async () => {
+  test('renders category slugs on request instead of freezing build-time category data', () => {
+    expect(dynamic).toBe('force-dynamic');
+  });
+
+  test('delegates category data loading to the public category provider', async () => {
     const page = await DynamicCategoryPage({
       params: Promise.resolve({ category: 'bags' }),
     });
 
     render(page);
 
-    expect(screen.getByRole('heading', { level: 1, name: '가방' })).toBeInTheDocument();
-    expect(screen.getByTestId('product-list')).toHaveAttribute('data-category', 'bags');
-    expect(screen.getByTestId('product-list')).toHaveAttribute('data-locked', 'true');
+    expect(screen.getByTestId('category-provider')).toBeInTheDocument();
+    expect(screen.getByTestId('category-route')).toHaveAttribute('data-category', 'bags');
   });
 
   test('redirects the legacy tops slug to the canonical clothing route on the server', async () => {
@@ -84,15 +63,14 @@ describe('dynamic category page', () => {
     expect(redirect).toHaveBeenCalledWith('/categories/clothing');
   });
 
-  test('serves the canonical clothing route with a legacy tops category document', async () => {
+  test('passes canonical clothing to the client route for a legacy tops document', async () => {
     const page = await DynamicCategoryPage({
       params: Promise.resolve({ category: 'clothing' }),
     });
 
     render(page);
 
-    expect(screen.getByRole('heading', { level: 1, name: '상의' })).toBeInTheDocument();
-    expect(screen.getByTestId('product-list')).toHaveAttribute('data-category', 'tops');
+    expect(screen.getByTestId('category-route')).toHaveAttribute('data-category', 'clothing');
   });
 
   test('uses the category route as its canonical URL', async () => {
@@ -111,14 +89,6 @@ describe('dynamic category page', () => {
     });
   });
 
-  test('returns not found for a slug missing from the active category list', async () => {
-    await expect(DynamicCategoryPage({
-      params: Promise.resolve({ category: 'missing-category' }),
-    })).rejects.toThrow('NEXT_NOT_FOUND');
-
-    expect(notFound).toHaveBeenCalledTimes(1);
-  });
-
   test('marks missing category metadata as noindex without a canonical URL', async () => {
     const metadata = await generateMetadata({
       params: Promise.resolve({ category: 'missing-metadata' }),
@@ -128,15 +98,5 @@ describe('dynamic category page', () => {
       robots: { index: false, follow: false },
     });
     expect(metadata.alternates).toBeUndefined();
-  });
-
-  test('propagates category lookup failures instead of turning them into not found', async () => {
-    jest.mocked(CategoryService.getCategories).mockRejectedValueOnce(new Error('firestore unavailable'));
-
-    await expect(DynamicCategoryPage({
-      params: Promise.resolve({ category: 'lookup-error' }),
-    })).rejects.toThrow('firestore unavailable');
-
-    expect(notFound).not.toHaveBeenCalled();
   });
 });

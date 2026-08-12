@@ -103,6 +103,7 @@ function OrderCompleteContent() {
   }, [authLoading, orderId, user, router]);
 
   const order = state.order;
+  const hasVerifiedCouponDiscount = Boolean(order?.userCouponId && order.discountAmount && order.discountAmount > 0);
 
   const itemsSubTotal = useMemo(() => {
     if (!order) return "0원";
@@ -183,10 +184,12 @@ function OrderCompleteContent() {
                 <span className={styles.infoLabel}>배송비</span>
                 <span className={styles.infoValue}>{formatCurrency(order.deliveryFee || 0)}</span>
               </div>
-              <div className={styles.infoItem}>
-                <span className={styles.infoLabel}>쿠폰 할인</span>
-                <span className={styles.infoValue}>-{formatCurrency(order.discountAmount || 0)}</span>
-              </div>
+              {hasVerifiedCouponDiscount && (
+                <div className={styles.infoItem}>
+                  <span className={styles.infoLabel}>쿠폰 할인</span>
+                  <span className={styles.infoValue}>-{formatCurrency(order.discountAmount || 0)}</span>
+                </div>
+              )}
               <div className={styles.infoItem}>
                 <span className={styles.infoLabel}>포인트 사용</span>
                 <span className={styles.infoValue}>-{formatCurrency(order.pointUsed || 0)}</span>

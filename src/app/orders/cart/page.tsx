@@ -124,6 +124,18 @@ export default function OrderCartPage() {
 
   // 주문 계산
   const selectedItems = cartItems.filter(item => item.selected && item.isAvailable);
+  const pricingItems = useMemo(
+    () => selectedItems.map((item) => ({
+      productId: item.productId,
+      originalPrice: item.price + item.discountAmount,
+      salePrice: item.price,
+      price: item.price,
+      discountAmount: item.discountAmount,
+      quantity: item.quantity,
+      isAvailable: item.isAvailable,
+    })),
+    [selectedItems]
+  );
   const couponLookupAmount = selectedItems.reduce(
     (sum, item) => sum + Math.max(0, Math.floor(item.price)) * Math.max(0, Math.floor(item.quantity)),
     0,
@@ -137,26 +149,27 @@ export default function OrderCartPage() {
   const selectedCouponView = orderCouponState.coupons.find(coupon => coupon.id === selectedCoupon) || null;
   const orderPreview = useMemo(
     () => calculateOrderPreview({
-      items: selectedItems,
+      items: pricingItems,
       deliveryOption,
       selectedCoupon: selectedCouponView,
       requestedPointAmount: 0,
       pointBalance: 0,
     }),
-    [selectedItems, deliveryOption, selectedCouponView]
+    [pricingItems, deliveryOption, selectedCouponView]
   );
   const standardDeliveryPreview = useMemo(
     () => calculateOrderPreview({
-      items: selectedItems,
+      items: pricingItems,
       deliveryOption: "standard",
       selectedCoupon: selectedCouponView,
       requestedPointAmount: 0,
       pointBalance: 0,
     }),
-    [selectedItems, selectedCouponView]
+    [pricingItems, selectedCouponView]
   );
 
   const subtotal = orderPreview.subtotal;
+  const originalSubtotal = orderPreview.originalSubtotal;
   const totalDiscountAmount = orderPreview.productDiscountAmount;
   const couponDiscount = orderPreview.couponDiscount;
   const deliveryFee = orderPreview.deliveryFee;
@@ -206,6 +219,8 @@ export default function OrderCartPage() {
         brand: item.brand,
         price: item.price,
         discountAmount: item.discountAmount,
+        originalPrice: item.price + item.discountAmount,
+        salePrice: item.price,
       })),
       subtotal,
       couponDiscount,
@@ -213,6 +228,7 @@ export default function OrderCartPage() {
       finalAmount,
       selectedCoupon: orderPreview.usableCoupon?.id || "",
       pricingPreview: {
+        originalSubtotal: orderPreview.originalSubtotal,
         subtotal: orderPreview.subtotal,
         productDiscountAmount: orderPreview.productDiscountAmount,
         couponDiscount: orderPreview.couponDiscount,
@@ -546,7 +562,7 @@ export default function OrderCartPage() {
                 <div className={styles.summaryItem}>
                   <span className={styles.summaryLabel}>상품금액</span>
                   <span className={styles.summaryValue}>
-                    {subtotal.toLocaleString()}원
+                    {originalSubtotal.toLocaleString()}원
                   </span>
                 </div>
                 
