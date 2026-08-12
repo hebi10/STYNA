@@ -31,7 +31,7 @@ describe('getCuratedMainPageCategories', () => {
     ];
 
     expect(getCuratedMainPageCategories(categories, 4).map((category) => category.id)).toEqual([
-      'tops',
+      'clothing',
       'bottoms',
       'shoes',
       'sports',

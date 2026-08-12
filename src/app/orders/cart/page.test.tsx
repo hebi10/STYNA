@@ -109,6 +109,13 @@ describe('OrderCartPage policy copy', () => {
     } as unknown as ReturnType<typeof useRemoveFromCart>);
   });
 
+  test('labels the cart page as a cart instead of checkout', async () => {
+    render(<OrderCartPage />);
+
+    expect(await screen.findByRole('heading', { level: 1, name: '장바구니' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1, name: '주문/결제' })).not.toBeInTheDocument();
+  });
+
   test('shows a busy status while authentication is being checked without navigating', () => {
     jest.mocked(useAuth).mockReturnValue({
       user: null,

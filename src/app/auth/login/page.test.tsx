@@ -175,6 +175,17 @@ describe('LoginPage transition feedback', () => {
     expect(screen.getByRole('button', { name: '관리자 로그인' })).toBeInTheDocument();
   });
 
+  test('routes the administrator demo login to the admin area', async () => {
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN = 'true';
+    login.mockResolvedValue(undefined);
+
+    render(<LoginPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: '관리자 로그인' }));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/admin'));
+  });
+
   test.each([
     ['missing', undefined],
     ['false', 'false'],

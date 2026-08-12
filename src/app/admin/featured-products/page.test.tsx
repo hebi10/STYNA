@@ -63,4 +63,32 @@ describe('FeaturedProductManagePage', () => {
       );
     });
   });
+
+  test('does not show more selected products than the fixed three-product limit', async () => {
+    jest.mocked(FeaturedProductService.getFeaturedProductConfig).mockResolvedValue({
+      id: 'mainPageFeatured',
+      productIds: ['product-1', 'product-2', 'product-3', 'product-4'],
+      title: 'STYNA SELECT',
+      subtitle: '세 가지 선택',
+      description: '한 가지 무드로 이어지는 스타일',
+      heroImage: '/style-now/spring/style-now-spring-main.webp',
+      maxCount: 3,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    jest.mocked(ProductService.getAllProducts).mockResolvedValue([
+      ...['product-1', 'product-2', 'product-3', 'product-4'].map((id) => ({
+        id,
+        name: id,
+        brand: 'STYNA',
+        price: 10000,
+        images: [],
+      })),
+    ] as never);
+
+    render(<FeaturedProductManagePage />);
+
+    expect(await screen.findByText('선택된 추천 상품 (3/3)')).toBeInTheDocument();
+  });
 });

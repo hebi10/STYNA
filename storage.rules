@@ -30,6 +30,13 @@ service firebase.storage {
         ).data.get('role', '') == 'admin';
     }
 
+    function isAdminForWrite() {
+      return isAdmin() &&
+        request.auth.token.auth_time is int &&
+        request.auth.token.auth_time <= request.time.toMillis() / 1000 &&
+        request.auth.token.auth_time >= request.time.toMillis() / 1000 - 300;
+    }
+
     function isValidImageUpload() {
       return request.resource.size < 5 * 1024 * 1024 &&
         request.resource.contentType.matches('image/.*');
@@ -37,14 +44,14 @@ service firebase.storage {
 
     match /images/{category}/{productId}/{filename} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidImageUpload();
-      allow delete: if isAdmin();
+      allow create, update: if isAdminForWrite() && isValidImageUpload();
+      allow delete: if isAdminForWrite();
     }
 
     match /categories/{filename} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidImageUpload();
-      allow delete: if isAdmin();
+      allow create, update: if isAdminForWrite() && isValidImageUpload();
+      allow delete: if isAdminForWrite();
     }
 
     match /events/banner/{filename} {
@@ -63,14 +70,14 @@ service firebase.storage {
 
     match /events/publication/{filename} {
       allow read: if filename.matches('.*-20260731-(wide|card)[.]webp');
-      allow create, update: if isAdmin() && isValidImageUpload();
-      allow delete: if isAdmin();
+      allow create, update: if isAdminForWrite() && isValidImageUpload();
+      allow delete: if isAdminForWrite();
     }
 
     match /events/{allPaths=**} {
       allow read: if isAdmin();
-      allow create, update: if isAdmin() && isValidImageUpload();
-      allow delete: if isAdmin();
+      allow create, update: if isAdminForWrite() && isValidImageUpload();
+      allow delete: if isAdminForWrite();
     }
 
     match /{allPaths=**} {

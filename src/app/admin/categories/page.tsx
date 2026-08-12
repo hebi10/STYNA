@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, doc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/shared/libs/firebase/firebase';
+import { isCategoryIconImage } from '@/shared/utils/categoryIcon';
+import Image from 'next/image';
 import styles from './page.module.css';
 import Link from 'next/link';
 
@@ -239,7 +241,17 @@ export default function AdminCategoriesPage() {
           <div key={category.id} className={styles.categoryCard}>
             <div className={styles.categoryHeader}>
               <div className={styles.categoryIcon} style={{ backgroundColor: category.color }}>
-                {category.icon}
+                {isCategoryIconImage(category.icon) ? (
+                  <Image
+                    src={category.icon}
+                    alt=""
+                    aria-hidden="true"
+                    className={styles.categoryIconImage}
+                    width={256}
+                    height={256}
+                    loading="lazy"
+                  />
+                ) : category.icon}
               </div>
               <div className={styles.categoryInfo}>
                 <h3 className={styles.categoryName}>{category.name}</h3>

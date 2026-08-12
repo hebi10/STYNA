@@ -45,4 +45,18 @@ describe('AuthChecking', () => {
     expect(screen.getByRole('link', { name: '로그인 페이지로 이동' })).toHaveClass('gateButton');
     expect(screen.queryByText('관리자 본문')).not.toBeInTheDocument();
   });
+
+  test('allows a read-only demo administrator into the isolated admin shell', () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      user: { uid: 'demo-admin-1' },
+      isAdmin: false,
+      isDemoAdmin: true,
+      loading: false,
+      isUserDataLoading: false,
+    });
+
+    render(<AuthChecking>읽기 전용 관리자 본문</AuthChecking>);
+
+    expect(screen.getByText('읽기 전용 관리자 본문')).toBeInTheDocument();
+  });
 });

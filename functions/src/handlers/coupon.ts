@@ -8,7 +8,7 @@ import {
 } from "../domain/couponDomain";
 import { CouponIssuanceError, issueUserCouponInTransaction } from "../domain/couponIssuance";
 import { parseCouponExpiryDay, toKstDayKey } from "../domain/kstDate";
-import { verifyAuth, requireAdmin, AuthError } from "../utils/auth";
+import { verifyAuth, requireRecentAdmin, AuthError } from "../utils/auth";
 import { applyNoStoreHeaders } from "../utils/http";
 
 function getDb() {
@@ -45,7 +45,7 @@ export const coupon = onRequest(
           return;
         }
         case "issue": {
-          const adminContext = await requireAdmin(req.headers.authorization);
+          const adminContext = await requireRecentAdmin(req.headers.authorization);
           const targetUid = ensureString(payload.targetUid) || adminContext.uid;
           await handleIssue(targetUid, payload, res);
           return;
@@ -56,19 +56,19 @@ export const coupon = onRequest(
           return;
         }
         case "cleanup":
-          await requireAdmin(req.headers.authorization);
+          await requireRecentAdmin(req.headers.authorization);
           await handleCleanup(res);
           return;
         case "adminCreate":
-          await requireAdmin(req.headers.authorization);
+          await requireRecentAdmin(req.headers.authorization);
           await handleAdminCreate(payload, res);
           return;
         case "adminUpdate":
-          await requireAdmin(req.headers.authorization);
+          await requireRecentAdmin(req.headers.authorization);
           await handleAdminUpdate(payload, res);
           return;
         case "adminArchive":
-          await requireAdmin(req.headers.authorization);
+          await requireRecentAdmin(req.headers.authorization);
           await handleAdminArchive(payload, res);
           return;
         default:

@@ -6,6 +6,7 @@ import {
 } from '@/shared/services/sitemapFirestoreService';
 import { canonicalUrl } from '@/shared/constants/seo';
 import { isPublicEventReady } from '@/shared/utils/eventPublicPolicy';
+import { normalizeCategoryId } from '@/shared/utils/categoryRouting';
 
 export const revalidate = 3600;
 export const SITEMAP_URL_LIMIT = 50_000;
@@ -86,9 +87,10 @@ export async function buildSitemap(
   ]);
 
   for (const categoryId of categoryIds) {
-    if (categoryId.trim()) {
+    const normalizedCategoryId = normalizeCategoryId(categoryId);
+    if (normalizedCategoryId) {
       addUniqueEntry(entries, {
-        url: canonicalUrl(`/categories/${encodeURIComponent(categoryId)}`),
+        url: canonicalUrl(`/categories/${encodeURIComponent(normalizedCategoryId)}`),
       }, maxUrls);
     }
   }

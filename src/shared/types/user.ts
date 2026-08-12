@@ -1,4 +1,4 @@
-export type UserRole = 'user' | 'admin';
+export type UserRole = 'user' | 'admin' | 'demo_admin';
 export type UserAccountStatus = 'active' | 'inactive' | 'banned' | 'deleted';
 export type MutableUserAccountStatus = Exclude<UserAccountStatus, 'deleted'>;
 

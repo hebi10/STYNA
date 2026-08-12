@@ -32,6 +32,17 @@ export interface FeaturedProductSection {
 }
 
 const FEATURED_PRODUCTS_COLLECTION = 'featuredProducts';
+const MAX_FEATURED_PRODUCT_COUNT = 3;
+
+function normalizeFeaturedProductIds(productIds: unknown, maxCount: number): string[] {
+  if (!Array.isArray(productIds)) {
+    return [];
+  }
+
+  return Array.from(new Set(productIds.filter((id): id is string => (
+    typeof id === 'string' && id.trim().length > 0
+  )))).slice(0, maxCount);
+}
 
 export class FeaturedProductService {
   // 기본 추천 상품 설정
@@ -57,13 +68,13 @@ export class FeaturedProductService {
         const data = docSnap.data();
         return {
           id: docSnap.id,
-          productIds: data.productIds || [],
+          productIds: normalizeFeaturedProductIds(data.productIds, MAX_FEATURED_PRODUCT_COUNT),
           title: data.title || this.defaultConfig.title,
           subtitle: data.subtitle || this.defaultConfig.subtitle,
           description: data.description || this.defaultConfig.description,
           heroImage: data.heroImage || this.defaultConfig.heroImage,
           isActive: data.isActive ?? this.defaultConfig.isActive,
-          maxCount: Math.min(data.maxCount || this.defaultConfig.maxCount, this.defaultConfig.maxCount),
+          maxCount: MAX_FEATURED_PRODUCT_COUNT,
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date(),
         };
@@ -106,12 +117,12 @@ export class FeaturedProductService {
   ): Promise<void> {
     try {
       const configData = {
-        productIds,
+        productIds: normalizeFeaturedProductIds(productIds, MAX_FEATURED_PRODUCT_COUNT),
         title: options?.title || this.defaultConfig.title,
         subtitle: options?.subtitle || this.defaultConfig.subtitle,
         description: options?.description || this.defaultConfig.description,
         heroImage: options?.heroImage || this.defaultConfig.heroImage,
-        maxCount: Math.min(options?.maxCount || this.defaultConfig.maxCount, this.defaultConfig.maxCount),
+        maxCount: MAX_FEATURED_PRODUCT_COUNT,
         isActive: options?.isActive ?? this.defaultConfig.isActive,
         updatedAt: Timestamp.now(),
       };
@@ -171,13 +182,13 @@ export class FeaturedProductService {
         const data = doc.data();
         return {
           id: doc.id,
-          productIds: data.productIds || [],
+          productIds: normalizeFeaturedProductIds(data.productIds, MAX_FEATURED_PRODUCT_COUNT),
           title: data.title || this.defaultConfig.title,
           subtitle: data.subtitle || this.defaultConfig.subtitle,
           description: data.description || this.defaultConfig.description,
           heroImage: data.heroImage || this.defaultConfig.heroImage,
           isActive: data.isActive ?? this.defaultConfig.isActive,
-          maxCount: Math.min(data.maxCount || this.defaultConfig.maxCount, this.defaultConfig.maxCount),
+          maxCount: MAX_FEATURED_PRODUCT_COUNT,
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date(),
         };

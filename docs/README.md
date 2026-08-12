@@ -1,6 +1,56 @@
 ﻿# Docs Hub
 
-## 관련 문서 목록
+이 문서 허브는 현재 프로젝트를 이해하기 위한 진입점입니다.
+
+현재 동작의 기준은 코드와 아래 세 문서입니다.
+
+- [README.md](../README.md): 기술 스택, 현재 기능, 데이터 구조, 실행·배포 방법
+- [PRODUCT.md](../PRODUCT.md): 제품 목적, 사용자, 포트폴리오 범위와 원칙
+- [commerce-policy.md](commerce-policy.md): 결제·배송·문의·챗봇 데모 경계와 정책 원본
+
+## 권장 읽기 순서
+
+1. [README.md](../README.md)에서 프로젝트 전체 구조와 현재 기능을 확인합니다.
+2. [PRODUCT.md](../PRODUCT.md)에서 제품 목적과 화면 방향을 확인합니다.
+3. [commerce-policy.md](commerce-policy.md)에서 데모 범위와 금지된 운영 약속을 확인합니다.
+4. [env-setup.md](env-setup.md)와 [quality-gates.md](quality-gates.md)에서 실행·검증 환경을 확인합니다.
+5. 관심 있는 도메인의 상세 문서와 해당 코드·테스트를 함께 확인합니다.
+
+## 현재 구현과 문서의 기준
+
+- Firestore 경로, Firebase Rules, Functions handler와 화면 동작은 저장소의 현재 코드를 기준으로 합니다.
+- `docs/superpowers/specs/`와 `docs/superpowers/plans/`의 설계·실행 계획은 작성 당시의 요구사항과 작업 기록입니다. 현재 구현과 다를 경우 현재 코드와 최신 개요 문서를 우선합니다.
+- `ai-harness-handoff.md`와 날짜가 붙은 작업 문서는 특정 시점의 인수인계·검증 기록입니다. 전체 프로젝트 개요를 대신하지 않습니다.
+- 정책·환경·품질 문서의 명령과 경로를 변경하면 이 허브와 루트 README의 관련 링크도 함께 확인합니다.
+
+## 핵심 운영·정책 문서
+
+- 상거래 정책과 데모 범위 : [commerce-policy.md](commerce-policy.md)
+- 환경 변수/배포 설정 : [env-setup.md](env-setup.md)
+- 품질 게이트/CI 스크립트 : [quality-gates.md](quality-gates.md)
+- API 캐시 정책 및 debug 경로 : [api-cache-debug-route.md](api-cache-debug-route.md)
+- SEO 경로·색인 정책 : [seo-routing.md](seo-routing.md)
+- 스토리지 구조 : [storage-structure.md](storage-structure.md)
+- 정적 콘텐츠 Firestore 관리 : [static-content.md](static-content.md)
+
+## 핵심 기능 문서
+
+- 인증 화면 UI : [auth-ui.md](auth-ui.md)
+- 상품 조회 구조 : [product-listing-structure.md](product-listing-structure.md)
+- 주문 생성 서버화 : [order-serverization.md](order-serverization.md)
+- 쿠폰/포인트 정책 : [coupon-system.md](coupon-system.md)
+- 리뷰 통계 동기화·백필 : [review-statistics.md](review-statistics.md)
+- QnA 비밀글 검증 구조 : [qna-secret-password.md](qna-secret-password.md)
+- 관리자 대시보드 : [dashboard.md](dashboard.md)
+- 마이페이지 UI : [mypage-ui.md](mypage-ui.md)
+- 이벤트 페이지 점검 : [event-page-review.md](event-page-review.md)
+- 전체 프로젝트 종합 검토 : [project-comprehensive-review.md](project-comprehensive-review.md)
+
+## 인수인계·작업 기록
+
+- 현재 확인된 특정 작업 인수인계 : [ai-harness-handoff.md](ai-harness-handoff.md)
+
+## 전체 상세·작업 문서 목록
 - 관리 권한/보안 판정 정리 : security-admin-permission.md
 - 관리자 토큰 통합 정리 : store-admin-token-unification.md
 - 관리자 페이지 권한 검토 : admin-page-review.md

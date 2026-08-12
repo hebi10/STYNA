@@ -11,7 +11,7 @@ interface AuthCheckingProps {
 }
 
 export default function AuthChecking({ children, fallback }: AuthCheckingProps) {
-  const { user, isAdmin, loading: authLoading, isUserDataLoading } = useAuth();
+  const { user, isAdmin, isDemoAdmin, loading: authLoading, isUserDataLoading } = useAuth();
 
   if (authLoading || isUserDataLoading) {
     return (
@@ -41,7 +41,7 @@ export default function AuthChecking({ children, fallback }: AuthCheckingProps) 
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isDemoAdmin) {
     return (
       <div className={styles.gate}>
         <div className={styles.gateContent}>

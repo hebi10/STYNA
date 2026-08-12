@@ -4,7 +4,7 @@ jest.mock('firebase-admin', () => ({
 }));
 
 import * as admin from 'firebase-admin';
-import { verifyAuthContext } from '../src/utils/auth';
+import { requireRecentAdmin, verifyAuthContext } from '../src/utils/auth';
 
 describe('verifyAuthContext', () => {
   const verifyIdToken = jest.fn();
@@ -82,6 +82,35 @@ describe('verifyAuthContext', () => {
 
     await expect(verifyAuthContext('Bearer valid-token')).resolves.toMatchObject({
       role: 'admin',
+      isAdmin: true,
+    });
+  });
+
+  test('identifies a read-only demo administrator separately from a full administrator', async () => {
+    mockDecodedToken({ demoAdmin: true });
+    mockUserDocument({ status: 'active', role: 'demo_admin' });
+
+    await expect(verifyAuthContext('Bearer demo-token')).resolves.toMatchObject({
+      role: 'demo_admin',
+      isAdmin: false,
+      isDemoAdmin: true,
+    });
+  });
+
+  test('rejects a full administrator whose password authentication is older than five minutes', async () => {
+    mockDecodedToken({ admin: true, auth_time: Math.floor(Date.now() / 1000) - 301 });
+    mockUserDocument({ status: 'active', role: 'admin' });
+
+    await expect(requireRecentAdmin('Bearer stale-token')).rejects.toMatchObject({
+      statusCode: 403,
+    });
+  });
+
+  test('accepts a full administrator immediately after password reauthentication', async () => {
+    mockDecodedToken({ admin: true, auth_time: Math.floor(Date.now() / 1000) });
+    mockUserDocument({ status: 'active', role: 'admin' });
+
+    await expect(requireRecentAdmin('Bearer fresh-token')).resolves.toMatchObject({
       isAdmin: true,
     });
   });

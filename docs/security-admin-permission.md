@@ -71,6 +71,13 @@
 - 일반 계정으로 `/admin` 접속 시 Unauthorized UI 분기와 비로그인 이동 UX는 통합 점검 필요.
 - 실제 배포는 별도 승인 후 진행하며, Storage Rules가 Firestore 사용자 문서를 처음 참조하는 배포에서는 Firebase가 서비스 간 권한 설정을 요청할 수 있다.
 
+## 2026-08-12 공개 관리자 데모와 변경 재인증
+
+- 공개 관리자 데모는 `demo_admin` 사용자 문서 역할과 `demoAdmin: true` custom claim을 함께 사용한다. 이 역할은 엄격 관리자 조건을 만족하지 않으므로 Firestore·Storage·관리 Functions의 관리자 읽기·쓰기를 얻지 못한다.
+- 관리자 셸은 데모 주체일 때 실제 하위 관리 화면을 마운트하지 않고, 실제 데이터 조회 없이 개인정보가 없는 읽기 전용 요약만 표시한다.
+- 실제 관리자 쓰기는 Firebase 재인증으로 갱신된 ID token의 `auth_time`이 현재 시각 기준 5분 이내인 경우에만 Firestore Rules·Storage Rules·`adminUsers`·`coupon`·`points` Functions에서 허용한다.
+- `npm run provision:demo-admin:dry-run`은 `PORTFOLIO_DEMO_ADMIN_UID`를 기준으로 데모 역할 전환 가능 여부만 확인한다. `--execute`는 다른 활성 실제 관리자가 1명 이상 있을 때만 claim·문서 role 변경과 refresh token 폐기를 수행한다.
+
 ## 2026-07-10 서버 권한 경계 보강
 - 일반 사용자의 쿠폰 `issue` 액션을 차단하고, 직접 발급은 관리자·이벤트 보상 transaction만 사용한다.
 - 이벤트 참여는 `/api/event/participate` Function이 결정적 참여 문서 ID와 단일 transaction으로 처리한다. 일반 사용자의 `eventParticipants`, `events`, `user_coupons` 직접 쓰기는 규칙에서 거부한다.

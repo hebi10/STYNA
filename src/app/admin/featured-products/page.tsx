@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { FeaturedProductService } from '@/shared/services/featuredProductService';
 import { ProductService } from '@/shared/services/productService';
 import { Product } from '@/shared/types/product';
 import Image from 'next/image';
 import styles from './page.module.css';
+
+const MAX_FEATURED_PRODUCT_COUNT = 3;
 
 export default function FeaturedProductManagePage() {
   const router = useRouter();
@@ -23,14 +25,10 @@ export default function FeaturedProductManagePage() {
   const [subtitle, setSubtitle] = useState('');
   const [description, setDescription] = useState('');
   const [heroImage, setHeroImage] = useState('/style-now/autumn/style-now-autumn-main.webp');
-  const [maxCount] = useState(3);
+  const maxCount = MAX_FEATURED_PRODUCT_COUNT;
   const [isActive, setIsActive] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -57,9 +55,11 @@ export default function FeaturedProductManagePage() {
         // 선택된 상품들 로드
         if (configData.productIds && configData.productIds.length > 0) {
           console.log('선택된 상품 ID들:', configData.productIds);
-          const selectedProductsData = productsData.filter(product => 
-            configData.productIds.includes(product.id)
-          );
+          const productsById = new Map(productsData.map((product) => [product.id, product]));
+          const selectedProductsData = configData.productIds
+            .slice(0, MAX_FEATURED_PRODUCT_COUNT)
+            .map((productId) => productsById.get(productId))
+            .filter((product): product is Product => Boolean(product));
           console.log('매칭된 선택된 상품들:', selectedProductsData);
           setSelectedProducts(selectedProductsData);
         } else {
@@ -74,7 +74,11 @@ export default function FeaturedProductManagePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const handleProductSelect = (product: Product) => {
     if (selectedProducts.find(p => p.id === product.id)) {

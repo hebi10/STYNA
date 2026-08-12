@@ -27,7 +27,7 @@ CHAT_API_URL=https://us-central1-your_project_id.cloudfunctions.net/chat
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
 NODE_ENV=development
 NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true
-# 포트폴리오 데모 배포에서만 빠른 로그인 노출
+# 포트폴리오 데모 배포에서만 일반 회원·읽기 전용 관리자 빠른 로그인 노출
 NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true
 ```
 
@@ -92,7 +92,7 @@ const firebaseConfig = await getFirebaseConfig();
 | `NEXT_PUBLIC_CHAT_API_URL` | 레거시 호환 | 과거 Next 서버 upstream 변수. 브라우저 직접 호출에는 사용하지 않으며 신규 설정은 `CHAT_API_URL`을 사용 |
 | `NEXT_PUBLIC_API_URL` | 선택 | API 기본 URL (기본값: `/api`) |
 | `NEXT_PUBLIC_USE_FIREBASE_EMULATOR` | 선택 | Firebase 에뮬레이터 사용 여부 |
-| `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | 포트폴리오 데모 배포에서만 | 정확히 `true`일 때 로그인 화면의 일반 회원·관리자 빠른 로그인을 노출 |
+| `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | 포트폴리오 데모 배포에서만 | 정확히 `true`일 때 로그인 화면의 일반 회원·읽기 전용 관리자 빠른 로그인을 노출 |
 
 `NEXT_PUBLIC_` 접두사 변수는 클라이언트에 노출되므로 민감한 키에는 사용하지 않습니다.
 

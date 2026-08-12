@@ -36,6 +36,11 @@ const fixedTime = Timestamp.fromDate(new Date('2026-07-20T00:00:00.000Z'));
 
 let testEnv: RulesTestEnvironment;
 
+type AuthenticatedContextFactory = (
+  userId: string,
+  tokenOptions?: Record<string, unknown>,
+) => ReturnType<RulesTestEnvironment['authenticatedContext']>;
+
 setLogLevel('silent');
 
 type AccountStatus = 'active' | 'inactive' | 'banned' | 'deleted';
@@ -170,6 +175,14 @@ beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
     projectId,
     firestore: { rules },
+  });
+  const originalAuthenticatedContext = testEnv.authenticatedContext.bind(testEnv) as AuthenticatedContextFactory;
+  (testEnv as unknown as { authenticatedContext: AuthenticatedContextFactory }).authenticatedContext = (
+    userId,
+    tokenOptions = {},
+  ) => originalAuthenticatedContext(userId, {
+    auth_time: Math.floor(Date.now() / 1000),
+    ...tokenOptions,
   });
 });
 
@@ -431,6 +444,17 @@ describe('strict admin boundary', () => {
     const adminDb = testEnv.authenticatedContext('admin-role-token', { role: 'admin' }).firestore();
 
     await assertSucceeds(setDoc(doc(adminDb, 'featuredProducts', 'role-token'), {
+      productIds: ['product-2'],
+    }));
+  });
+
+  test('denies a strict administrator write after the reauthentication window expires', async () => {
+    const staleAdminDb = testEnv.authenticatedContext('admin-1', {
+      admin: true,
+      auth_time: 0,
+    }).firestore();
+
+    await assertFails(setDoc(doc(staleAdminDb, 'featuredProducts', 'stale-admin'), {
       productIds: ['product-2'],
     }));
   });

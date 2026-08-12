@@ -46,8 +46,9 @@ jest.mock('@/shared/services/categoryOrderService', () => ({
 }));
 
 jest.mock('@/shared/utils/categoryUtils', () => ({
-  DEFAULT_CATEGORY_IDS: ['tops', 'bottoms', 'shoes', 'sports'],
+  DEFAULT_CATEGORY_IDS: ['clothing', 'bottoms', 'shoes', 'sports'],
   getDefaultCategoryNames: () => ({
+    clothing: '의류',
     tops: '상의',
     bottoms: '하의',
     shoes: '신발',
@@ -65,13 +66,13 @@ describe('DynamicCategorySection', () => {
 
     const { container } = render(<DynamicCategorySection visualMode="text" />);
 
-    expect(screen.getByText('상의')).toBeInTheDocument();
+    expect(screen.getByText('의류')).toBeInTheDocument();
     expect(screen.getByText('하의')).toBeInTheDocument();
     expect(screen.getByText('신발')).toBeInTheDocument();
     expect(screen.getByText('스포츠')).toBeInTheDocument();
     expect(screen.queryByText('로딩 중...')).not.toBeInTheDocument();
     expect(container.querySelector('.dynamic-categoryImageWrapper')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /상의/ })).toHaveClass(
+    expect(screen.getByRole('link', { name: /의류/ })).toHaveClass(
       'dynamic-categoryCard',
       'dynamic-categoryCardTextOnly',
     );

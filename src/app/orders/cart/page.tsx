@@ -271,12 +271,11 @@ export default function OrderCartPage() {
     return (
       <div className={styles.container}>
         <PageHeader
-          title="주문/결제"
+          title="장바구니"
           description="장바구니를 불러오는 중..."
           breadcrumb={[
             { label: '홈', href: '/' },
-            { label: '장바구니', href: '/orders/cart' },
-            { label: '주문/결제' }
+            { label: '장바구니' },
           ]}
         />
         <div className={styles.content}>
@@ -290,12 +289,11 @@ export default function OrderCartPage() {
     return (
       <div className={styles.container}>
         <PageHeader
-          title="주문/결제"
+          title="장바구니"
           description="장바구니 오류"
           breadcrumb={[
             { label: '홈', href: '/' },
-            { label: '장바구니', href: '/orders/cart' },
-            { label: '주문/결제' }
+            { label: '장바구니' },
           ]}
         />
         <div className={styles.content}>
@@ -312,12 +310,11 @@ export default function OrderCartPage() {
     return (
       <div className={styles.container}>
         <PageHeader
-          title="주문/결제"
-          description="안전하고 빠른 주문 처리"
+          title="장바구니"
+          description="선택한 상품을 확인하고 주문을 준비하세요."
           breadcrumb={[
             { label: '홈', href: '/' },
-            { label: '장바구니', href: '/orders/cart' },
-            { label: '주문/결제' }
+            { label: '장바구니' },
           ]}
         />
         
@@ -340,12 +337,11 @@ export default function OrderCartPage() {
   return (
     <div className={styles.container}>
       <PageHeader
-        title="주문/결제"
-        description={`${selectedItems.length}개 상품 주문 진행`}
+          title="장바구니"
+          description={`${selectedItems.length}개 상품을 주문할 수 있습니다.`}
         breadcrumb={[
           { label: '홈', href: '/' },
-          { label: '장바구니', href: '/orders/cart' },
-          { label: '주문/결제' }
+          { label: '장바구니' },
         ]}
       />
       

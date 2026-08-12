@@ -21,6 +21,11 @@ const onePixelPng = new Uint8Array([137, 80, 78, 71]);
 
 let testEnv: RulesTestEnvironment;
 
+type AuthenticatedContextFactory = (
+  userId: string,
+  tokenOptions?: Record<string, unknown>,
+) => ReturnType<RulesTestEnvironment['authenticatedContext']>;
+
 function userData(userId: string, status = 'active', role = 'user') {
   return {
     id: userId,
@@ -60,6 +65,14 @@ beforeEach(async () => {
       { contentType: 'image/png' }
     );
   });
+  const originalAuthenticatedContext = testEnv.authenticatedContext.bind(testEnv) as AuthenticatedContextFactory;
+  (testEnv as unknown as { authenticatedContext: AuthenticatedContextFactory }).authenticatedContext = (
+    userId,
+    tokenOptions = {},
+  ) => originalAuthenticatedContext(userId, {
+    auth_time: Math.floor(Date.now() / 1000),
+    ...tokenOptions,
+  });
 });
 
 afterAll(async () => {
@@ -96,6 +109,19 @@ describe('Storage rules', () => {
 
     await assertSucceeds(deleteObject(
       ref(adminStorage, 'images/products/product-1/public.png')
+    ));
+  });
+
+  test('denies an image write after the administrator reauthentication window expires', async () => {
+    const staleAdminStorage = testEnv.authenticatedContext('admin-1', {
+      admin: true,
+      auth_time: 0,
+    }).storage();
+
+    await assertFails(uploadBytes(
+      ref(staleAdminStorage, 'images/products/product-1/stale.png'),
+      onePixelPng,
+      { contentType: 'image/png' }
     ));
   });
 

@@ -1,6 +1,6 @@
 import { onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
-import { requireAdmin, AuthError } from "../utils/auth";
+import { requireRecentAdmin, AuthError } from "../utils/auth";
 import { applyNoStoreHeaders } from "../utils/http";
 
 type UserRole = "user" | "admin";
@@ -98,7 +98,7 @@ export const adminUsers = onRequest(
     }
 
     try {
-      await requireAdmin(req.headers.authorization);
+      await requireRecentAdmin(req.headers.authorization);
 
       const request = parseAdminUserAction(req.body);
       if (!request) {

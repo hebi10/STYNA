@@ -18,6 +18,15 @@ export function hasStrictAdminAccess(
     && hasActiveAccount(userData);
 }
 
+export function hasDemoAdminAccess(
+  claims: AuthClaims,
+  userData: UserAccessData
+): boolean {
+  return claims?.demoAdmin === true
+    && userData?.role === 'demo_admin'
+    && hasActiveAccount(userData);
+}
+
 export function notifyAuthAccessChanged(userId: string): void {
   if (typeof window === 'undefined') {
     return;

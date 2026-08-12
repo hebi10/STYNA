@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useCategories } from '@/context/categoryProvider';
 import { CategoryProvider } from '@/context/categoryProvider';
+import { isCategoryIconImage } from '@/shared/utils/categoryIcon';
+import { toCategoryPath } from '@/shared/utils/categoryRouting';
 import styles from './page.module.css';
 
 function CategoriesContent() {
@@ -46,11 +49,20 @@ function CategoriesContent() {
           {categories.map((category) => (
             <Link
               key={category.id}
-              href={`/categories/${category.id}`}
+              href={toCategoryPath(category.id)}
               className={styles.categoryCard}
             >
               <div className={styles.categoryImage}>
-                {category.icon ? (
+                {isCategoryIconImage(category.imageUrl || category.icon) ? (
+                  <Image
+                    src={category.imageUrl || category.icon}
+                    alt=""
+                    aria-hidden="true"
+                    fill
+                    sizes="(max-width: 480px) 50vw, (max-width: 768px) 33vw, 25vw"
+                    className={styles.categoryIconImage}
+                  />
+                ) : category.icon ? (
                   <span className={styles.categoryIcon}>
                     {category.icon}
                   </span>

@@ -1,0 +1,91 @@
+.trigger,
+.actions button {
+  min-height: 36px;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--black);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(10, 10, 10, 0.36);
+}
+
+.dialog {
+  width: min(100%, 390px);
+  padding: 1.5rem;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-raised);
+}
+
+.dialog h2,
+.dialog p {
+  margin: 0;
+}
+
+.dialog h2 {
+  color: var(--black);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.dialog > p {
+  margin-top: 0.5rem;
+  color: var(--text-subtle);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.dialog label {
+  display: block;
+  margin-top: 1.25rem;
+  color: var(--black);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.dialog input {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--black);
+}
+
+.error {
+  margin-top: 0.75rem !important;
+  color: var(--error) !important;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.actions button:last-child {
+  border-color: var(--black);
+  background: var(--black);
+  color: var(--surface-raised);
+}
+
+.trigger:focus-visible,
+.actions button:focus-visible,
+.dialog input:focus-visible {
+  outline: 2px solid var(--action-soft);
+  outline-offset: 2px;
+}

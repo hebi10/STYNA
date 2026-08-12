@@ -32,6 +32,16 @@ images/{category}/{productId}/main.webp
 
 Firestore `products/{productId}`의 `mainImage`, `images`, `detailImages`는 `/products/...` 같은 로컬 경로가 아니라 `https://firebasestorage.googleapis.com/...` 다운로드 URL이어야 한다.
 
+## 관리자 카테고리 아이콘
+
+관리자 카테고리 카드 아이콘은 카테고리 문서의 `icon` 필드에 Firebase Storage 공개 읽기 URL을 저장한다.
+
+```text
+categories/admin-icon-{categoryId}-v{yyyymmdd}.webp
+```
+
+현재 아이콘은 256×256 투명 WebP이며, `public/category-icons/`에 재생성 원본도 보존한다. 버전 날짜를 파일명에 포함해 교체 시 기존 URL의 캐시를 보존한다.
+
 ## Storage Rules
 
 - 읽기: 상품, 카테고리, 이벤트 이미지 공개 허용

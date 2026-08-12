@@ -4,6 +4,7 @@ import PageHeader from '@/app/_components/PageHeader';
 import ProductList from '@/app/products/_components/ProductList';
 import { CategoryService } from '@/shared/services/categoryService';
 import { createPublicPageMetadata } from '@/shared/constants/routeMetadata';
+import { getCategoryIdCandidates, normalizeCategoryId, toCategoryPath } from '@/shared/utils/categoryRouting';
 import styles from './page.module.css';
 
 interface CategoryPageProps {
@@ -16,12 +17,16 @@ const getActiveCategories = cache(() => CategoryService.getCategories());
 
 const getActiveCategory = cache(async (categoryId: string) => {
   const categories = await getActiveCategories();
-  return categories.find((category) => category.id === categoryId) ?? null;
+  const candidates = getCategoryIdCandidates(categoryId);
+
+  return candidates
+    .map((candidateId) => categories.find((category) => category.id.toLowerCase() === candidateId))
+    .find((category) => category !== undefined) ?? null;
 });
 
 export async function generateMetadata({ params }: CategoryPageProps) {
   const { category } = await params;
-  const normalizedCategory = category === 'clothing' ? 'tops' : category;
+  const normalizedCategory = normalizeCategoryId(category);
   const activeCategory = await getActiveCategory(normalizedCategory);
 
   if (!activeCategory) {
@@ -35,18 +40,19 @@ export async function generateMetadata({ params }: CategoryPageProps) {
     title: `${activeCategory.name} | STYNA`,
     description: activeCategory.description
       ?? `${activeCategory.name} 카테고리의 STYNA 상품을 둘러보세요.`,
-    pathname: `/categories/${encodeURIComponent(normalizedCategory)}`,
+    pathname: toCategoryPath(normalizedCategory),
   });
 }
 
 export default async function DynamicCategoryPage({ params }: CategoryPageProps) {
   const { category } = await params;
+  const normalizedCategory = normalizeCategoryId(category);
 
-  if (category === 'clothing') {
-    redirect('/categories/tops');
+  if (category !== normalizedCategory) {
+    redirect(toCategoryPath(normalizedCategory));
   }
 
-  const activeCategory = await getActiveCategory(category);
+  const activeCategory = await getActiveCategory(normalizedCategory);
 
   if (!activeCategory) {
     notFound();
@@ -63,7 +69,7 @@ export default async function DynamicCategoryPage({ params }: CategoryPageProps)
           { label: activeCategory.name },
         ]}
       />
-      <ProductList initialCategory={category} lockCategory />
+      <ProductList initialCategory={activeCategory.id} lockCategory />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ProductDetailClient from './ProductDetailClient';
 import { Product } from '@/shared/types/product';
 import {
@@ -82,7 +82,19 @@ jest.mock('./ProductCard', () => function MockProductCard() {
   return <div data-testid="product-card" />;
 });
 
-jest.mock('./ProductReviews', () => function MockProductReviews() {
+let onReviewSummaryChange: ((summary: {
+  totalReviews: number;
+  averageRating: number;
+  ratingDistribution: Record<1 | 2 | 3 | 4 | 5, number>;
+  recommendationRate: number;
+} | null) => void) | undefined;
+
+jest.mock('./ProductReviews', () => function MockProductReviews({
+  onSummaryChange,
+}: {
+  onSummaryChange?: typeof onReviewSummaryChange;
+}) {
+  onReviewSummaryChange = onSummaryChange;
   return <div data-testid="product-reviews" />;
 });
 
@@ -164,6 +176,36 @@ describe('ProductDetailClient wishlist button', () => {
       expect(removeFromWishlist).toHaveBeenCalledWith('product-1');
     });
     expect(window.alert).not.toHaveBeenCalledWith('찜 목록에서 제거되었습니다.');
+  });
+});
+
+describe('ProductDetailClient review summary', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockWishlistItems = [];
+    mockActivityHooks();
+    onReviewSummaryChange = undefined;
+  });
+
+  test('uses the loaded review summary for the product header and review tab count', async () => {
+    render(<ProductDetailClient product={product} />);
+
+    expect(screen.getByText('4.5 (13개 리뷰)')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '리뷰 (13)' }));
+
+    act(() => {
+      onReviewSummaryChange?.({
+        averageRating: 0,
+        totalReviews: 0,
+        ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+        recommendationRate: 0,
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('0 (0개 리뷰)')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '리뷰 (0)' })).toBeInTheDocument();
+    });
   });
 });
 

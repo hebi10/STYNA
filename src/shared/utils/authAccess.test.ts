@@ -5,6 +5,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import {
   AUTH_ACCESS_CHANGED_EVENT,
   hasActiveAccount,
+  hasDemoAdminAccess,
   hasStrictAdminAccess,
   notifyAuthAccessChanged,
 } from './authAccess';
@@ -87,6 +88,13 @@ describe('authAccess', () => {
 
     expect(hasStrictAdminAccess({ admin: true }, activeAdmin)).toBe(true);
     expect(hasStrictAdminAccess({ role: 'admin' }, activeAdmin)).toBe(true);
+  });
+
+  test('accepts an active read-only demo administrator without granting full admin access', () => {
+    const demoAdmin = { role: 'demo_admin', status: 'active' };
+
+    expect(hasDemoAdminAccess({ demoAdmin: true }, demoAdmin)).toBe(true);
+    expect(hasStrictAdminAccess({ demoAdmin: true }, demoAdmin)).toBe(false);
   });
 
   test('publishes the changed user id for immediate auth access re-evaluation', () => {

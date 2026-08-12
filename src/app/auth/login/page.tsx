@@ -53,7 +53,7 @@ export default function LoginPage() {
     try {
       await login("test@test.com", "testtest", false);
       window.scrollTo(0, 0);
-      router.replace(redirectTarget);
+      router.replace("/admin");
     } catch (error) {
       console.error("Naver login failed:", error);
       setIsSubmitting(false);

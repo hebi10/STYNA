@@ -32,6 +32,13 @@ service cloud.firestore {
       return isStrictAdmin();
     }
 
+    function isAdminForWrite() {
+      return isStrictAdmin() &&
+        request.auth.token.auth_time is int &&
+        request.auth.token.auth_time <= request.time.toMillis() / 1000 &&
+        request.auth.token.auth_time >= request.time.toMillis() / 1000 - 300;
+    }
+
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
@@ -272,7 +279,7 @@ service cloud.firestore {
 
     function isValidQnAAdminUpdate() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
-      return isStrictAdmin() &&
+      return isAdminForWrite() &&
         changed.hasOnly(['answer', 'status', 'updatedAt']) &&
         changed.hasAny(['updatedAt']) &&
         request.resource.data.updatedAt == request.time &&
@@ -340,7 +347,7 @@ service cloud.firestore {
 
     function isValidInquiryAdminUpdate() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
-      return isStrictAdmin() &&
+      return isAdminForWrite() &&
         changed.hasOnly([
           'answer',
           'status',
@@ -374,7 +381,7 @@ service cloud.firestore {
 
     function isValidInquiryAdminReadUpdate() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
-      return isStrictAdmin() &&
+      return isAdminForWrite() &&
         changed.hasOnly(['unreadForAdmin']) &&
         resource.data.get('unreadForAdmin', false) == true &&
         request.resource.data.unreadForAdmin == false;
@@ -477,40 +484,40 @@ service cloud.firestore {
 
     match /categories/{categoryId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdminForWrite();
 
       match /products/{productId} {
         allow read: if isAdmin() ||
           resource.data.get('status', '') == 'active';
-        allow create: if isAdmin() && hasSafeInitialProductReviewStats(request.resource.data);
-        allow delete: if isAdmin();
-        allow update: if isAdmin() && preservesServerOwnedProductReviewStats();
+        allow create: if isAdminForWrite() && hasSafeInitialProductReviewStats(request.resource.data);
+        allow delete: if isAdminForWrite();
+        allow update: if isAdminForWrite() && preservesServerOwnedProductReviewStats();
       }
     }
 
     match /products/{productId} {
       allow read: if isAdmin() ||
         resource.data.get('status', '') == 'active';
-      allow create: if isAdmin() && hasSafeInitialProductReviewStats(request.resource.data);
-      allow delete: if isAdmin();
-      allow update: if isAdmin() && preservesServerOwnedProductReviewStats();
+      allow create: if isAdminForWrite() && hasSafeInitialProductReviewStats(request.resource.data);
+      allow delete: if isAdminForWrite();
+      allow update: if isAdminForWrite() && preservesServerOwnedProductReviewStats();
     }
 
     match /categoryOrder/{configId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdminForWrite();
     }
 
     match /brandSummaries/{brandId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdminForWrite();
     }
 
     match /events/{eventId} {
       allow read: if isStrictAdmin() ||
         (resource.data.get('publicPolicyVerified', false) == true &&
           resource.data.get('isActive', false) == true);
-      allow write: if isAdmin();
+      allow write: if isAdminForWrite();
     }
 
     match /eventParticipants/{participantId} {
@@ -521,37 +528,37 @@ service cloud.firestore {
 
     match /faqs/{faqId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdminForWrite();
     }
 
     match /notices/{noticeId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdminForWrite();
     }
 
     match /mainBanners/{bannerId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdminForWrite();
     }
 
     match /featuredProducts/{configId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdminForWrite();
     }
 
     match /offlineStores/{storeId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdminForWrite();
     }
 
     match /offlineServices/{serviceId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdminForWrite();
     }
 
     match /offlineInfo/{infoId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdminForWrite();
     }
 
     match /users/{userId} {
@@ -562,20 +569,23 @@ service cloud.firestore {
 
       match /pointHistory/{historyId} {
         allow read: if isActiveOwner(userId) || isAdmin();
-        allow write: if isAdmin();
+        allow write: if isAdminForWrite();
       }
 
       match /wishlist/{productId} {
-        allow read, write: if isActiveOwner(userId) || isAdmin();
+        allow read: if isActiveOwner(userId) || isAdmin();
+        allow write: if isActiveOwner(userId) || isAdminForWrite();
       }
 
       match /recentProducts/{productId} {
-        allow read, write: if isActiveOwner(userId) || isAdmin();
+        allow read: if isActiveOwner(userId) || isAdmin();
+        allow write: if isActiveOwner(userId) || isAdminForWrite();
       }
     }
 
     match /carts/{userId} {
-      allow read, write: if isActiveOwner(userId) || isAdmin();
+      allow read: if isActiveOwner(userId) || isAdmin();
+      allow write: if isActiveOwner(userId) || isAdminForWrite();
     }
 
     match /orders/{orderId} {
@@ -589,28 +599,30 @@ service cloud.firestore {
       allow create: if false;
       allow update: if hasValidReviewAggregateFields(request.resource.data) &&
         preservesReviewIdentity() &&
-        (isAdmin() || isValidReviewOwnerUpdate());
-      allow delete: if isAdmin() || isActiveOwner(resource.data.userId);
+        (isAdminForWrite() || isValidReviewOwnerUpdate());
+      allow delete: if isAdminForWrite() || isActiveOwner(resource.data.userId);
     }
 
     match /user_coupons/{userCouponId} {
       allow read: if isAdmin() ||
         (isActiveAccount() && resource.data.uid == request.auth.uid);
-      allow write: if isAdmin();
+      allow write: if isAdminForWrite();
     }
 
     match /userRecentProducts/{docId} {
-      allow create: if isAdmin() || isActiveOwner(request.resource.data.userId);
-      allow read, delete: if isAdmin() || isActiveOwner(resource.data.userId);
-      allow update: if isAdmin() ||
+      allow create: if isAdminForWrite() || isActiveOwner(request.resource.data.userId);
+      allow read: if isAdmin() || isActiveOwner(resource.data.userId);
+      allow delete: if isAdminForWrite() || isActiveOwner(resource.data.userId);
+      allow update: if isAdminForWrite() ||
         (isActiveOwner(resource.data.userId) &&
           request.resource.data.userId == resource.data.userId);
     }
 
     match /userWishlist/{docId} {
-      allow create: if isAdmin() || isActiveOwner(request.resource.data.userId);
-      allow read, delete: if isAdmin() || isActiveOwner(resource.data.userId);
-      allow update: if isAdmin() ||
+      allow create: if isAdminForWrite() || isActiveOwner(request.resource.data.userId);
+      allow read: if isAdmin() || isActiveOwner(resource.data.userId);
+      allow delete: if isAdminForWrite() || isActiveOwner(resource.data.userId);
+      allow update: if isAdminForWrite() ||
         (isActiveOwner(resource.data.userId) &&
           request.resource.data.userId == resource.data.userId);
     }
@@ -635,11 +647,12 @@ service cloud.firestore {
 
     match /coupons/{couponId} {
       allow read: if isActiveAccount();
-      allow write: if isAdmin();
+      allow write: if isAdminForWrite();
     }
 
     match /migrationRuns/{runId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow write: if isAdminForWrite();
     }
 
     match /{document=**} {

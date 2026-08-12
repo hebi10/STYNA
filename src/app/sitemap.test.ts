@@ -62,7 +62,7 @@ describe('sitemap metadata route', () => {
 
   test('includes public static routes, categories, active products, and policy-ready events', async () => {
     jest.mocked(SitemapFirestoreService.getCategoryIds)
-      .mockResolvedValue(['tops', 'bags', 'tops', '']);
+      .mockResolvedValue(['tops', 'bags', 'clothing', '']);
     jest.mocked(SitemapFirestoreService.queryActiveProductsPage)
       .mockResolvedValueOnce({
         items: [sitemapProduct('product-one')],
@@ -85,12 +85,13 @@ describe('sitemap metadata route', () => {
     expect(urls).toEqual(expect.arrayContaining([
       'https://hebimall.web.app/',
       'https://hebimall.web.app/products/',
-      'https://hebimall.web.app/categories/tops/',
+      'https://hebimall.web.app/categories/clothing/',
       'https://hebimall.web.app/categories/bags/',
       'https://hebimall.web.app/products/product-one/',
       'https://hebimall.web.app/products/product-two/',
       'https://hebimall.web.app/events/ready-event/',
     ]));
+    expect(urls).not.toContain('https://hebimall.web.app/categories/tops/');
     expect(urls).not.toEqual(expect.arrayContaining([
       'https://hebimall.web.app/events/inactive-event/',
       'https://hebimall.web.app/events/unverified-event/',

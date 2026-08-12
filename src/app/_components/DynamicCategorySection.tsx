@@ -25,13 +25,14 @@ interface DynamicCategorySectionProps {
 }
 
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  clothing: '현재 등록된 의류 상품',
   tops: '현재 등록된 기본 상의 상품',
   bottoms: '현재 등록된 기본 하의 상품',
   shoes: '현재 등록된 신발 상품',
   sports: '현재 등록된 스포츠 상품',
 };
 
-const TEXT_MODE_CATEGORY_IDS = ['tops', 'bottoms', 'shoes', 'sports'] as const;
+const TEXT_MODE_CATEGORY_IDS = ['clothing', 'bottoms', 'shoes', 'sports'] as const;
 
 function getCategoryDescription(category: CategoryCardProps) {
   return category.count || CATEGORY_DESCRIPTIONS[category.id] || '상품 준비 중';

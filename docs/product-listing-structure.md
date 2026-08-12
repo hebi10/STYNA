@@ -44,6 +44,8 @@
 
 - URL만 React Query에 넣어 돌려주던 이미지 캐시 레이어를 제거하고 `ProductCard`는 `next/image`를 직접 사용한다.
 - 카테고리 기본 id/name은 `categoryUtils`로 단일화했고 Header, CategoryProvider, fallback UI가 같은 기본값을 재사용한다.
+- 공개 표준 경로는 `clothing`, `bottoms`, `shoes`, `bags`, `accessories`, `jewelry`, `sports`, `outdoor`다. 기존 `tops`·대소문자 혼용 ID는 공개 URL에서 표준 경로로 정규화하며, 상세 상품 조회는 실제 활성 카테고리 문서 ID를 사용해 기존 상품 데이터와 호환한다.
+- 카테고리 카드의 Firebase Storage URL은 텍스트가 아니라 이미지로 렌더링한다.
 
 ## 2026-06-30 상품 상세 경로 정리
 

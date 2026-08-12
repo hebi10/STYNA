@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/shared/types/product';
+import { ReviewSummary } from '@/shared/types/review';
 import { useAuth } from '@/context/authProvider';
 import { useAddToCart } from '@/shared/hooks/useCart';
 import { useRelatedProducts } from '@/shared/hooks/useProducts';
@@ -88,6 +89,7 @@ export default function ProductDetailClient({ product }: Props) {
   const [isProductQnAsLoading, setIsProductQnAsLoading] = useState(false);
   const [productQnAsError, setProductQnAsError] = useState<string | null>(null);
   const [resumeIntentFeedback, setResumeIntentFeedback] = useState<string | null>(null);
+  const [loadedReviewSummary, setLoadedReviewSummary] = useState<ReviewSummary | null>(null);
   const hasResumedIntentRef = useRef(false);
 
   // 찜 상태 확인
@@ -99,6 +101,10 @@ export default function ProductDetailClient({ product }: Props) {
   useEffect(() => {
     setOptimisticWishlisted(null);
   }, [product.id, user?.uid, storedWishlisted]);
+
+  useEffect(() => {
+    setLoadedReviewSummary(null);
+  }, [product.id]);
 
   useEffect(() => {
     if (activeTab !== 'qna') {
@@ -358,8 +364,8 @@ export default function ProductDetailClient({ product }: Props) {
 
   const inStock = product.stock > 0;
 
-  const displayRating = product.rating || 0;
-  const displayReviewCount = product.reviewCount ?? 0;
+  const displayRating = loadedReviewSummary?.averageRating ?? product.rating ?? 0;
+  const displayReviewCount = loadedReviewSummary?.totalReviews ?? product.reviewCount ?? 0;
 
   useEffect(() => {
     if (
@@ -780,7 +786,7 @@ export default function ProductDetailClient({ product }: Props) {
           )}
 
           {activeTab === 'review' && (
-            <ProductReviews productId={product.id} />
+            <ProductReviews productId={product.id} onSummaryChange={setLoadedReviewSummary} />
           )}
 
           {activeTab === 'qna' && (

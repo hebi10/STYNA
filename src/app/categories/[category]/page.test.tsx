@@ -76,12 +76,23 @@ describe('dynamic category page', () => {
     expect(screen.getByTestId('product-list')).toHaveAttribute('data-locked', 'true');
   });
 
-  test('redirects the legacy clothing slug to tops on the server', async () => {
+  test('redirects the legacy tops slug to the canonical clothing route on the server', async () => {
     await expect(DynamicCategoryPage({
-      params: Promise.resolve({ category: 'clothing' }),
+      params: Promise.resolve({ category: 'tops' }),
     })).rejects.toThrow('NEXT_REDIRECT');
 
-    expect(redirect).toHaveBeenCalledWith('/categories/tops');
+    expect(redirect).toHaveBeenCalledWith('/categories/clothing');
+  });
+
+  test('serves the canonical clothing route with a legacy tops category document', async () => {
+    const page = await DynamicCategoryPage({
+      params: Promise.resolve({ category: 'clothing' }),
+    });
+
+    render(page);
+
+    expect(screen.getByRole('heading', { level: 1, name: '상의' })).toBeInTheDocument();
+    expect(screen.getByTestId('product-list')).toHaveAttribute('data-category', 'tops');
   });
 
   test('uses the category route as its canonical URL', async () => {

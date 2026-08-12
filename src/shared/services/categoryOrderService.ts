@@ -12,6 +12,7 @@ import {
 import { db } from '@/shared/libs/firebase/firebase';
 import { CATEGORY_IMAGE_URLS } from '@/shared/constants/categoryImages';
 import { DEFAULT_CATEGORY_IDS, getDefaultCategoryNames } from '@/shared/utils/categoryUtils';
+import { normalizeCategoryId, toCategoryPath } from '@/shared/utils/categoryRouting';
 
 export interface CategoryOrderConfig {
   id: string;
@@ -28,25 +29,15 @@ const DEFAULT_CATEGORY_NAMES = getDefaultCategoryNames();
 const DEFAULT_ORDER_NAMES = DEFAULT_CATEGORY_IDS.map((id) => DEFAULT_CATEGORY_NAMES[id]).filter(Boolean);
 type SortedCategory = { id: string; name: string; order: number };
 
-const MAIN_PAGE_CATEGORY_PRIORITY = ['tops', 'bottoms', 'shoes', 'sports'];
-const MAIN_PAGE_CATEGORY_ALIASES: Record<string, string> = {
-  top: 'tops',
-  clothing: 'tops',
-  pants: 'bottoms',
-  shoe: 'shoes',
-};
+const MAIN_PAGE_CATEGORY_PRIORITY = ['clothing', 'bottoms', 'shoes', 'sports'];
 
 function nameToId(name: string): string {
-  return Object.entries(DEFAULT_CATEGORY_NAMES).find(([, label]) => label === name)?.[0] || name;
+  const matchedId = Object.entries(DEFAULT_CATEGORY_NAMES).find(([, label]) => label === name)?.[0] || name;
+  return normalizeCategoryId(matchedId);
 }
 
 function categoryName(id: string, rawName?: string): string {
-  return DEFAULT_CATEGORY_NAMES[rawName?.toLowerCase() || ''] || DEFAULT_CATEGORY_NAMES[id] || rawName || id;
-}
-
-function normalizeMainPageCategoryId(id: string): string {
-  const normalizedId = id.toLowerCase();
-  return MAIN_PAGE_CATEGORY_ALIASES[normalizedId] || normalizedId;
+  return DEFAULT_CATEGORY_NAMES[rawName?.toLowerCase() || ''] || rawName || DEFAULT_CATEGORY_NAMES[id] || id;
 }
 
 export function getCuratedMainPageCategories(
@@ -56,7 +47,7 @@ export function getCuratedMainPageCategories(
   const byCuratedId = new Map<string, SortedCategory>();
 
   categories.forEach((category) => {
-    const curatedId = normalizeMainPageCategoryId(category.id);
+    const curatedId = normalizeCategoryId(category.id);
 
     if (!MAIN_PAGE_CATEGORY_PRIORITY.includes(curatedId) || byCuratedId.has(curatedId)) {
       return;
@@ -145,8 +136,8 @@ export class CategoryOrderService {
           const data = categoryDoc.data();
 
           return {
-            id: categoryDoc.id,
-            name: categoryName(categoryDoc.id, data.name),
+            id: normalizeCategoryId(categoryDoc.id),
+            name: categoryName(normalizeCategoryId(categoryDoc.id), data.name),
             isActive: data.isActive === true,
           };
         })
@@ -193,7 +184,7 @@ export class CategoryOrderService {
       id: category.id,
       name: category.name,
       slug: category.id,
-      href: `/categories/${category.id}`,
+      href: toCategoryPath(category.id),
       icon: '',
       image: CATEGORY_IMAGE_URLS[index] || CATEGORY_IMAGE_URLS[0],
       count: '',

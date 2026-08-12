@@ -18,6 +18,8 @@
     "seed:users": "node scripts/seed-users.js",
     "seed:coupons": "node scripts/seed-coupons.js",
     "seed:content": "node scripts/seed-static-content.js",
+    "provision:demo-admin:dry-run": "node scripts/provision-readonly-demo-admin.js",
+    "provision:demo-admin:execute": "node scripts/provision-readonly-demo-admin.js --execute",
     "deploy:firebase": "npm run verify && firebase deploy",
     "deploy:prep": "npm run build && node scripts/copy-next-to-functions.js && node scripts/verify-functions-next-chat-boundary.js",
     "deploy:functions": "firebase deploy --only functions",

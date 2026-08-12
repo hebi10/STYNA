@@ -1,7 +1,7 @@
 import { onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import type { Response } from "express";
-import { verifyAuthContext, requireAdmin, AuthError } from "../utils/auth";
+import { verifyAuthContext, requireRecentAdmin, AuthError } from "../utils/auth";
 import { applyNoStoreHeaders } from "../utils/http";
 import {
   SIGNUP_BONUS_AMOUNT,
@@ -35,17 +35,17 @@ export const points = onRequest(
 
       switch (action) {
         case "add": {
-          const adminContext = await requireAdmin(req.headers.authorization);
+          const adminContext = await requireRecentAdmin(req.headers.authorization);
           await handleAdd(adminContext.uid, payload, res);
           return;
         }
         case "refund": {
-          const adminContext = await requireAdmin(req.headers.authorization);
+          const adminContext = await requireRecentAdmin(req.headers.authorization);
           await handleRefund(adminContext.uid, payload, res);
           return;
         }
         case "subtract": {
-          await requireAdmin(req.headers.authorization);
+          await requireRecentAdmin(req.headers.authorization);
           await handleSubtract(payload, res);
           return;
         }

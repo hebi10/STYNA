@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/shared/libs/firebase/firebase';
 import { DEFAULT_CATEGORY_IDS, getDefaultCategoryNames } from '@/shared/utils/categoryUtils';
+import { normalizeCategoryId } from '@/shared/utils/categoryRouting';
 
 interface Category {
   id: string;
@@ -12,6 +13,7 @@ interface Category {
   order: number;
   isActive: boolean;
   icon: string;
+  imageUrl?: string;
   color: string;
   createdAt: Date;
   updatedAt: Date;
@@ -63,16 +65,18 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
           const data = doc.data();
           const rawName = data.name || '';
           const categoryNames = getDefaultCategoryNames();
+          const id = normalizeCategoryId(doc.id);
           const displayName =
-            categoryNames[rawName.toLowerCase()] || categoryNames[doc.id.toLowerCase()] || rawName;
+            categoryNames[rawName.toLowerCase()] || rawName || categoryNames[id] || id;
 
           return {
-            id: doc.id,
-            name: displayName || doc.id,
+            id,
+            name: displayName,
             description: data.description || '',
             order: data.order || 0,
             isActive: data.isActive ?? true,
             icon: data.icon || '',
+            imageUrl: data.imageUrl || data.image || undefined,
             color: data.color || '#000000',
             createdAt: data.createdAt?.toDate() || new Date(),
             updatedAt: data.updatedAt?.toDate() || new Date(),
@@ -81,7 +85,20 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
         .filter((category) => category.id && category.name);
 
       if (categoryList.length > 0) {
-        setCategories(categoryList.filter((category) => category.isActive).sort((a, b) => a.order - b.order));
+        const normalizedCategories = categoryList
+          .filter((category) => category.isActive)
+          .sort((a, b) => a.order - b.order)
+          .reduce<Category[]>((result, category) => {
+            const existingIndex = result.findIndex((item) => item.id === category.id);
+
+            if (existingIndex === -1) {
+              result.push(category);
+            }
+
+            return result;
+          }, []);
+
+        setCategories(normalizedCategories);
       } else {
         setCategories(fallbackCategories);
       }

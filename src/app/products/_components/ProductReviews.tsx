@@ -4,14 +4,16 @@ import React, { useEffect, useState } from 'react';
 import { useReview } from '@/context/reviewProvider';
 import { useAuth } from '@/context/authProvider';
 import { ReviewEligibilityOption, ReviewService } from '@/shared/services/reviewService';
+import { ReviewSummary } from '@/shared/types/review';
 import { formatDate } from '@/shared/utils/dateFormat';
 import styles from './ProductReviews.module.css';
 
 interface ProductReviewsProps {
   productId: string;
+  onSummaryChange?: (summary: ReviewSummary | null) => void;
 }
 
-export default function ProductReviews({ productId }: ProductReviewsProps) {
+export default function ProductReviews({ productId, onSummaryChange }: ProductReviewsProps) {
   const { 
     productReviews, 
     reviewSummary, 
@@ -42,6 +44,10 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
     loadProductReviews(productId);
     loadReviewSummary(productId);
   }, [productId, loadProductReviews, loadReviewSummary]);
+
+  useEffect(() => {
+    onSummaryChange?.(reviewSummary);
+  }, [onSummaryChange, reviewSummary]);
 
   const getOptionKey = (option: ReviewEligibilityOption) => (
     JSON.stringify([option.orderId, option.productId, option.size, option.color])

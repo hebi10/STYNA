@@ -8,6 +8,7 @@ import { useCartItemCount } from "@/shared/hooks/useCart";
 import { useInquiryNotification } from "@/shared/hooks/useInquiryNotification";
 import { formatSignupBenefit } from "@/shared/constants/commercePolicy";
 import { CategoryOrderService } from "@/shared/services/categoryOrderService";
+import { toCategoryPath } from "@/shared/utils/categoryRouting";
 import {
   buildDesktopHeaderNav,
   buildHeaderNavGroups,
@@ -75,7 +76,7 @@ export default function Header() {
         const headerCategories = sortedCategories.map((category) => ({
           id: category.id,
           name: category.name,
-          href: `/categories/${category.id}`,
+          href: toCategoryPath(category.id),
         }));
 
         if (isActive && headerCategories.length > 0) {

@@ -6,6 +6,7 @@ jest.mock("../src/utils/auth", () => ({
   verifyAuthContext: jest.fn(),
   verifyAuth: jest.fn(),
   requireAdmin: jest.fn(),
+  requireRecentAdmin: jest.fn(),
   AuthError: class AuthError extends Error {
     constructor(public statusCode: number, message: string) {
       super(message);
@@ -51,7 +52,7 @@ import { qna } from "../src/handlers/qna";
 import { event } from "../src/handlers/event";
 import { review } from "../src/handlers/review";
 import { ExpiredOrderCouponError } from "../src/domain/orderDomain";
-import { AuthError, verifyAuthContext, verifyAuth, requireAdmin } from "../src/utils/auth";
+import { AuthError, verifyAuthContext, verifyAuth, requireRecentAdmin } from "../src/utils/auth";
 
 type Handler = (req: {
   method: string;
@@ -164,7 +165,7 @@ describe("admin user lifecycle", () => {
       })),
     } as never);
     jest.mocked(admin.auth).mockReturnValue(authApi as never);
-    jest.mocked(requireAdmin).mockResolvedValue({
+    jest.mocked(requireRecentAdmin).mockResolvedValue({
       uid: "admin-1",
       token: {} as never,
       role: "admin",
@@ -199,7 +200,7 @@ describe("admin user lifecycle", () => {
   ])("rejects %s after requiring strict admin access", async (_caseName, body) => {
     const response = await request(body);
 
-    expect(requireAdmin).toHaveBeenCalledWith("Bearer admin-token");
+    expect(requireRecentAdmin).toHaveBeenCalledWith("Bearer admin-token");
     expect(response.status).toHaveBeenCalledWith(400);
     expect(userRef.update).not.toHaveBeenCalled();
     expect(authApi.updateUser).not.toHaveBeenCalled();
@@ -915,7 +916,7 @@ describe("points signup bonus", () => {
 describe("coupon issuance", () => {
   beforeEach(() => {
     jest.mocked(verifyAuth).mockResolvedValue("user-1");
-    jest.mocked(requireAdmin).mockResolvedValue({
+    jest.mocked(requireRecentAdmin).mockResolvedValue({
       uid: "admin-1",
       token: {} as never,
       isAdmin: true,
@@ -1002,7 +1003,7 @@ describe("coupon issuance", () => {
 
   test("rejects direct coupon issue by an authenticated non-admin user", async () => {
     const response = createResponse();
-    jest.mocked(requireAdmin).mockRejectedValue(new AuthError(403, "Admin privileges are required."));
+    jest.mocked(requireRecentAdmin).mockRejectedValue(new AuthError(403, "Recent administrator reauthentication is required."));
 
     await (coupon as unknown as Handler)({
       method: "POST",
@@ -1010,7 +1011,7 @@ describe("coupon issuance", () => {
       body: { action: "issue", couponId: "coupon-1" },
     }, response);
 
-    expect(requireAdmin).toHaveBeenCalledWith("Bearer user-token");
+    expect(requireRecentAdmin).toHaveBeenCalledWith("Bearer user-token");
     expect(response.status).toHaveBeenCalledWith(403);
   });
 });

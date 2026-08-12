@@ -4,6 +4,16 @@
 - Next 15 프로젝트의 lint는 `next lint` 대신 ESLint CLI와 `eslint.config.mjs`를 기준으로 실행한다.
 - CI는 타입체크, lint, Jest, Firestore·Storage Rules Emulator, Functions 빌드를 분리된 스크립트로 검증한다.
 
+## 현재 검증 스냅샷 (2026-08-07)
+
+- `npm run typecheck`: 통과
+- `npm run lint -- --max-warnings=0`: 통과
+- `npm run functions:build`: 통과. 채팅 응답 생성물 비교 검사와 Functions TypeScript 빌드를 함께 실행한다.
+- `npm run test:rules`: 이전 독립 실행에서 Firestore·Storage Rules 테스트 170개 통과. 최신 재실행은 다른 프로젝트 `sitePing`의 Firebase Emulator가 Hub 기본 포트 4400을 사용 중인 상태에서 포트 대체 기동 후 Rules Emulator 초기화 오류가 발생해 중단되었다. 이번 작업은 문서만 변경했으므로 문서 변경과 무관한 로컬 실행 환경 문제로 기록한다.
+- `npm test`: 1,475개 중 1,474개 통과. `scripts/event-editorial-image-assets.test.js`의 이미지 시트 테스트가 전체 실행에서 기본 5초 타임아웃으로 한 번 실패했다.
+- 위 테스트를 단독 실행했을 때는 12개 테스트가 통과했다. 따라서 현재 확인된 실패는 기능 assertion 실패가 아니라 전체 Jest 실행 환경의 시간 변동 가능성으로 기록한다.
+- 이 스냅샷은 실행 당시의 상태를 기록한 것이며, 배포 전에는 반드시 현재 코드에서 `npm run verify`를 다시 실행한다.
+
 ## 스크립트
 - `npm run typecheck`: 루트 `tsconfig.json` 기준 TypeScript 검증. `.next`/tsbuildinfo 캐시 흔들림을 피하기 위해 `--incremental false`를 사용한다.
 - `npm run lint`: `eslint .` 실행.

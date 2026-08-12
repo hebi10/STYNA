@@ -1,7 +1,7 @@
 import { CategoryService } from '@/shared/services/categoryService';
 
 export const DEFAULT_CATEGORY_IDS = [
-  'tops',
+  'clothing',
   'bottoms',
   'shoes',
   'sports',
@@ -12,6 +12,7 @@ export const DEFAULT_CATEGORY_IDS = [
 ] as const;
 
 const DEFAULT_CATEGORY_NAMES: Record<string, string> = {
+  clothing: '의류',
   tops: '상의',
   bottoms: '하의',
   shoes: '신발',
@@ -20,7 +21,6 @@ const DEFAULT_CATEGORY_NAMES: Record<string, string> = {
   bags: '가방',
   jewelry: '주얼리',
   accessories: '액세서리',
-  clothing: '의류',
   pants: '바지',
   top: '상의',
   bag: '가방',

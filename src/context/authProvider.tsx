@@ -19,6 +19,7 @@ import { db } from "../shared/libs/firebase/firebase";
 import {
   AUTH_ACCESS_CHANGED_EVENT,
   hasActiveAccount,
+  hasDemoAdminAccess,
   hasStrictAdminAccess,
 } from "../shared/utils/authAccess";
 import { getAuthGuardRedirect } from "../shared/utils/authRouteGuard";
@@ -36,6 +37,7 @@ interface AuthContextType {
   loading: boolean;
   userData: Record<string, unknown> | null | undefined;
   isAdmin: boolean;
+  isDemoAdmin: boolean;
   error: string | null;
   clearError: () => void;
   isUserDataLoading: boolean;
@@ -63,6 +65,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   userData: null,
   isAdmin: false,
+  isDemoAdmin: false,
   error: null,
   clearError: () => {},
   isUserDataLoading: false,
@@ -71,6 +74,7 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuthUser();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isDemoAdmin, setIsDemoAdmin] = useState(false);
   const [isUserDataLoading, setIsUserDataLoading] = useState(true);
   const [adminClaimsLoading, setAdminClaimsLoading] = useState(false);
   const [isLoginValidating, setIsLoginValidating] = useState(false);
@@ -252,6 +256,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setIsAdmin(false);
+      setIsDemoAdmin(false);
       void queryClient.invalidateQueries({ queryKey: ['user', user.uid] });
     };
 
@@ -278,11 +283,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (userDataError && !userDataMissing) {
       setIsAdmin(false);
+      setIsDemoAdmin(false);
       return;
     }
 
     if (!userData && !userDataMissing) {
       setIsAdmin(false);
+      setIsDemoAdmin(false);
       return;
     }
 
@@ -296,6 +303,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       || userData?.status === 'deleted';
 
     setIsAdmin(false);
+    setIsDemoAdmin(false);
     if (!blockedStatus) {
       return;
     }
@@ -327,6 +335,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         || !hasActiveAccount(userData)
       ) {
         setIsAdmin(false);
+        setIsDemoAdmin(false);
         setAdminClaimsLoading(false);
         return;
       }
@@ -336,14 +345,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const tokenResult = await user.getIdTokenResult(true);
         const claims = tokenResult.claims;
         const nextIsAdmin = hasStrictAdminAccess(claims, userData);
+        const nextIsDemoAdmin = hasDemoAdminAccess(claims, userData);
 
         if (!cancelled) {
           setIsAdmin(nextIsAdmin);
+          setIsDemoAdmin(nextIsDemoAdmin);
         }
       } catch (error) {
         console.error('관리자 권한 토큰 확인 실패:', error);
         if (!cancelled) {
           setIsAdmin(false);
+          setIsDemoAdmin(false);
         }
       } finally {
         if (!cancelled) {
@@ -370,7 +382,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [userDataLoading, loading, adminClaimsLoading, isLoginValidating, isProvisioning]);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, signUp, userData, loading, isUserDataLoading, isAdmin, error, clearError }}>
+    <AuthContext.Provider value={{ user, login, logout, signUp, userData, loading, isUserDataLoading, isAdmin, isDemoAdmin, error, clearError }}>
       {children}
     </AuthContext.Provider>
   );
