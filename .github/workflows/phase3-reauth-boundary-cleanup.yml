@@ -85,6 +85,9 @@ jobs:
                 tag = removeMarker(tag);
                 removed += 1;
               }
+              if (action) {
+                tag = tag.replace(/[ \t]+(?=\n)/g, '');
+              }
               output += tag;
               cursor = end + 1;
               tagPattern.lastIndex = end + 1;
