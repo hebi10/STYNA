@@ -1,5 +1,6 @@
 'use client';
 
+import { publishFeedback } from '@/shared/utils/feedback';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -199,14 +200,14 @@ export default function ProductDetailClient({ product }: Props) {
         },
       });
 
-      alert('장바구니에 추가되었습니다.');
+      publishFeedback('장바구니에 추가되었습니다.');
 
       if (confirm('장바구니로 이동하시겠습니까?')) {
         router.push('/orders/cart');
       }
     } catch (error) {
       console.error('장바구니 추가 실패:', error);
-      alert('장바구니 추가에 실패했습니다. 다시 시도해주세요.');
+      publishFeedback('장바구니 추가에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setIsAddingToCart(false);
     }
@@ -255,7 +256,7 @@ export default function ProductDetailClient({ product }: Props) {
     } catch (error) {
       setOptimisticWishlisted(false);
       console.error('찜하기 추가 실패:', error);
-      alert(error instanceof Error ? error.message : '찜하기 처리에 실패했습니다.');
+      publishFeedback(error instanceof Error ? error.message : '찜하기 처리에 실패했습니다.');
     } finally {
       setIsWishlistLoading(false);
     }
@@ -264,7 +265,7 @@ export default function ProductDetailClient({ product }: Props) {
   const handleAddToCart = async () => {
     // 로그인 확인
     if (!user) {
-      alert('로그인이 필요합니다.');
+      publishFeedback('로그인이 필요합니다.');
       redirectToLoginWithIntent('cart');
       return;
     }
@@ -274,18 +275,18 @@ export default function ProductDetailClient({ product }: Props) {
     const hasColors = product.colors && product.colors.length > 0;
     
     if (hasSizes && !selectedSize) {
-      alert('사이즈를 선택해주세요.');
+      publishFeedback('사이즈를 선택해주세요.');
       return;
     }
     
     if (hasColors && !selectedColor) {
-      alert('색상을 선택해주세요.');
+      publishFeedback('색상을 선택해주세요.');
       return;
     }
 
     // 재고 확인
     if (!inStock || quantity > product.stock) {
-      alert('재고가 부족합니다.');
+      publishFeedback('재고가 부족합니다.');
       return;
     }
 
@@ -302,7 +303,7 @@ export default function ProductDetailClient({ product }: Props) {
   const handleBuyNow = () => {
     // 로그인 확인
     if (!user) {
-      alert('로그인이 필요합니다.');
+      publishFeedback('로그인이 필요합니다.');
       redirectToLoginWithIntent('buy');
       return;
     }
@@ -312,18 +313,18 @@ export default function ProductDetailClient({ product }: Props) {
     const hasColors = product.colors && product.colors.length > 0;
     
     if (hasSizes && !selectedSize) {
-      alert('사이즈를 선택해주세요.');
+      publishFeedback('사이즈를 선택해주세요.');
       return;
     }
     
     if (hasColors && !selectedColor) {
-      alert('색상을 선택해주세요.');
+      publishFeedback('색상을 선택해주세요.');
       return;
     }
 
     // 재고 확인
     if (!inStock || quantity > product.stock) {
-      alert('재고가 부족합니다.');
+      publishFeedback('재고가 부족합니다.');
       return;
     }
 
@@ -340,7 +341,7 @@ export default function ProductDetailClient({ product }: Props) {
   // 찜하기 토글
   const handleWishlistToggle = async () => {
     if (!user) {
-      alert('로그인이 필요합니다.');
+      publishFeedback('로그인이 필요합니다.');
       redirectToLoginWithIntent('wishlist');
       return;
     }
@@ -359,9 +360,9 @@ export default function ProductDetailClient({ product }: Props) {
       setOptimisticWishlisted(isWishlisted);
       console.error('찜하기 토글 실패:', error);
       if (error instanceof Error) {
-        alert(error.message);
+        publishFeedback(error.message);
       } else {
-        alert('찜하기 처리에 실패했습니다.');
+        publishFeedback('찜하기 처리에 실패했습니다.');
       }
     } finally {
       setIsWishlistLoading(false);

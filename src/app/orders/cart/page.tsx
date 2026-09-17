@@ -1,5 +1,6 @@
 "use client";
 
+import { publishFeedback } from '@/shared/utils/feedback';
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -75,7 +76,7 @@ export default function OrderCartPage() {
       }
     } catch (error) {
       console.error('수량 업데이트 실패:', error);
-      alert('수량 변경에 실패했습니다.');
+      publishFeedback('수량 변경에 실패했습니다.');
     }
   };
 
@@ -94,7 +95,7 @@ export default function OrderCartPage() {
       }
     } catch (error) {
       console.error('아이템 제거 실패:', error);
-      alert('상품 제거에 실패했습니다.');
+      publishFeedback('상품 제거에 실패했습니다.');
     }
   };
 
@@ -195,15 +196,15 @@ export default function OrderCartPage() {
   // 주문하기
   const handleCheckout = () => {
     if (selectedItems.length === 0) {
-      alert("선택된 상품이 없습니다.");
+      publishFeedback("선택된 상품이 없습니다.");
       return;
     }
     if (couponSelectionMessage) {
-      alert(couponSelectionMessage);
+      publishFeedback(couponSelectionMessage);
       return;
     }
     if (orderCouponState.loading) {
-      alert("사용 가능한 쿠폰을 확인하는 중입니다.");
+      publishFeedback("사용 가능한 쿠폰을 확인하는 중입니다.");
       return;
     }
     

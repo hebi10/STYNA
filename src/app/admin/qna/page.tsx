@@ -1,5 +1,6 @@
 'use client';
 
+import { publishFeedback } from '@/shared/utils/feedback';
 import { useState, useEffect, useCallback } from 'react';
 import { SimpleQnAService } from '@/shared/services/simpleQnAService';
 import { QnA } from '@/shared/types/qna';
@@ -96,13 +97,13 @@ export default function AdminQnAPage() {
         isAdmin: true,
       });
 
-      alert('답변이 저장되었습니다.');
+      publishFeedback('답변이 저장되었습니다.');
       setShowAnswerModal(false);
       setSelectedQnA(null);
       setAnswerContent('');
       loadQnAs();
     } catch (err) {
-      alert('답변 저장에 실패했습니다.');
+      publishFeedback('답변 저장에 실패했습니다.');
       console.error('Error saving answer:', err);
     }
   };

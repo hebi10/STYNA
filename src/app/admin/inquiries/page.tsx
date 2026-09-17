@@ -1,5 +1,6 @@
 'use client';
 
+import { publishFeedback } from '@/shared/utils/feedback';
 import { Suspense, useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { InquiryService } from '@/shared/services/inquiryService';
@@ -157,13 +158,13 @@ function AdminInquiriesPageContent() {
         answeredBy: 'Admin', // 실제 관리자 정보로 대체 가능
       });
 
-      alert('답변이 저장되었습니다.');
+      publishFeedback('답변이 저장되었습니다.');
       setShowAnswerModal(false);
       setSelectedInquiry(null);
       setAnswerContent('');
       loadInquiries();
     } catch (err) {
-      alert('답변 저장에 실패했습니다.');
+      publishFeedback('답변 저장에 실패했습니다.');
       console.error('Error saving answer:', err);
     }
   };
@@ -174,7 +175,7 @@ function AdminInquiriesPageContent() {
       await InquiryService.updateInquiryStatus(inquiryId, newStatus);
       loadInquiries();
     } catch (err) {
-      alert('상태 변경에 실패했습니다.');
+      publishFeedback('상태 변경에 실패했습니다.');
       console.error('Error updating status:', err);
     }
   };

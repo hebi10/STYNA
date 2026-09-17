@@ -1,5 +1,6 @@
 'use client';
 
+import { publishFeedback } from '@/shared/utils/feedback';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -45,7 +46,7 @@ export default function AdminEventList() {
       setEvents(eventsData);
     } catch (error) {
       console.error('Error loading events:', error);
-      alert('이벤트를 불러오는데 실패했습니다.');
+      publishFeedback('이벤트를 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -96,16 +97,16 @@ export default function AdminEventList() {
           ? { ...event, isActive: !event.isActive }
           : event
       ));
-      alert('이벤트 상태가 변경되었습니다.');
+      publishFeedback('이벤트 상태가 변경되었습니다.');
     } catch (error) {
       console.error('Error toggling event status:', error);
-      alert('이벤트 상태 변경에 실패했습니다.');
+      publishFeedback('이벤트 상태 변경에 실패했습니다.');
     }
   };
 
   const handleDeleteEvents = async () => {
     if (selectedEvents.length === 0) {
-      alert('삭제할 이벤트를 선택해주세요.');
+      publishFeedback('삭제할 이벤트를 선택해주세요.');
       return;
     }
     
@@ -114,10 +115,10 @@ export default function AdminEventList() {
         await Promise.all(selectedEvents.map(id => EventService.deleteEvent(id)));
         setEvents(events.filter(event => !selectedEvents.includes(event.id)));
         setSelectedEvents([]);
-        alert('선택한 이벤트가 삭제되었습니다.');
+        publishFeedback('선택한 이벤트가 삭제되었습니다.');
       } catch (error) {
         console.error('Error deleting events:', error);
-        alert('이벤트 삭제에 실패했습니다.');
+        publishFeedback('이벤트 삭제에 실패했습니다.');
       }
     }
   };

@@ -1,5 +1,6 @@
  "use client";
 
+import { publishFeedback } from '@/shared/utils/feedback';
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -211,17 +212,17 @@ export default function CheckoutPage() {
     }
 
     if (!user || !orderData || !agreeTerms) {
-      alert("필수 정보를 입력해주세요.");
+      publishFeedback("필수 정보를 입력해주세요.");
       return;
     }
 
     if (!orderData.items.length) {
-      alert("주문 대상 상품이 없습니다.");
+      publishFeedback("주문 대상 상품이 없습니다.");
       return;
     }
 
     if (couponSelectionMessage) {
-      alert(couponSelectionMessage);
+      publishFeedback(couponSelectionMessage);
       return;
     }
 
@@ -240,7 +241,7 @@ export default function CheckoutPage() {
     } else if (selectedAddress) {
       deliveryAddress = selectedAddress;
     } else {
-      alert("배송지를 선택해주세요.");
+      publishFeedback("배송지를 선택해주세요.");
       return;
     }
 
@@ -273,7 +274,7 @@ export default function CheckoutPage() {
       });
     } catch (error) {
       console.error("order create failed:", error);
-      alert("주문 생성에 실패했습니다.");
+      publishFeedback("주문 생성에 실패했습니다.");
       submissionLockRef.current = false;
       setIsProcessing(false);
       return;
@@ -289,7 +290,7 @@ export default function CheckoutPage() {
         });
       } catch (saveError) {
         console.error("delivery address save failed:", saveError);
-        alert("주문은 완료됐지만 입력한 배송지는 저장하지 못했습니다.");
+        publishFeedback("주문은 완료됐지만 입력한 배송지는 저장하지 못했습니다.");
       }
     }
 

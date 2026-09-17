@@ -1,5 +1,6 @@
 'use client';
 
+import { publishFeedback } from '@/shared/utils/feedback';
 import React, { useState, useEffect } from 'react';
 import styles from './page.module.css';
 import { CouponService } from '@/shared/services/couponService';
@@ -76,10 +77,10 @@ export default function AdminCouponsPage() {
       await CouponService.createCoupon(couponData);
       await loadData(); // 데이터 새로고침
       resetForm();
-      alert('쿠폰이 생성되었습니다.');
+      publishFeedback('쿠폰이 생성되었습니다.');
     } catch (error) {
       console.error('Error creating coupon:', error);
-      alert('쿠폰 생성에 실패했습니다.');
+      publishFeedback('쿠폰 생성에 실패했습니다.');
     }
   };
 
@@ -106,10 +107,10 @@ export default function AdminCouponsPage() {
       await CouponService.updateCoupon(selectedCoupon.id, updateData);
       await loadData(); // 데이터 새로고침
       resetForm();
-      alert('쿠폰이 수정되었습니다.');
+      publishFeedback('쿠폰이 수정되었습니다.');
     } catch (error) {
       console.error('Error updating coupon:', error);
-      alert('쿠폰 수정에 실패했습니다.');
+      publishFeedback('쿠폰 수정에 실패했습니다.');
     }
   };
 
@@ -119,10 +120,10 @@ export default function AdminCouponsPage() {
     try {
       await CouponService.deleteCoupon(couponId);
       await loadData(); // 데이터 새로고침
-      alert('쿠폰이 비활성화되었습니다.');
+      publishFeedback('쿠폰이 비활성화되었습니다.');
     } catch (error) {
       console.error('Error deleting coupon:', error);
-      alert('쿠폰 비활성화에 실패했습니다.');
+      publishFeedback('쿠폰 비활성화에 실패했습니다.');
     }
   };
 
@@ -132,7 +133,7 @@ export default function AdminCouponsPage() {
       await loadData(); // 데이터 새로고침
     } catch (error) {
       console.error('Error toggling status:', error);
-      alert('상태 변경에 실패했습니다.');
+      publishFeedback('상태 변경에 실패했습니다.');
     }
   };
 

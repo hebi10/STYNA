@@ -1,5 +1,6 @@
 "use client";
 
+import { publishFeedback } from '@/shared/utils/feedback';
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/authProvider";
@@ -126,7 +127,7 @@ export default function AdminUsersPage() {
       await loadUsers(); // 데이터 새로고침
     } catch (error) {
       console.error('Error updating user status:', error);
-      alert('사용자 상태 변경에 실패했습니다.');
+      publishFeedback('사용자 상태 변경에 실패했습니다.');
     }
   };
 
@@ -136,7 +137,7 @@ export default function AdminUsersPage() {
       await loadUsers(); // 데이터 새로고침
     } catch (error) {
       console.error('Error updating user role:', error);
-      alert('사용자 역할 변경에 실패했습니다.');
+      publishFeedback('사용자 역할 변경에 실패했습니다.');
     }
   };
 
@@ -147,7 +148,7 @@ export default function AdminUsersPage() {
         await loadUsers(); // 데이터 새로고침
       } catch (error) {
         console.error('Error deleting user:', error);
-        alert('사용자 삭제에 실패했습니다.');
+        publishFeedback('사용자 삭제에 실패했습니다.');
       }
     }
   };
@@ -194,7 +195,7 @@ export default function AdminUsersPage() {
       downloadUsersCsv(csvContent);
     } catch (error) {
       console.error('Error exporting users:', error);
-      alert('사용자 데이터 내보내기에 실패했습니다.');
+      publishFeedback('사용자 데이터 내보내기에 실패했습니다.');
     }
   };
 
@@ -208,12 +209,12 @@ export default function AdminUsersPage() {
 
   const handlePointUpdate = async () => {
     if (!selectedUser || pointAmount <= 0) {
-      alert('올바른 포인트 금액을 입력해주세요.');
+      publishFeedback('올바른 포인트 금액을 입력해주세요.');
       return;
     }
 
     if (!pointDescription.trim()) {
-      alert('포인트 적립/차감 사유를 입력해주세요.');
+      publishFeedback('포인트 적립/차감 사유를 입력해주세요.');
       return;
     }
 
@@ -226,12 +227,12 @@ export default function AdminUsersPage() {
       };
 
       await AdminUserService.updateUserPoints(operation);
-      alert(`포인트가 성공적으로 ${pointOperation === 'add' ? '적립' : '차감'}되었습니다.`);
+      publishFeedback(`포인트가 성공적으로 ${pointOperation === 'add' ? '적립' : '차감'}되었습니다.`);
       setShowPointModal(false);
       await loadUsers(); // 데이터 새로고침
     } catch (error) {
       console.error('Error updating points:', error);
-      alert('포인트 업데이트에 실패했습니다.');
+      publishFeedback('포인트 업데이트에 실패했습니다.');
     }
   };
 
@@ -243,7 +244,7 @@ export default function AdminUsersPage() {
       setShowUserDetail(true);
     } catch (error) {
       console.error('Error loading user detail:', error);
-      alert('사용자 상세 정보를 불러오는데 실패했습니다.');
+      publishFeedback('사용자 상세 정보를 불러오는데 실패했습니다.');
     }
   };
 
@@ -255,11 +256,11 @@ export default function AdminUsersPage() {
       if (confirm(`모든 활성 사용자에게 ${amount}포인트를 지급하시겠습니까?`)) {
         try {
           const successCount = await AdminUserService.givePointsToAllUsers(Number(amount), description);
-          alert(`${successCount}명의 사용자에게 포인트가 지급되었습니다.`);
+          publishFeedback(`${successCount}명의 사용자에게 포인트가 지급되었습니다.`);
           await loadUsers();
         } catch (error) {
           console.error('Error giving bulk points:', error);
-          alert('일괄 포인트 지급에 실패했습니다.');
+          publishFeedback('일괄 포인트 지급에 실패했습니다.');
         }
       }
     }

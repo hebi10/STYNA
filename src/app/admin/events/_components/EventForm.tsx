@@ -1,5 +1,6 @@
 'use client';
 
+import { publishFeedback } from '@/shared/utils/feedback';
 import { useState, useRef, useEffect, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -155,7 +156,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
       setCategories(uniqueCategories);
     } catch (error) {
       console.error('Error loading categories:', error);
-      alert('카테고리를 불러오는 데 실패했습니다.');
+      publishFeedback('카테고리를 불러오는 데 실패했습니다.');
       setCategories([]);
     } finally {
       setLoadingCategories(false);
@@ -221,10 +222,10 @@ export default function EventForm({ event, isEdit = false }: Props) {
         [`${type}Image`]: imageUrl
       }));
       setFormData(prev => ({ ...prev, publicPolicyVerified: false }));
-      alert(`${type === 'banner' ? '배너' : '썸네일'} 이미지가 업로드되었습니다.`);
+      publishFeedback(`${type === 'banner' ? '배너' : '썸네일'} 이미지가 업로드되었습니다.`);
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert('이미지 업로드에 실패했습니다.');
+      publishFeedback('이미지 업로드에 실패했습니다.');
     } finally {
       setUploading(false);
     }
@@ -239,10 +240,10 @@ export default function EventForm({ event, isEdit = false }: Props) {
         [role]: imageUrl,
       }));
       setFormData(prev => ({ ...prev, publicPolicyVerified: false }));
-      alert('에디토리얼 이미지가 업로드되었습니다.');
+      publishFeedback('에디토리얼 이미지가 업로드되었습니다.');
     } catch (error) {
       console.error('Error uploading editorial image:', error);
-      alert('이미지 업로드에 실패했습니다.');
+      publishFeedback('이미지 업로드에 실패했습니다.');
     } finally {
       setUploading(false);
     }
@@ -252,18 +253,18 @@ export default function EventForm({ event, isEdit = false }: Props) {
     e.preventDefault();
     
     if (!formData.title || !formData.description || !formData.startDate || !formData.endDate) {
-      alert('필수 항목을 모두 입력해주세요.');
+      publishFeedback('필수 항목을 모두 입력해주세요.');
       return;
     }
 
     if (!images.bannerImage || !images.thumbnailImage) {
-      alert('배너 이미지와 썸네일 이미지를 모두 업로드해주세요.');
+      publishFeedback('배너 이미지와 썸네일 이미지를 모두 업로드해주세요.');
       return;
     }
 
     const targetProducts = normalizeTargetProducts(formData.targetProductsText);
     if (formData.eligibilityType !== 'none' && targetProducts.length === 0) {
-      alert('구매 자격 이벤트에는 대상 상품 ID가 필요합니다.');
+      publishFeedback('구매 자격 이벤트에는 대상 상품 ID가 필요합니다.');
       return;
     }
 
@@ -271,7 +272,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
       formData.rewardType === 'coupon'
       && !isValidFirestoreDocumentId(formData.rewardCouponId.trim())
     ) {
-      alert('쿠폰 보상에는 유효한 쿠폰 관리 문서 ID가 필요합니다.');
+      publishFeedback('쿠폰 보상에는 유효한 쿠폰 관리 문서 ID가 필요합니다.');
       return;
     }
 
@@ -316,16 +317,16 @@ export default function EventForm({ event, isEdit = false }: Props) {
 
       if (isEdit && event) {
         await EventService.updateEvent(event.id, eventData);
-        alert('이벤트가 수정되었습니다.');
+        publishFeedback('이벤트가 수정되었습니다.');
       } else {
         await EventService.createEvent(eventData);
-        alert('이벤트가 생성되었습니다.');
+        publishFeedback('이벤트가 생성되었습니다.');
       }
       
       router.push('/admin/events');
     } catch (error) {
       console.error('Error saving event:', error);
-      alert('이벤트 저장에 실패했습니다.');
+      publishFeedback('이벤트 저장에 실패했습니다.');
     } finally {
       setLoading(false);
     }

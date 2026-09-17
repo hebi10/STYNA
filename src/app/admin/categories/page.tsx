@@ -1,5 +1,6 @@
 'use client';
 
+import { publishFeedback } from '@/shared/utils/feedback';
 import { useState, useEffect } from 'react';
 import { collection, getDocs, doc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/shared/libs/firebase/firebase';
@@ -55,7 +56,7 @@ export default function AdminCategoriesPage() {
       setCategories(categoryList);
     } catch (error) {
       console.error('카테고리 로드 실패:', error);
-      alert('카테고리를 불러오는데 실패했습니다.');
+      publishFeedback('카테고리를 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -75,17 +76,17 @@ export default function AdminCategoriesPage() {
       
       await loadCategories();
       setEditingCategory(null);
-      alert('카테고리가 수정되었습니다.');
+      publishFeedback('카테고리가 수정되었습니다.');
     } catch (error) {
       console.error('카테고리 수정 실패:', error);
-      alert('카테고리 수정에 실패했습니다.');
+      publishFeedback('카테고리 수정에 실패했습니다.');
     }
   };
 
   const handleAddCategory = async () => {
     try {
       if (!newCategory.id || !newCategory.name) {
-        alert('ID와 이름은 필수입니다.');
+        publishFeedback('ID와 이름은 필수입니다.');
         return;
       }
 
@@ -106,10 +107,10 @@ export default function AdminCategoriesPage() {
         icon: 'box',
         color: '#007bff'
       });
-      alert('새 카테고리가 추가되었습니다.');
+      publishFeedback('새 카테고리가 추가되었습니다.');
     } catch (error) {
       console.error('카테고리 추가 실패:', error);
-      alert('카테고리 추가에 실패했습니다.');
+      publishFeedback('카테고리 추가에 실패했습니다.');
     }
   };
 
@@ -121,10 +122,10 @@ export default function AdminCategoriesPage() {
     try {
       await deleteDoc(doc(db, 'categories', categoryId));
       await loadCategories();
-      alert('카테고리가 삭제되었습니다.');
+      publishFeedback('카테고리가 삭제되었습니다.');
     } catch (error) {
       console.error('카테고리 삭제 실패:', error);
-      alert('카테고리 삭제에 실패했습니다.');
+      publishFeedback('카테고리 삭제에 실패했습니다.');
     }
   };
 
@@ -137,7 +138,7 @@ export default function AdminCategoriesPage() {
       await loadCategories();
     } catch (error) {
       console.error('카테고리 상태 변경 실패:', error);
-      alert('카테고리 상태 변경에 실패했습니다.');
+      publishFeedback('카테고리 상태 변경에 실패했습니다.');
     }
   };
 

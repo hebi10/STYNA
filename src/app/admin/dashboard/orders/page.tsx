@@ -1,5 +1,6 @@
 "use client";
 
+import { publishFeedback } from '@/shared/utils/feedback';
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/authProvider";
@@ -155,10 +156,10 @@ export default function AdminOrdersPage() {
     try {
       await OrderService.updateOrderStatus(orderId, newStatus);
       await loadOrders(); // 데이터 새로고침
-      alert('주문 상태가 성공적으로 변경되었습니다.');
+      publishFeedback('주문 상태가 성공적으로 변경되었습니다.');
     } catch (error) {
       console.error('주문 상태 변경 실패:', error);
-      alert('주문 상태 변경에 실패했습니다.');
+      publishFeedback('주문 상태 변경에 실패했습니다.');
     }
   };
 
@@ -206,10 +207,10 @@ export default function AdminOrdersPage() {
       const csvContent = `\ufeff${createCsv([headers, ...csvData])}`;
       downloadOrdersCsv(csvContent);
 
-      alert('주문 데이터를 CSV로 내보냈습니다.');
+      publishFeedback('주문 데이터를 CSV로 내보냈습니다.');
     } catch (error) {
       console.error('CSV 내보내기 실패:', error);
-      alert('CSV 내보내기에 실패했습니다.');
+      publishFeedback('CSV 내보내기에 실패했습니다.');
     }
   };
 
