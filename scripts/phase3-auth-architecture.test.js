@@ -55,6 +55,8 @@ describe('phase 3 auth architecture contracts', () => {
 
   test.each([
     'src/app/admin/categories/page.tsx',
+    'src/app/admin/category-order/page.tsx',
+    'src/app/admin/qna/page.tsx',
     'src/app/admin/dashboard/products/page.tsx',
     'src/app/admin/dashboard/products/_components/EditProductForm.tsx',
     'src/app/admin/dashboard/orders/page.tsx',
@@ -65,7 +67,53 @@ describe('phase 3 auth architecture contracts', () => {
     'src/app/admin/events/_components/AdminEventList.tsx',
     'src/app/admin/events/_components/EventForm.tsx',
     'src/app/admin/reviews/_components/AdminReviewList.tsx',
-  ])('%s marks mutation controls with explicit reauthentication intent', (relativePath) => {
+  ])('%s marks persisted mutations with explicit reauthentication intent', (relativePath) => {
     expect(read(relativePath)).toContain('data-requires-reauth="true"');
+  });
+
+  test('category writes are guarded without blocking local cancel actions', () => {
+    const source = read('src/app/admin/categories/page.tsx');
+
+    expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}handleAddCategory/);
+    expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}toggleCategoryStatus/);
+    expect(source).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}setShowAddForm\(false\)/);
+    expect(source).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}setEditingCategory\(null\)/);
+  });
+
+  test('category-order and QnA persisted writes are explicitly guarded', () => {
+    const categoryOrder = read('src/app/admin/category-order/page.tsx');
+    const qna = read('src/app/admin/qna/page.tsx');
+
+    expect(categoryOrder).toMatch(/data-requires-reauth="true"[\s\S]{0,180}resetToDefault/);
+    expect(categoryOrder).toMatch(/data-requires-reauth="true"[\s\S]{0,180}saveOrder/);
+    expect(qna).toMatch(/data-requires-reauth="true"[\s\S]{0,180}handleAnswerSubmit/);
+  });
+
+  test('product form guards storage and save writes but not local-only subforms or cancel', () => {
+    const source = read('src/app/admin/dashboard/products/_components/EditProductForm.tsx');
+
+    expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}handleSubmit/);
+    expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}handleImageUpload/);
+    expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}handleImageDelete/);
+    expect(source).not.toMatch(/data-requires-reauth="true" onSubmit=\{handleSubmit\} className=\{styles\.addInput\}/);
+    expect(source).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}onClick=\{onCancel\}/);
+  });
+
+  test('user management guards real writes but not read/open/close controls', () => {
+    const source = read('src/app/admin/dashboard/users/page.tsx');
+
+    expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}handleBulkPointGift/);
+    expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}handlePointUpdate/);
+    expect(source).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}handlePointManagement/);
+    expect(source).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}setShowPointModal\(false\)/);
+    expect(source).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}setShowUserDetail\(false\)/);
+  });
+
+  test('modal entry and cancel controls do not require write reauthentication', () => {
+    const coupons = read('src/app/admin/coupons/page.tsx');
+    const inquiries = read('src/app/admin/inquiries/page.tsx');
+
+    expect(coupons).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}setShowCreateForm\(true\)/);
+    expect(inquiries).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}setShowAnswerModal\(false\)/);
   });
 });
