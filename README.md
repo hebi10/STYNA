@@ -97,34 +97,56 @@ src/
 │   ├── events/            # 이벤트 목록·상세
 │   ├── legal/             # 데모 이용 안내·개인정보 안내
 │   ├── main/sale/         # 세일 상품 전체 목록
-│   ├── mypage/             # 주문·쿠폰·포인트·찜·최근 본 상품
-│   ├── orders/             # 장바구니·체크아웃·완료·배송 안내
+│   ├── mypage/            # 주문·쿠폰·포인트·찜·최근 본 상품
+│   ├── orders/            # 장바구니·체크아웃·완료·배송 안내
 │   ├── products/[productId]/
-│   ├── qna/                # 상품 QnA
-│   ├── recommend/          # 기준형 추천 상품
-│   ├── reviews/            # 공개 리뷰 목록
-│   ├── search/             # 키워드 검색
+│   ├── qna/               # 상품 QnA
+│   ├── recommend/         # 기준형 추천 상품
+│   ├── reviews/           # 공개 리뷰 목록
+│   ├── search/            # 키워드 검색
 │   ├── style-now/[season]/ # 시즌 콘텐츠
-│   ├── support/offline/    # 오프라인 안내
-│   └── _components/        # 전역 공통 컴포넌트
-├── context/                # auth, category, coupon, event, product, review, activity
+│   ├── support/offline/   # 오프라인 안내
+│   └── _components/       # 전역 공통 컴포넌트
+├── context/               # auth, category, coupon, event, product, review, activity
 └── shared/
-    ├── constants/          # 정책·SEO·라우트·사이트 정보
-    ├── hooks/               # React Query와 공통 커스텀 훅
-    ├── libs/firebase/       # Auth·Firestore·Storage·Functions 초기화
-    ├── services/            # Firestore·Functions 데이터 서비스
-    ├── types/               # TypeScript 도메인 타입
-    └── utils/               # 검증·포맷·정책·세션 유틸리티
+    ├── constants/         # 정책·SEO·라우트·사이트 정보
+    ├── hooks/             # React Query와 공통 커스텀 훅
+    ├── libs/firebase/     # Auth·Firestore·Storage·Functions 초기화
+    ├── services/          # 도메인/매핑/Repository/Service 데이터 계층
+    ├── types/             # TypeScript 도메인 타입
+    └── utils/             # 검증·포맷·정책·세션 유틸리티
 
 functions/
 └── src/
-    ├── config/              # 환경·Next runtime 설정
-    ├── domain/              # 주문·쿠폰·이벤트·채팅·리뷰 도메인 규칙
-    ├── handlers/            # HTTP Functions
-    ├── triggers/            # Firestore trigger
-    ├── cron/                # 만료 처리 스케줄러
-    └── utils/               # Firebase 초기화·인증·HTTP 유틸리티
+    ├── config/            # 환경·Next runtime 설정
+    ├── domain/            # 주문·쿠폰·이벤트·채팅·리뷰 도메인 규칙
+    ├── handlers/          # HTTP Functions
+    ├── triggers/          # Firestore trigger
+    ├── cron/              # 만료 처리 스케줄러
+    └── utils/             # Firebase 초기화·인증·HTTP 유틸리티
 ```
+
+## 아키텍처와 기술 선택
+
+### 상품 데이터 계층
+
+상품 영역은 Firestore 구현 세부사항과 화면용 도메인 규칙을 한 서비스에 섞지 않도록 책임을 분리합니다.
+
+- `productRepository.ts`: Firestore query/read/write와 cursor document 처리
+- `productMapper.ts`: Firestore document를 `Product`로 정규화하고 write payload를 정리
+- `productDomain.ts`: 검색, 필터, 정렬, keyset cursor 비교, 추천·랭킹 순수 함수
+- `productService.ts`: 공개/관리자 조회 경계, fallback과 오류 정책을 조합하는 use-case 계층
+- `useProducts.ts`: `productKeys`를 기준으로 TanStack Query 캐시를 화면에 제공
+
+`productDomain.ts`와 `productMapper.ts`는 Firebase SDK에 의존하지 않도록 유지합니다. Firestore 구현이 바뀌어도 검색·정렬·추천 규칙을 독립적으로 테스트하기 위한 경계입니다. 상품 상세은 ID별 캐시를 공유하고, 목록·상세·홈 조회의 기본 staleTime은 5분으로 유지합니다. 다중 ID 조회는 현재 상세 캐시 재사용을 우선하며, 실제 read 수 측정에서 고유 ID가 지속적으로 10~20개 이상 필요한 경우 batch 조회를 검토합니다.
+
+자세한 기준은 [docs/data-access-and-cache.md](docs/data-access-and-cache.md)를 참고하세요.
+
+### 이미지 전송
+
+상품·카테고리·이벤트 업로드 이미지는 WebP q75와 긴 변 최대 1600px를 기본 정책으로 사용합니다. 카드/썸네일은 250KB 이하, 일반 상세 이미지는 500KB 이하, 대형 배너·에디토리얼 이미지는 750KB 이하를 목표 기준으로 삼고 실제 Network 전송량과 LCP를 함께 확인합니다.
+
+현재 Firebase Functions 배포 구조에서는 Next.js 이미지 최적화 프록시보다 원본 WebP와 브라우저 캐시 정책을 우선하며, 트래픽·원격 이미지 비중이 증가해 실측 이점이 확인될 때 CDN 또는 Next Image 최적화 재도입을 검토합니다. 자세한 기준은 [docs/image-delivery-performance.md](docs/image-delivery-performance.md)를 참고하세요.
 
 ## 실행 방법
 
@@ -250,6 +272,8 @@ npm run functions:build
 npm run build
 ```
 
+GitHub Actions의 상시 `CI` workflow는 push와 `main` 대상 PR에서 `quality`, `rules`, `build` 세 job을 분리 실행합니다. `quality`는 typecheck·lint·Jest·Functions build, `rules`는 Firebase Rules emulator 테스트, `build`는 CI용 Firebase 공개 설정으로 Next.js production build를 검증합니다.
+
 배포 전 전체 검증은 `npm run verify`, Firebase 전체 배포는
 `npm run deploy:firebase`를 사용합니다. Functions만 배포할 때도 predeploy 단계에서
 최신 Next 산출물 복사와 채팅 provider 경계 검사를 수행합니다.
@@ -263,6 +287,8 @@ npm run build
 | [docs/commerce-policy.md](docs/commerce-policy.md) | 데모 결제·배송·문의·챗봇 정책 |
 | [docs/env-setup.md](docs/env-setup.md) | 환경변수, Firebase Secret, 채팅 연결 |
 | [docs/quality-gates.md](docs/quality-gates.md) | 타입·lint·Jest·Rules·Functions·배포 검증 |
+| [docs/data-access-and-cache.md](docs/data-access-and-cache.md) | 상품 데이터 계층, React Query 캐시, Firestore read 정책 |
+| [docs/image-delivery-performance.md](docs/image-delivery-performance.md) | 이미지 WebP·용량·캐시·전송 성능 기준 |
 | [docs/dashboard.md](docs/dashboard.md) | 관리자 대시보드 구조와 데이터 레이어 |
 | [docs/coupon-system.md](docs/coupon-system.md) | 쿠폰 구조와 발급·사용 Functions |
 | [docs/storage-structure.md](docs/storage-structure.md) | Firebase Storage 경로와 업로드 정책 |
