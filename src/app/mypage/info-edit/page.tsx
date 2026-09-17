@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { userKeys } from "@/shared/hooks/queryKeys";
 import styles from "./page.module.css";
 import useInputs from "@/shared/hooks/useInput";
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
@@ -211,7 +212,7 @@ export default function InfoEditPage() {
         updatedAt: serverTimestamp(),
       });
 
-      await queryClient.invalidateQueries({ queryKey: ["user", user.uid] });
+      await queryClient.invalidateQueries({ queryKey: userKeys.detail(user.uid) });
 
       alert("정보가 성공적으로 업데이트되었습니다!");
       router.push("/mypage");
