@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { arrayUnion, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import PageHeader from "../../_components/PageHeader";
+import AsyncStatePanel from "../../_components/AsyncStatePanel";
 import { useAuth } from "@/context/authProvider";
 import { useCoupon } from "@/context/couponProvider";
 import { OrderService } from "@/shared/services/orderService";
@@ -212,12 +213,12 @@ export default function CheckoutPage() {
     }
 
     if (!user || !orderData || !agreeTerms) {
-      publishFeedback("필수 정보를 입력해주세요.");
+      publishFeedback({ message: "필수 정보를 입력해주세요.", tone: 'error' });
       return;
     }
 
     if (!orderData.items.length) {
-      publishFeedback("주문 대상 상품이 없습니다.");
+      publishFeedback({ message: "주문 대상 상품이 없습니다.", tone: 'error' });
       return;
     }
 
@@ -241,7 +242,7 @@ export default function CheckoutPage() {
     } else if (selectedAddress) {
       deliveryAddress = selectedAddress;
     } else {
-      publishFeedback("배송지를 선택해주세요.");
+      publishFeedback({ message: "배송지를 선택해주세요.", tone: 'error' });
       return;
     }
 
@@ -274,7 +275,7 @@ export default function CheckoutPage() {
       });
     } catch (error) {
       console.error("order create failed:", error);
-      publishFeedback("주문 생성에 실패했습니다.");
+      publishFeedback({ message: "주문 생성에 실패했습니다.", tone: 'error' });
       submissionLockRef.current = false;
       setIsProcessing(false);
       return;
@@ -326,7 +327,13 @@ export default function CheckoutPage() {
   };
 
   if (authLoading || !user) {
-    return <div>로그인 / 주문 정보 확인 중...</div>;
+    return (
+      <AsyncStatePanel
+        kind="loading"
+        title="로그인과 주문 정보를 확인하고 있습니다."
+        headingLevel="h1"
+      />
+    );
   }
 
   if (checkoutRecoveryReason) {
@@ -342,22 +349,25 @@ export default function CheckoutPage() {
           ]}
         />
         <div className={styles.content}>
-          <div className={styles.recoveryPanel} role="status" aria-live="polite">
-            <h2 className={styles.recoveryTitle}>주문 정보를 불러올 수 없습니다</h2>
-            <p className={styles.recoveryDescription}>
-              장바구니에서 주문할 상품을 다시 선택하면 결제를 이어갈 수 있습니다.
-            </p>
-            <Link href="/orders/cart" className={styles.recoveryButton}>
-              장바구니로 돌아가기
-            </Link>
-          </div>
+          <AsyncStatePanel
+            kind="error"
+            title="주문 정보를 불러올 수 없습니다"
+            description="장바구니에서 주문할 상품을 다시 선택하면 결제를 이어갈 수 있습니다."
+            primaryAction={{ label: "장바구니로 돌아가기", href: "/orders/cart" }}
+          />
         </div>
       </div>
     );
   }
 
   if (!orderData) {
-    return <div>주문 정보 확인 중...</div>;
+    return (
+      <AsyncStatePanel
+        kind="loading"
+        title="주문 정보를 확인하고 있습니다."
+        headingLevel="h1"
+      />
+    );
   }
 
   return (

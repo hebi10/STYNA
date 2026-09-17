@@ -76,7 +76,7 @@ export default function OrderCartPage() {
       }
     } catch (error) {
       console.error('수량 업데이트 실패:', error);
-      publishFeedback('수량 변경에 실패했습니다.');
+      publishFeedback({ message: '수량 변경에 실패했습니다.', tone: 'error' });
     }
   };
 
@@ -95,7 +95,7 @@ export default function OrderCartPage() {
       }
     } catch (error) {
       console.error('아이템 제거 실패:', error);
-      publishFeedback('상품 제거에 실패했습니다.');
+      publishFeedback({ message: '상품 제거에 실패했습니다.', tone: 'error' });
     }
   };
 
@@ -196,7 +196,7 @@ export default function OrderCartPage() {
   // 주문하기
   const handleCheckout = () => {
     if (selectedItems.length === 0) {
-      publishFeedback("선택된 상품이 없습니다.");
+      publishFeedback({ message: "선택된 상품이 없습니다.", tone: 'error' });
       return;
     }
     if (couponSelectionMessage) {
@@ -204,7 +204,7 @@ export default function OrderCartPage() {
       return;
     }
     if (orderCouponState.loading) {
-      publishFeedback("사용 가능한 쿠폰을 확인하는 중입니다.");
+      publishFeedback({ message: "사용 가능한 쿠폰을 확인하는 중입니다.", tone: 'error' });
       return;
     }
     
@@ -296,7 +296,10 @@ export default function OrderCartPage() {
           ]}
         />
         <div className={styles.content}>
-          <div className={styles.loading}>장바구니를 불러오는 중...</div>
+          <AsyncStatePanel
+            kind="loading"
+            title="장바구니를 불러오는 중입니다."
+          />
         </div>
       </div>
     );
@@ -314,10 +317,12 @@ export default function OrderCartPage() {
           ]}
         />
         <div className={styles.content}>
-          <div className={styles.error}>
-            장바구니를 불러오는 중 오류가 발생했습니다.
-            <Button onClick={() => window.location.reload()}>다시 시도</Button>
-          </div>
+          <AsyncStatePanel
+            kind="error"
+            title="장바구니를 불러오지 못했습니다"
+            description="일시적인 연결 문제일 수 있습니다. 다시 시도해 주세요."
+            primaryAction={{ label: "다시 시도", onClick: () => window.location.reload() }}
+          />
         </div>
       </div>
     );
@@ -336,16 +341,12 @@ export default function OrderCartPage() {
         />
         
         <div className={styles.content}>
-          <div className={styles.emptyCart}>
-            <div className={styles.emptyIcon}></div>
-            <h2 className={styles.emptyTitle}>주문할 상품이 없습니다</h2>
-            <p className={styles.emptyDescription}>
-              장바구니에서 상품을 선택하고 주문을 진행해주세요.
-            </p>
-            <Link href="/recommend" className={styles.backButton}>
-              쇼핑 계속하기
-            </Link>
-          </div>
+          <AsyncStatePanel
+            kind="empty"
+            title="장바구니가 비어 있습니다"
+            description="상품을 담은 뒤 이곳에서 수량과 쿠폰을 확인할 수 있습니다."
+            primaryAction={{ label: "쇼핑 계속하기", href: "/recommend" }}
+          />
         </div>
       </div>
     );

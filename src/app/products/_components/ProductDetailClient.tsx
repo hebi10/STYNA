@@ -1,7 +1,7 @@
 'use client';
 
 import { publishFeedback } from '@/shared/utils/feedback';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Product } from '@/shared/types/product';
@@ -36,6 +36,9 @@ import styles from './ProductDetail.module.css';
 interface Props {
   product: Product;
 }
+
+type ProductDetailTab = 'detail' | 'size' | 'review' | 'qna';
+const PRODUCT_DETAIL_TABS: ProductDetailTab[] = ['detail', 'size', 'review', 'qna'];
 
 export default function ProductDetailClient({ product }: Props) {
   const router = useRouter();
@@ -87,7 +90,14 @@ export default function ProductDetailClient({ product }: Props) {
     setSelectedImageIndex(0); // 대표 이미지를 첫 번째로 재정렬했으므로 0번 인덱스
   }, [product.id]);
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState<'detail' | 'size' | 'review' | 'qna'>('detail');
+  const [activeTab, setActiveTab] = useState<ProductDetailTab>('detail');
+  const [optionError, setOptionError] = useState<string | null>(null);
+  const tabRefs = useRef<Record<ProductDetailTab, HTMLButtonElement | null>>({
+    detail: null,
+    size: null,
+    review: null,
+    qna: null,
+  });
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isWishlistLoading, setIsWishlistLoading] = useState(false);
   const [optimisticWishlisted, setOptimisticWishlisted] = useState<boolean | null>(null);
@@ -200,14 +210,10 @@ export default function ProductDetailClient({ product }: Props) {
         },
       });
 
-      publishFeedback('장바구니에 추가되었습니다.');
-
-      if (confirm('장바구니로 이동하시겠습니까?')) {
-        router.push('/orders/cart');
-      }
+      publishFeedback({ message: '장바구니에 추가되었습니다.', tone: 'success' });
     } catch (error) {
       console.error('장바구니 추가 실패:', error);
-      publishFeedback('장바구니 추가에 실패했습니다. 다시 시도해주세요.');
+      publishFeedback({ message: '장바구니 추가에 실패했습니다. 다시 시도해주세요.', tone: 'error' });
     } finally {
       setIsAddingToCart(false);
     }
@@ -270,23 +276,25 @@ export default function ProductDetailClient({ product }: Props) {
       return;
     }
 
+    setOptionError(null);
+
     // 옵션 선택 확인 (사이즈나 색상이 있는 경우에만)
     const hasSizes = product.sizes && product.sizes.length > 0;
     const hasColors = product.colors && product.colors.length > 0;
     
     if (hasSizes && !selectedSize) {
-      publishFeedback('사이즈를 선택해주세요.');
+      setOptionError('사이즈를 선택해주세요.');
       return;
     }
     
     if (hasColors && !selectedColor) {
-      publishFeedback('색상을 선택해주세요.');
+      setOptionError('색상을 선택해주세요.');
       return;
     }
 
     // 재고 확인
     if (!inStock || quantity > product.stock) {
-      publishFeedback('재고가 부족합니다.');
+      setOptionError('재고가 부족합니다.');
       return;
     }
 
@@ -308,23 +316,25 @@ export default function ProductDetailClient({ product }: Props) {
       return;
     }
 
+    setOptionError(null);
+
     // 옵션 선택 확인 (사이즈나 색상이 있는 경우에만)
     const hasSizes = product.sizes && product.sizes.length > 0;
     const hasColors = product.colors && product.colors.length > 0;
     
     if (hasSizes && !selectedSize) {
-      publishFeedback('사이즈를 선택해주세요.');
+      setOptionError('사이즈를 선택해주세요.');
       return;
     }
     
     if (hasColors && !selectedColor) {
-      publishFeedback('색상을 선택해주세요.');
+      setOptionError('색상을 선택해주세요.');
       return;
     }
 
     // 재고 확인
     if (!inStock || quantity > product.stock) {
-      publishFeedback('재고가 부족합니다.');
+      setOptionError('재고가 부족합니다.');
       return;
     }
 
@@ -379,6 +389,31 @@ export default function ProductDetailClient({ product }: Props) {
   const reviewLabel = reviewSummaryState.status === 'ready'
     ? `리뷰 (${reviewSummaryState.summary?.totalReviews ?? 0})`
     : reviewSummaryState.status === 'error' ? '리뷰 정보 확인 필요' : '리뷰 확인 중';
+
+  const handleTabKeyDown = (
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    currentTab: ProductDetailTab,
+  ) => {
+    const currentIndex = PRODUCT_DETAIL_TABS.indexOf(currentTab);
+    let nextIndex = currentIndex;
+
+    if (event.key === 'ArrowRight') {
+      nextIndex = (currentIndex + 1) % PRODUCT_DETAIL_TABS.length;
+    } else if (event.key === 'ArrowLeft') {
+      nextIndex = (currentIndex - 1 + PRODUCT_DETAIL_TABS.length) % PRODUCT_DETAIL_TABS.length;
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = PRODUCT_DETAIL_TABS.length - 1;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    const nextTab = PRODUCT_DETAIL_TABS[nextIndex];
+    setActiveTab(nextTab);
+    tabRefs.current[nextTab]?.focus();
+  };
 
   useEffect(() => {
     if (
@@ -549,7 +584,11 @@ export default function ProductDetailClient({ product }: Props) {
                     <button
                       key={size}
                       className={`${styles.sizeButton} ${selectedSize === size ? styles.selected : ''}`}
-                      onClick={() => setSelectedSize(size)}
+                      aria-pressed={selectedSize === size}
+                      onClick={() => {
+                        setSelectedSize(size);
+                        setOptionError(null);
+                      }}
                       disabled={!inStock}
                     >
                       {size}
@@ -568,7 +607,11 @@ export default function ProductDetailClient({ product }: Props) {
                     <button
                       key={color}
                       className={`${styles.colorButton} ${selectedColor === color ? styles.selected : ''}`}
-                      onClick={() => setSelectedColor(color)}
+                      aria-pressed={selectedColor === color}
+                      onClick={() => {
+                        setSelectedColor(color);
+                        setOptionError(null);
+                      }}
                       title={formatProductOptionValue(color)}
                       aria-label={`${formatProductOptionValue(color)} 색상 선택`}
                       disabled={!inStock}
@@ -584,16 +627,18 @@ export default function ProductDetailClient({ product }: Props) {
               <div className={styles.quantitySelector}>
                 <button
                   className={styles.quantityButton}
+                  aria-label={`수량 ${quantity}개 감소`}
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={!inStock}
+                  disabled={!inStock || quantity <= 1}
                 >
                   -
                 </button>
                 <span className={styles.quantityValue}>{quantity}</span>
                 <button
                   className={styles.quantityButton}
+                  aria-label={`수량 ${quantity}개 증가`}
                   onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                  disabled={!inStock}
+                  disabled={!inStock || quantity >= product.stock}
                 >
                   +
                 </button>
@@ -602,8 +647,11 @@ export default function ProductDetailClient({ product }: Props) {
           </div>
 
           {/* 구매 버튼 */}
+          {optionError && (
+            <p role="alert">{optionError}</p>
+          )}
           {resumeIntentFeedback && (
-            <p role="alert">{resumeIntentFeedback}</p>
+            <p role="status" aria-live="polite">{resumeIntentFeedback}</p>
           )}
           <div className={styles.actions}>
             <button
@@ -694,28 +742,56 @@ export default function ProductDetailClient({ product }: Props) {
 
       {/* 상세 정보 탭 */}
       <div className={styles.detailTabs}>
-        <div className={styles.tabHeaders}>
+        <div className={styles.tabHeaders} role="tablist" aria-label="상품 상세 정보">
           <button
+            ref={(node) => { tabRefs.current.detail = node; }}
+            id="product-tab-detail"
+            role="tab"
+            aria-selected={activeTab === 'detail'}
+            aria-controls="product-panel-detail"
+            tabIndex={activeTab === 'detail' ? 0 : -1}
             className={`${styles.tabHeader} ${activeTab === 'detail' ? styles.active : ''}`}
             onClick={() => setActiveTab('detail')}
+            onKeyDown={(event) => handleTabKeyDown(event, 'detail')}
           >
             상품상세
           </button>
           <button
+            ref={(node) => { tabRefs.current.size = node; }}
+            id="product-tab-size"
+            role="tab"
+            aria-selected={activeTab === 'size'}
+            aria-controls="product-panel-size"
+            tabIndex={activeTab === 'size' ? 0 : -1}
             className={`${styles.tabHeader} ${activeTab === 'size' ? styles.active : ''}`}
             onClick={() => setActiveTab('size')}
+            onKeyDown={(event) => handleTabKeyDown(event, 'size')}
           >
             사이즈 가이드
           </button>
           <button
+            ref={(node) => { tabRefs.current.review = node; }}
+            id="product-tab-review"
+            role="tab"
+            aria-selected={activeTab === 'review'}
+            aria-controls="product-panel-review"
+            tabIndex={activeTab === 'review' ? 0 : -1}
             className={`${styles.tabHeader} ${activeTab === 'review' ? styles.active : ''}`}
             onClick={() => setActiveTab('review')}
+            onKeyDown={(event) => handleTabKeyDown(event, 'review')}
           >
             {reviewLabel}
           </button>
           <button
+            ref={(node) => { tabRefs.current.qna = node; }}
+            id="product-tab-qna"
+            role="tab"
+            aria-selected={activeTab === 'qna'}
+            aria-controls="product-panel-qna"
+            tabIndex={activeTab === 'qna' ? 0 : -1}
             className={`${styles.tabHeader} ${activeTab === 'qna' ? styles.active : ''}`}
             onClick={() => setActiveTab('qna')}
+            onKeyDown={(event) => handleTabKeyDown(event, 'qna')}
           >
             Q&A
           </button>
@@ -723,7 +799,12 @@ export default function ProductDetailClient({ product }: Props) {
 
         <div className={styles.tabContent}>
           {activeTab === 'detail' && (
-            <div className={styles.detailContent}>
+            <div
+              id="product-panel-detail"
+              role="tabpanel"
+              aria-labelledby="product-tab-detail"
+              className={styles.detailContent}
+            >
               <h3>상품 정보</h3>
               <p>{product.description}</p>
               
@@ -765,7 +846,12 @@ export default function ProductDetailClient({ product }: Props) {
           )}
 
           {activeTab === 'size' && (
-            <div className={styles.sizeGuide}>
+            <div
+              id="product-panel-size"
+              role="tabpanel"
+              aria-labelledby="product-tab-size"
+              className={styles.sizeGuide}
+            >
               <h3>사이즈 가이드</h3>
               {hasRegisteredSizeMeasurements ? (
                 <div className={styles.sizeTable}>
@@ -805,11 +891,18 @@ export default function ProductDetailClient({ product }: Props) {
           )}
 
           {activeTab === 'review' && (
-            <ProductReviews productId={product.id} />
+            <div id="product-panel-review" role="tabpanel" aria-labelledby="product-tab-review">
+              <ProductReviews productId={product.id} />
+            </div>
           )}
 
           {activeTab === 'qna' && (
-            <div className={styles.qnaContent}>
+            <div
+              id="product-panel-qna"
+              role="tabpanel"
+              aria-labelledby="product-tab-qna"
+              className={styles.qnaContent}
+            >
               <h3>상품 Q&A</h3>
               <p>공개 문의와 답변을 확인할 수 있습니다. 비밀글은 작성자와 관리자만 볼 수 있습니다.</p>
               {isProductQnAsLoading ? (
