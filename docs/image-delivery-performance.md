@@ -11,6 +11,43 @@
 - 이벤트 이미지 소스는 `/`로 시작하는 로컬 절대 경로 또는 `https:` URL만 허용한다. `javascript:`, `data:`, `http:`, protocol-relative 및 상대 경로는 `next/image`에 전달하지 않고 에디토리얼 이미지로 대체하며, 유효한 URL의 앞뒤 공백은 제거한다.
 - 상품 WebP 마이그레이션은 `images`, `mainImage`, `detailImages`를 모두 대상으로 삼는다.
 
+## 업로드와 전송 크기 기준
+
+현재 브라우저 업로드 최적화는 `src/shared/libs/firebase/imageOptimization.ts`를 기준으로 WebP q75, 긴 변 최대 1600px로 변환한다. Storage Rules의 5MB 제한은 보안상 상한이며 목표 전송 크기가 아니다.
+
+`images.unoptimized: true` 상태에서는 Firebase Storage에 저장된 원본 WebP 크기가 브라우저 전송량에 직접 영향을 주므로 다음을 운영 예산으로 사용한다.
+
+| 용도 | 권장 전송 크기 | 비고 |
+| --- | ---: | --- |
+| 상품 카드/썸네일 | 250KB 이하 | 목록에서 여러 장이 동시에 노출되므로 우선순위가 가장 높다. |
+| 상품 상세 이미지 | 500KB 이하 | 확대 품질과 모바일 전송량을 함께 본다. |
+| 메인 배너/이벤트 에디토리얼 | 750KB 이하 | 화면을 크게 사용하지만 한 화면의 동시 eager 요청 수를 제한한다. |
+| 아이콘/소형 장식 이미지 | 100KB 이하 | 가능하면 실제 표시 크기에 가까운 원본을 사용한다. |
+
+위 값은 Storage Rules의 hard limit가 아니라 성능 예산이다. 이미지 종류별 품질 검증 없이 더 낮은 수치로 강제 압축하지 않는다.
+
+### 확인 절차
+
+배포 또는 이미지 교체 뒤 Chrome DevTools Network에서 `Img` 필터를 사용해 다음을 확인한다.
+
+1. 캐시를 비운 첫 진입에서 `Transferred`와 `Resource Size`를 기록한다.
+2. 상품 목록은 첫 viewport에 표시되는 이미지 합계와 개별 250KB 초과 파일을 확인한다.
+3. 상품 상세는 대표 이미지와 상세 이미지 중 500KB 초과 파일을 확인한다.
+4. 메인 배너는 LCP 후보가 불필요한 다른 슬라이드 이미지보다 먼저 시작되는지 확인한다.
+5. 새로고침 후 immutable Storage 이미지가 메모리/디스크 캐시를 재사용하는지 확인한다.
+
+Firebase Storage의 운영 이미지 크기는 저장소 정적 파일만으로 정확히 측정할 수 없으므로, 문서에는 실제 측정값과 목표 예산을 구분해서 기록한다. 측정하지 않은 값을 현재 전송량으로 표기하지 않는다.
+
+## Next Image/CDN 후속 판단
+
+현재는 Firebase Hosting/Functions 배포 단순성과 기존 원격 이미지 호환성을 위해 `images.unoptimized: true`를 유지한다. 다음 조건이 충족되면 CDN 또는 Next Image 최적화 경로 재도입을 검토한다.
+
+- Storage 원본을 충분히 압축해도 모바일 LCP 이미지 전송량이 예산을 지속적으로 초과하는 경우
+- 동일 원본에 대해 카드·상세·배너 등 여러 해상도 파생본이 반복적으로 필요한 경우
+- 이미지 최적화 Functions/CDN 비용과 캐시 적중률을 관측할 수 있는 운영 지표가 준비된 경우
+
+전환 시에는 Firebase Storage remote pattern, Functions 런타임, `/_next/image` 캐시, 배포 크기를 한 번에 검증한다.
+
 ## Firebase Storage 후속 작업
 
 기존 메인 배너 10개에는 아래 캐시 정책 적용 및 검증을 완료했다. 이후 배너 파일을 교체한 경우에만 다음 명령을 다시 실행한다.
