@@ -15,14 +15,8 @@ const nextConfig: NextConfig = {
   devIndicators: false,
 
   images: {
-    // 호스팅 환경에서 안정성을 위해 이미지 최적화 비활성화
+    // Firebase Hosting/Functions 배포에서는 Next 이미지 최적화 경로를 사용하지 않는다.
     unoptimized: true,
-    // 원본 이미지 캐시 설정 (하루)
-    minimumCacheTTL: 86400,
-    formats: ['image/avif', 'image/webp'],
-    // 이미지 크기 제한
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       {
         protocol: 'https',
@@ -30,15 +24,11 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/v0/b/hebimall.firebasestorage.app/o/**',
       },
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
     ],
   },
 
   // Webpack 설정 최소화
-  webpack: (config, { dev, isServer }) => {
+  webpack: (config, { dev }) => {
     // 개발 환경에서 캐시 문제 해결
     if (dev) {
       config.cache = false;
@@ -52,7 +42,7 @@ const nextConfig: NextConfig = {
         filename: 'static/chunks/[name].[hash][ext]',
       },
     });
-    
+
     return config;
   },
 };
