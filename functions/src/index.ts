@@ -7,6 +7,7 @@ import {
   loadNextRuntimeConfig,
   type NextRuntimeConfig,
 } from "./config/nextRuntimeConfig";
+import { ALLOWED_WEB_ORIGINS } from "./config/httpPolicy";
 
 // ── 핸들러 ──
 export { points } from "./handlers/points";
@@ -18,6 +19,7 @@ export { qna } from "./handlers/qna";
 export { order } from "./handlers/order";
 export { event } from "./handlers/event";
 export { review } from "./handlers/review";
+export { demoLogin } from "./handlers/demoLogin";
 export { syncReviewProductStats } from "./triggers/reviewStats";
 
 // ── 크론 ──
@@ -43,7 +45,7 @@ export const nextjsServer = onRequest(
     memory: "2GiB",
     timeoutSeconds: 60,
     invoker: "public",
-    cors: true,
+    cors: [...ALLOWED_WEB_ORIGINS],
   },
   async (req, res) => {
     if (req.method === "OPTIONS") {
@@ -81,7 +83,6 @@ export const nextjsServer = onRequest(
       console.error("Next.js server error:", error);
       res.status(500).json({
         error: "Internal Server Error",
-        details: String(error),
       });
     }
   }
