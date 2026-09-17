@@ -14,7 +14,8 @@
 2. [PRODUCT.md](../PRODUCT.md)에서 제품 목적과 화면 방향을 확인합니다.
 3. [commerce-policy.md](commerce-policy.md)에서 데모 범위와 금지된 운영 약속을 확인합니다.
 4. [env-setup.md](env-setup.md)와 [quality-gates.md](quality-gates.md)에서 실행·검증 환경을 확인합니다.
-5. 관심 있는 도메인의 상세 문서와 해당 코드·테스트를 함께 확인합니다.
+5. 상품 데이터 구조를 볼 때는 [data-access-and-cache.md](data-access-and-cache.md), 이미지 성능 기준은 [image-delivery-performance.md](image-delivery-performance.md)를 확인합니다.
+6. 관심 있는 도메인의 상세 문서와 해당 코드·테스트를 함께 확인합니다.
 
 ## 현재 구현과 문서의 기준
 
@@ -28,6 +29,8 @@
 - 상거래 정책과 데모 범위 : [commerce-policy.md](commerce-policy.md)
 - 환경 변수/배포 설정 : [env-setup.md](env-setup.md)
 - 품질 게이트/CI 스크립트 : [quality-gates.md](quality-gates.md)
+- 상품 데이터 접근·React Query 캐시 : [data-access-and-cache.md](data-access-and-cache.md)
+- 이미지 전송·WebP·캐시 성능 : [image-delivery-performance.md](image-delivery-performance.md)
 - API 캐시 정책 및 debug 경로 : [api-cache-debug-route.md](api-cache-debug-route.md)
 - SEO 경로·색인 정책 : [seo-routing.md](seo-routing.md)
 - 스토리지 구조 : [storage-structure.md](storage-structure.md)
@@ -37,6 +40,7 @@
 
 - 인증 화면 UI : [auth-ui.md](auth-ui.md)
 - 상품 조회 구조 : [product-listing-structure.md](product-listing-structure.md)
+- 상품 데이터 계층·캐시 정책 : [data-access-and-cache.md](data-access-and-cache.md)
 - 주문 생성 서버화 : [order-serverization.md](order-serverization.md)
 - 쿠폰/포인트 정책 : [coupon-system.md](coupon-system.md)
 - 리뷰 통계 동기화·백필 : [review-statistics.md](review-statistics.md)
@@ -92,6 +96,7 @@
 - 인증 화면 UI 정리 : auth-ui.md
 - 상거래 정책과 데모 범위 : [commerce-policy.md](commerce-policy.md)
 - 상품 조회 구조 개선 : product-listing-structure.md
+- 상품 데이터 접근·캐시 정책 : data-access-and-cache.md
 - 리뷰 통계 동기화·백필 : review-statistics.md
 - 디자인 시스템 정리/리팩터 : design-system-refactor.md
 - 디자인 시스템 QA : design-system-qa.md
