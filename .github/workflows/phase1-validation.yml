@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  targeted-tests:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,4 +16,26 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm ci --prefix functions
       - run: npm test -- src/app/auth/login/page.test.tsx functions/__tests__/phase1SecurityContracts.test.ts --runInBand
+      - run: npm run typecheck
+      - run: npm run lint -- --max-warnings=0
+      - run: npm test -- --runInBand
+      - run: npm run functions:build
+      - run: npm run build
+
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - run: npm install --global firebase-tools
+      - run: npm run test:rules
