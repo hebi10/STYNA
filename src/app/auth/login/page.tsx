@@ -31,7 +31,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const { login, error, clearError, user, loading } = useAuth();
+  const { login, loginDemo, error, clearError, user, loading } = useAuth();
   const isTransitioning = isSubmitting || (!loading && Boolean(user));
 
   useEffect(() => {
@@ -45,32 +45,30 @@ export default function LoginPage() {
     setRememberMe(e.target.checked);
   };
 
-  // 네이버 로그인 (관리자 계정)
-  const handleNaverLogin = async () => {
+  const handleDemoAdminLogin = async () => {
     setIsSubmitting(true);
     clearError();
 
     try {
-      await login("test@test.com", "testtest", false);
+      await loginDemo("admin");
       window.scrollTo(0, 0);
       router.replace("/admin");
     } catch (error) {
-      console.error("Naver login failed:", error);
+      console.error("Demo administrator login failed:", error);
       setIsSubmitting(false);
     }
   };
 
-  // 카카오 로그인 (일반 유저 계정)
-  const handleKakaoLogin = async () => {
+  const handleDemoUserLogin = async () => {
     setIsSubmitting(true);
     clearError();
 
     try {
-      await login("test01@test.com", "test01test01", false);
+      await loginDemo("user");
       window.scrollTo(0, 0);
       router.replace(redirectTarget);
     } catch (error) {
-      console.error("Kakao login failed:", error);
+      console.error("Demo member login failed:", error);
       setIsSubmitting(false);
     }
   };
@@ -182,7 +180,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 className={styles.socialButton}
-                onClick={handleKakaoLogin}
+                onClick={handleDemoUserLogin}
                 disabled={isSubmitting}
               >
                 <span
@@ -196,7 +194,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 className={styles.socialButton}
-                onClick={handleNaverLogin}
+                onClick={handleDemoAdminLogin}
                 disabled={isSubmitting}
               >
                 <span
