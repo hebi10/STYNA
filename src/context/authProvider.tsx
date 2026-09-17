@@ -1,15 +1,18 @@
 "use client";
-import { usePathname, useRouter } from "next/navigation";
+
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { User, UserCredential } from "firebase/auth";
 import { useAuthUser } from "../shared/hooks/useAuthUser";
+import { useAuthGuard } from "../shared/hooks/useAuthGuard";
+import { useAuthAccess } from "../shared/hooks/useAuthAccess";
+import { userKeys } from "../shared/hooks/queryKeys";
 import {
   logout as firebaseLogout,
   loginOneSession as firebaseSignIn,
   loginKeepAlive as firebaseLoginKeepAlive,
   loginWithCustomToken as firebaseLoginWithCustomToken,
-  signUp as firebaseSignUp
+  signUp as firebaseSignUp,
 } from "../shared/libs/firebase/auth";
 import {
   isUserDataNotFoundError,
@@ -17,13 +20,8 @@ import {
 } from "../shared/hooks/useUserData";
 import { getErrorMessage } from "../shared/utils/authErrorMessages";
 import { db } from "../shared/libs/firebase/firebase";
-import {
-  AUTH_ACCESS_CHANGED_EVENT,
-  hasActiveAccount,
-  hasDemoAdminAccess,
-  hasStrictAdminAccess,
-} from "../shared/utils/authAccess";
-import { getAuthGuardRedirect } from "../shared/utils/authRouteGuard";
+import { hasActiveAccount } from "../shared/utils/authAccess";
+import { clearAuthenticatedUserCache } from "../shared/utils/authQueryCache";
 import { useSignupBonusReconciliation } from "../shared/hooks/useSignupBonusReconciliation";
 
 type DemoLoginRole = "user" | "admin";
@@ -106,21 +104,20 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuthUser();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isDemoAdmin, setIsDemoAdmin] = useState(false);
-  const [isUserDataLoading, setIsUserDataLoading] = useState(true);
-  const [adminClaimsLoading, setAdminClaimsLoading] = useState(false);
   const [isLoginValidating, setIsLoginValidating] = useState(false);
   const isLoginValidatingRef = useRef(false);
   const [isProvisioning, setIsProvisioning] = useState(false);
   const isProvisioningRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const pathname = usePathname();
   const queryClient = useQueryClient();
 
+  useAuthGuard({
+    loading,
+    hasUser: Boolean(user),
+  });
+
   const validateAuthenticatedAccount = async (userCredential: UserCredential) => {
-    const userDoc = await import("firebase/firestore").then(module =>
+    const userDoc = await import("firebase/firestore").then((module) =>
       module.getDoc(module.doc(db, "users", userCredential.user.uid))
     );
     const accountData = userDoc.exists() ? userDoc.data() : null;
@@ -137,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error("ACCOUNT_UNAVAILABLE");
     }
 
-    queryClient.setQueryData(["user", userCredential.user.uid], accountData);
+    queryClient.setQueryData(userKeys.detail(userCredential.user.uid), accountData);
     return userCredential;
   };
 
@@ -204,13 +201,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    const userId = user?.uid;
+
     try {
       await firebaseLogout();
-      if (typeof window !== "undefined") {
-        window.location.href = "/auth/login";
+    } catch (logoutError) {
+      console.error("Logout error:", logoutError);
+    } finally {
+      if (userId) {
+        clearAuthenticatedUserCache(queryClient, userId);
       }
-    } catch (error) {
-      console.error("Logout error:", error);
       if (typeof window !== "undefined") {
         window.location.href = "/auth/login";
       }
@@ -233,11 +233,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await createProfile(userCredential.user);
       await queryClient.invalidateQueries({
-        queryKey: ["user", userCredential.user.uid],
+        queryKey: userKeys.detail(userCredential.user.uid),
         refetchType: "none",
       });
       await queryClient.refetchQueries({
-        queryKey: ["user", userCredential.user.uid],
+        queryKey: userKeys.detail(userCredential.user.uid),
         type: "active",
       });
 
@@ -266,7 +266,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     data: userData,
     isLoading: userDataLoading,
     error: userDataError,
-  } = useUserData(user?.uid || "");
+  } = useUserData(user?.uid ?? null);
 
   useSignupBonusReconciliation({
     userId: user?.uid || null,
@@ -280,39 +280,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       && !isProvisioningRef.current,
   });
 
-  useEffect(() => {
-    const guardRedirect = getAuthGuardRedirect({
-      loading,
-      hasUser: Boolean(user),
-      pathname,
-    });
-
-    if (guardRedirect) {
-      router.replace(guardRedirect);
-    }
-  }, [user, loading, pathname, router]);
-
-  useEffect(() => {
-    if (!user) {
-      return;
-    }
-
-    const handleAccessChanged = (event: Event) => {
-      const { userId } = (event as CustomEvent<{ userId?: string }>).detail || {};
-      if (userId !== user.uid) {
-        return;
-      }
-
-      setIsAdmin(false);
-      setIsDemoAdmin(false);
-      void queryClient.invalidateQueries({ queryKey: ["user", user.uid] });
-    };
-
-    window.addEventListener(AUTH_ACCESS_CHANGED_EVENT, handleAccessChanged);
-    return () => {
-      window.removeEventListener(AUTH_ACCESS_CHANGED_EVENT, handleAccessChanged);
-    };
-  }, [queryClient, user]);
+  const {
+    isAdmin,
+    isDemoAdmin,
+    isLoading: adminClaimsLoading,
+  } = useAuthAccess({
+    user,
+    userData,
+    userDataError,
+    enabled: !isLoginValidating
+      && !isLoginValidatingRef.current
+      && !isProvisioning
+      && !isProvisioningRef.current,
+  });
 
   useEffect(() => {
     if (
@@ -330,14 +310,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userDataMissing = isUserDataNotFoundError(userDataError);
 
     if (userDataError && !userDataMissing) {
-      setIsAdmin(false);
-      setIsDemoAdmin(false);
       return;
     }
 
     if (!userData && !userDataMissing) {
-      setIsAdmin(false);
-      setIsDemoAdmin(false);
       return;
     }
 
@@ -350,8 +326,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       || userData?.status === "banned"
       || userData?.status === "deleted";
 
-    setIsAdmin(false);
-    setIsDemoAdmin(false);
     if (!blockedStatus) {
       return;
     }
@@ -370,63 +344,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [isLoginValidating, isProvisioning, loading, user, userData, userDataError, userDataLoading]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadAdminClaims = async () => {
-      if (
-        !user
-        || isLoginValidating
-        || isLoginValidatingRef.current
-        || userDataError
-        || !hasActiveAccount(userData)
-      ) {
-        setIsAdmin(false);
-        setIsDemoAdmin(false);
-        setAdminClaimsLoading(false);
-        return;
-      }
-
-      setAdminClaimsLoading(true);
-      try {
-        const tokenResult = await user.getIdTokenResult(true);
-        const claims = tokenResult.claims;
-        const nextIsAdmin = hasStrictAdminAccess(claims, userData);
-        const nextIsDemoAdmin = hasDemoAdminAccess(claims, userData);
-
-        if (!cancelled) {
-          setIsAdmin(nextIsAdmin);
-          setIsDemoAdmin(nextIsDemoAdmin);
-        }
-      } catch (error) {
-        console.error("관리자 권한 토큰 확인 실패:", error);
-        if (!cancelled) {
-          setIsAdmin(false);
-          setIsDemoAdmin(false);
-        }
-      } finally {
-        if (!cancelled) {
-          setAdminClaimsLoading(false);
-        }
-      }
-    };
-
-    loadAdminClaims();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isLoginValidating, user, userData, userDataError]);
-
-  useEffect(() => {
-    setIsUserDataLoading(
-      userDataLoading
-      || loading
-      || adminClaimsLoading
-      || isLoginValidating
-      || isProvisioning
-    );
-  }, [userDataLoading, loading, adminClaimsLoading, isLoginValidating, isProvisioning]);
+  const isUserDataLoading = userDataLoading
+    || loading
+    || adminClaimsLoading
+    || isLoginValidating
+    || isProvisioning;
 
   return (
     <AuthContext.Provider value={{
