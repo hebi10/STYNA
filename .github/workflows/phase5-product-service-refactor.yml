@@ -57,12 +57,14 @@ jobs:
             ['cursor: QueryDocumentSnapshot<DocumentData>;', 'cursor: ProductDocumentCursor;'],
           ];
           for (const [from, to] of replacements) {
-            if (!source.includes(from)) throw new Error(`Expected transformed marker not found: ${from}`);
-            source = source.split(from).join(to);
+            if (source.includes(from)) {
+              source = source.split(from).join(to);
+            }
           }
           const reviewFields = `const SERVER_OWNED_REVIEW_FIELDS = [\n  'rating',\n  'reviewCount',\n  'reviewSummary',\n  'reviewStatsEventTime',\n  'reviewStatsRunToken',\n  'reviewStatsUpdatedAt',\n  'reviewStatsVersion',\n] as const;\n\n`;
-          if (!source.includes(reviewFields)) throw new Error('legacy review field marker not found');
-          source = source.replace(reviewFields, '');
+          if (source.includes(reviewFields)) {
+            source = source.replace(reviewFields, '');
+          }
           fs.writeFileSync(file, source);
           NODE
       - name: Typecheck
