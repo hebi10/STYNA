@@ -89,3 +89,11 @@
 - 리뷰 수정은 작성자와 엄격 관리자 모두 `rating` 정수 1~5, `isRecommended` boolean을 유지해야 한다. `productId`, `userId`, `createdAt`은 변경할 수 없고 aggregate 필드는 삭제할 수 없다.
 - 최상위 및 레거시 중첩 상품 문서는 `status == "active"`인 경우에만 공개 읽기를 허용한다. 엄격 관리자는 draft·inactive·상태 누락 문서를 포함한 전체 상품을 읽을 수 있다.
 - `npm run test:rules`는 Firestore·Storage Emulator에서 이 권한 행렬을 검증한다. 로컬 실행에는 Java 런타임이 필요하다.
+
+## 2026-09-17 인증·관리자 클라이언트 구조 정리
+
+- `AuthProvider`는 Firebase 세션(`useAuthUser`), 사용자 문서(`useUserData`), 관리자 claim 판정(`useAuthAccess`), 보호 경로 이동(`useAuthGuard`)을 분리해 최종 인증 상태와 액션을 조합한다.
+- 사용자 문서 React Query 키는 `userKeys.detail(userId)`로 통일했다. 로그인 검증·회원가입 후 갱신·회원정보 수정이 같은 키를 사용하며, 명시적 로그아웃에서는 사용자 문서·장바구니·포인트·주문·활동·쿠폰의 사용자별 캐시를 제거한다.
+- 관리자 쓰기 재인증은 버튼의 한국어 문구를 정규식으로 추측하지 않는다. 실제 Firestore·Functions·Storage 변경을 시작하는 컨트롤에 `data-requires-reauth="true"`를 명시하고 `AdminShell`이 해당 의도만 가로챈다.
+- 상품·이벤트 이미지처럼 선택 즉시 Storage에 업로드되는 입력도 쓰기 경계로 취급한다. 반대로 모달 열기·취소·로컬 폼 상태 편집은 재인증을 요구하지 않는다.
+- `demo_admin`은 계속 실제 관리자 하위 화면을 마운트하지 않는 읽기 전용 데모다. `data-requires-reauth`는 UX 재인증 경계이며 실제 권한 보안은 기존의 최근 `auth_time` 검증과 Firestore/Storage Rules·Functions 권한 검사에 의해 강제된다.
