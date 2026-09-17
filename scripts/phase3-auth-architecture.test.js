@@ -2,7 +2,8 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
+const resolve = (relativePath) => path.join(ROOT, relativePath);
+const read = (relativePath) => fs.readFileSync(resolve(relativePath), 'utf8');
 
 describe('phase 3 auth architecture contracts', () => {
   test('AuthProvider delegates route guarding and access claim resolution to hooks', () => {
@@ -28,7 +29,10 @@ describe('phase 3 auth architecture contracts', () => {
   });
 
   test('logout has an explicit authenticated-user cache cleanup boundary', () => {
-    const cacheBoundary = read('src/shared/utils/authQueryCache.ts');
+    const cachePath = 'src/shared/utils/authQueryCache.ts';
+    expect(fs.existsSync(resolve(cachePath))).toBe(true);
+
+    const cacheBoundary = read(cachePath);
     const authProvider = read('src/context/authProvider.tsx');
 
     expect(cacheBoundary).toContain('clearAuthenticatedUserCache');
