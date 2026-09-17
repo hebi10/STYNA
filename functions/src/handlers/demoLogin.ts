@@ -16,8 +16,7 @@ interface DemoUserData {
 }
 
 function isDemoLoginEnabled(): boolean {
-  return process.env.ENABLE_DEMO_LOGIN === "true"
-    || process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === "true";
+  return process.env.ENABLE_DEMO_LOGIN === "true";
 }
 
 function getDemoAccountConfig(role: DemoRole): DemoAccountConfig {
