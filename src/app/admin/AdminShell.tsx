@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, SyntheticEvent, useEffect, useState } from 'react';
+import { ReactNode, SyntheticEvent, useEffect, useRef, useState } from 'react';
 import styles from './layout.module.css';
 import AdminNav from './_components/adminNav';
 import AuthChecking from './_components/AuthChecking';
@@ -26,12 +26,38 @@ export default function AdminShell({ children }: AdminShellProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isReauthOpen, setIsReauthOpen] = useState(false);
   const [hasWriteAccess, setHasWriteAccess] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!hasWriteAccess) return;
     const timeoutId = window.setTimeout(() => setHasWriteAccess(false), 5 * 60 * 1000);
     return () => window.clearTimeout(timeoutId);
   }, [hasWriteAccess]);
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return;
+    }
+
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') {
+        return;
+      }
+      setIsMenuOpen(false);
+      menuButtonRef.current?.focus();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isMenuOpen]);
+
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+    menuButtonRef.current?.focus();
+  };
 
   const requestWriteAccess = (event: SyntheticEvent<HTMLElement>) => {
     if (isDemoAdmin || hasWriteAccess) return;
@@ -55,32 +81,43 @@ export default function AdminShell({ children }: AdminShellProps) {
         {isMenuOpen && (
           <button
             className={styles.mobileOverlay}
-            onClick={() => setIsMenuOpen(false)}
+            onClick={closeMenu}
             aria-label="관리자 메뉴 닫기"
+            tabIndex={-1}
           />
         )}
 
-        <aside className={`${styles.sidebar} ${isMenuOpen ? styles.open : ''}`}>
+        <aside
+          id="admin-navigation"
+          className={`${styles.sidebar} ${isMenuOpen ? styles.open : ''}`}
+          role={isMenuOpen ? 'dialog' : undefined}
+          aria-modal={isMenuOpen ? true : undefined}
+          aria-label={isMenuOpen ? '관리자 메뉴' : undefined}
+        >
           <div className={styles.logo}>
             <h2>Admin Panel</h2>
             <button
+              ref={closeButtonRef}
               className={styles.sidebarClose}
-              onClick={() => setIsMenuOpen(false)}
+              onClick={closeMenu}
               aria-label="관리자 메뉴 닫기"
             >
               ×
             </button>
           </div>
-          {!isDemoAdmin && <AdminNav onNavigate={() => setIsMenuOpen(false)} />}
+          {!isDemoAdmin && <AdminNav onNavigate={closeMenu} />}
         </aside>
 
         <div className={styles.mainContent}>
           <header className={styles.header}>
             <div className={styles.headerLeft}>
               <button
+                ref={menuButtonRef}
                 className={styles.menuButton}
                 onClick={() => setIsMenuOpen(true)}
                 aria-label="관리자 메뉴 열기"
+                aria-expanded={isMenuOpen}
+                aria-controls="admin-navigation"
               >
                 ☰
               </button>
