@@ -22,7 +22,6 @@ jobs:
       - run: npm run lint -- --max-warnings=0
       - run: npm test -- --runInBand
       - run: npm run functions:build
-      - run: npm run build
 
   rules:
     runs-on: ubuntu-latest
