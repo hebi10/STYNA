@@ -6,6 +6,7 @@ import Footer from "./_components/footer/Footer";
 import RootProviders from "./_components/providers/RootProviders";
 import ChatWidget from "./_components/chat/ChatWidget";
 import SiteGuideManager from "./_components/popup/SiteGuideManager";
+import FeedbackRegion from "./_components/feedback/FeedbackRegion";
 import { rootMetadata } from "@/shared/constants/routeMetadata";
 
 export const metadata: Metadata = rootMetadata;
@@ -28,6 +29,7 @@ export default function RootLayout({
           <Footer />
           <ChatWidget />
           <SiteGuideManager />
+          <FeedbackRegion />
         </RootProviders>
       </body>
     </html>
