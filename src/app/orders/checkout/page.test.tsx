@@ -122,7 +122,7 @@ describe('CheckoutPage recovery state', () => {
   test('shows a cart recovery link when checkout data is missing', async () => {
     render(<CheckoutPage />);
 
-    expect(await screen.findByRole('status')).toHaveTextContent('주문 정보를 불러올 수 없습니다');
+    expect(await screen.findByRole('alert')).toHaveTextContent('주문 정보를 불러올 수 없습니다');
     expect(screen.getByRole('link', { name: '장바구니로 돌아가기' })).toHaveAttribute('href', '/orders/cart');
   });
 

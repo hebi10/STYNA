@@ -77,7 +77,7 @@ const baseEvent: Event = {
 
 describe('EventForm', () => {
   beforeEach(() => {
-    jest.spyOn(window, 'alert').mockImplementation(() => {});
+    jest.spyOn(window, 'dispatchEvent');
   });
 
   afterEach(() => {
@@ -184,8 +184,13 @@ describe('EventForm', () => {
     });
     fireEvent.submit(container.querySelector('form') as HTMLFormElement);
 
-    expect(window.alert).toHaveBeenCalledWith(
-      '구매 자격 이벤트에는 대상 상품 ID가 필요합니다.'
+    expect(window.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'styna:feedback',
+        detail: expect.objectContaining({
+          message: '구매 자격 이벤트에는 대상 상품 ID가 필요합니다.',
+        }),
+      }),
     );
     expect(EventService.createEvent).not.toHaveBeenCalled();
   });
@@ -249,8 +254,13 @@ describe('EventForm', () => {
     });
     fireEvent.submit(container.querySelector('form') as HTMLFormElement);
 
-    expect(window.alert).toHaveBeenCalledWith(
-      '쿠폰 보상에는 유효한 쿠폰 관리 문서 ID가 필요합니다.'
+    expect(window.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'styna:feedback',
+        detail: expect.objectContaining({
+          message: '쿠폰 보상에는 유효한 쿠폰 관리 문서 ID가 필요합니다.',
+        }),
+      }),
     );
     expect(EventService.createEvent).not.toHaveBeenCalled();
   });
@@ -295,8 +305,13 @@ describe('EventForm', () => {
     expect(screen.getByLabelText('참여 자격')).toHaveValue('review');
     fireEvent.submit(container.querySelector('form') as HTMLFormElement);
 
-    expect(window.alert).toHaveBeenCalledWith(
-      '구매 자격 이벤트에는 대상 상품 ID가 필요합니다.'
+    expect(window.dispatchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'styna:feedback',
+        detail: expect.objectContaining({
+          message: '구매 자격 이벤트에는 대상 상품 ID가 필요합니다.',
+        }),
+      }),
     );
     expect(EventService.updateEvent).not.toHaveBeenCalled();
   });

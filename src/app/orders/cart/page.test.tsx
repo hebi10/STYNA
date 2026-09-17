@@ -263,7 +263,6 @@ describe('OrderCartPage policy copy', () => {
       userCoupons: [],
       getAvailableCouponsForOrder: mockGetAvailableCouponsForOrder,
     } as unknown as ReturnType<typeof useCoupon>);
-    const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => undefined);
     const { rerender } = render(<OrderCartPage />);
 
     const couponSelect = await screen.findByRole('combobox');
@@ -288,7 +287,7 @@ describe('OrderCartPage policy copy', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('쿠폰 없이 주문하려면');
     fireEvent.click(screen.getByRole('button', { name: /결제하기/ }));
 
-    expect(alertSpy).toHaveBeenCalledWith(expect.stringContaining('쿠폰 없이 주문하려면'));
+    expect(screen.getByRole('alert')).toHaveTextContent('쿠폰 없이 주문하려면');
     expect(mockPush).not.toHaveBeenCalledWith('/orders/checkout');
   });
 });

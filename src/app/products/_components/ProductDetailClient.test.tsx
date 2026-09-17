@@ -217,8 +217,8 @@ describe('ProductDetailClient review summary', () => {
     render(<ProductDetailClient product={product} />);
 
     expect(screen.getByText('0 (0개 리뷰)')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '리뷰 (0)' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '리뷰 (13)' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '리뷰 (0)' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: '리뷰 (13)' })).not.toBeInTheDocument();
     expect(loadReviewSummary).toHaveBeenCalledWith('product-1');
   });
 
@@ -227,8 +227,8 @@ describe('ProductDetailClient review summary', () => {
 
     render(<ProductDetailClient product={product} />);
 
-    expect(screen.getByRole('button', { name: '리뷰 정보 확인 필요' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '리뷰 (13)' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '리뷰 정보 확인 필요' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: '리뷰 (13)' })).not.toBeInTheDocument();
   });
 });
 
@@ -260,7 +260,7 @@ describe('ProductDetailClient detail images', () => {
   test('shows an honest empty state instead of an empty size table', () => {
     render(<ProductDetailClient product={product} />);
 
-    fireEvent.click(screen.getByRole('button', { name: '사이즈 가이드' }));
+    fireEvent.click(screen.getByRole('tab', { name: '사이즈 가이드' }));
 
     expect(screen.getByText('등록된 실측 치수 정보가 없습니다.')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
@@ -277,7 +277,7 @@ describe('ProductDetailClient detail images', () => {
 
     render(<ProductDetailClient product={productWithMeasurements} />);
 
-    fireEvent.click(screen.getByRole('button', { name: '사이즈 가이드' }));
+    fireEvent.click(screen.getByRole('tab', { name: '사이즈 가이드' }));
 
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: '가슴둘레' })).toBeInTheDocument();
@@ -334,7 +334,7 @@ describe('ProductDetailClient product Q&A', () => {
   test('shows public Q&A for the product and opens a prefilled inquiry form', async () => {
     render(<ProductDetailClient product={product} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Q&A' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Q&A' }));
 
     expect(await screen.findByText('사이즈 문의')).toBeInTheDocument();
     expect(screen.getByText('상세 사이즈 표를 참고해 주세요.')).toBeInTheDocument();
@@ -520,7 +520,7 @@ describe('ProductDetailClient login intent', () => {
 
     render(<ProductDetailClient product={product} />);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('옵션을 다시 선택해 주세요.');
+    expect(await screen.findByRole('status')).toHaveTextContent('옵션을 다시 선택해 주세요.');
     expect(mutateAsync).not.toHaveBeenCalled();
     expect(sessionStorage.getItem(PRODUCT_INTENT_STORAGE_KEY)).toBeNull();
   });
