@@ -5,6 +5,21 @@ const ROOT = path.resolve(__dirname, '..');
 const resolve = (relativePath) => path.join(ROOT, relativePath);
 const read = (relativePath) => fs.readFileSync(resolve(relativePath), 'utf8');
 
+function lastOpeningTagContaining(source, token, tagName = 'button') {
+  const tokenIndex = source.lastIndexOf(token);
+  if (tokenIndex < 0) {
+    throw new Error(`Token not found: ${token}`);
+  }
+
+  const start = source.lastIndexOf(`<${tagName}`, tokenIndex);
+  const end = source.indexOf('>', tokenIndex);
+  if (start < 0 || end < 0) {
+    throw new Error(`Opening <${tagName}> tag not found for token: ${token}`);
+  }
+
+  return source.slice(start, end + 1);
+}
+
 describe('phase 3 auth architecture contracts', () => {
   test('AuthProvider delegates route guarding and access claim resolution to hooks', () => {
     const source = read('src/context/authProvider.tsx');
@@ -76,8 +91,8 @@ describe('phase 3 auth architecture contracts', () => {
 
     expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}handleAddCategory/);
     expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}toggleCategoryStatus/);
-    expect(source).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}setShowAddForm\(false\)/);
-    expect(source).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}setEditingCategory\(null\)/);
+    expect(lastOpeningTagContaining(source, 'setShowAddForm(false)')).not.toContain('data-requires-reauth');
+    expect(lastOpeningTagContaining(source, 'setEditingCategory(null)')).not.toContain('data-requires-reauth');
   });
 
   test('category-order and QnA persisted writes are explicitly guarded', () => {
@@ -94,7 +109,7 @@ describe('phase 3 auth architecture contracts', () => {
 
     expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}onSubmit=\{handleSubmit\}[\s\S]{0,180}className=\{styles\.form\}/);
     expect(source).toMatch(/type="file"[\s\S]{0,220}data-requires-reauth="true"|data-requires-reauth="true"[\s\S]{0,220}type="file"/);
-    expect(source).toContain('onUpload={handleImageUpload}');
+    expect(source).toContain('handleImageUpload(e.target.files)');
     expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}handleImageDelete/);
     expect(source).not.toMatch(/data-requires-reauth="true" onSubmit=\{handleSubmit\} className=\{styles\.addInput\}/);
     expect(source).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}onClick=\{onCancel\}/);
