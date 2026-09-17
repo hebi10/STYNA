@@ -59,4 +59,5 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm ci --prefix functions
       - run: npm run build
