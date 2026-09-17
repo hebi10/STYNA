@@ -66,8 +66,11 @@ describe('phase 4 UX accessibility contracts', () => {
     const shell = read('src/app/admin/AdminShell.tsx');
     const css = read('src/app/admin/layout.module.css');
 
-    expect(shell).toContain('aria-modal="true"');
-    expect(shell).toContain('role="dialog"');
+    expect(shell).toContain("role={isMenuOpen ? 'dialog' : undefined}");
+    expect(shell).toContain("aria-modal={isMenuOpen ? true : undefined}");
+    expect(shell).toContain('aria-expanded={isMenuOpen}');
+    expect(shell).toContain('aria-controls="admin-navigation"');
+    expect(shell).toContain("event.key !== 'Escape'");
     expect(css).toContain('min-width: 44px');
     expect(css).toContain('min-height: 44px');
   });
