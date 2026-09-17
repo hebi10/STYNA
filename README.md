@@ -138,7 +138,7 @@ functions/
 - `productService.ts`: 공개/관리자 조회 경계, fallback과 오류 정책을 조합하는 use-case 계층
 - `useProducts.ts`: `productKeys`를 기준으로 TanStack Query 캐시를 화면에 제공
 
-`productDomain.ts`와 `productMapper.ts`는 Firebase SDK에 의존하지 않도록 유지합니다. Firestore 구현이 바뀌어도 검색·정렬·추천 규칙을 독립적으로 테스트하기 위한 경계입니다. 상품 상세은 ID별 캐시를 공유하고, 목록·상세·홈 조회의 기본 staleTime은 5분으로 유지합니다. 다중 ID 조회는 현재 상세 캐시 재사용을 우선하며, 실제 read 수 측정에서 고유 ID가 지속적으로 10~20개 이상 필요한 경우 batch 조회를 검토합니다.
+`productDomain.ts`와 `productMapper.ts`는 Firebase SDK에 의존하지 않도록 유지합니다. Firestore 구현이 바뀌어도 검색·정렬·추천 규칙을 독립적으로 테스트하기 위한 경계입니다. 상품 상세는 ID별 캐시를 공유하고, 목록·상세·홈 조회의 기본 staleTime은 5분으로 유지합니다. 다중 ID 조회는 현재 상세 캐시 재사용을 우선하며, 실제 read 수 측정에서 고유 ID가 지속적으로 10~20개 이상 필요한 경우 batch 조회를 검토합니다.
 
 자세한 기준은 [docs/data-access-and-cache.md](docs/data-access-and-cache.md)를 참고하세요.
 
