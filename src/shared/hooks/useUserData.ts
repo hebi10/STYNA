@@ -34,7 +34,7 @@ async function fetchUserData(uid: string | null) {
 
 export function useUserData(uid: string | null) {
   const { data, isLoading, error } = useQuery({
-    queryKey: userKeys.detail(uid || ""),
+    queryKey: userKeys.detail(uid),
     queryFn: () => fetchUserData(uid),
     enabled: !!uid,
   });
