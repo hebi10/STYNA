@@ -423,7 +423,7 @@ function AdminInquiriesPageContent() {
               </div>
             </div>
             <div className={styles.modalActions}>
-              <button data-requires-reauth="true"
+              <button
                 onClick={() => setShowAnswerModal(false)}
                 className={styles.cancelButton}
               >

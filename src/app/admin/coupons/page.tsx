@@ -181,7 +181,7 @@ export default function AdminCouponsPage() {
     <div className={styles.container}>
       <div className={styles.header}>
         <h1>쿠폰 관리</h1>
-        <button data-requires-reauth="true" onClick={() => setShowCreateForm(true)} className={styles.createBtn}>
+        <button onClick={() => setShowCreateForm(true)} className={styles.createBtn}>
           새 쿠폰 생성
         </button>
       </div>

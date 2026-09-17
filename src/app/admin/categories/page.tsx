@@ -229,7 +229,7 @@ export default function AdminCategoriesPage() {
             <button data-requires-reauth="true" className={styles.saveButton} onClick={handleAddCategory}>
               추가
             </button>
-            <button data-requires-reauth="true" className={styles.cancelButton} onClick={() => setShowAddForm(false)}>
+            <button className={styles.cancelButton} onClick={() => setShowAddForm(false)}>
               취소
             </button>
           </div>
@@ -279,7 +279,7 @@ export default function AdminCategoriesPage() {
               >
                 수정
               </button>
-              <button 
+              <button data-requires-reauth="true"
                 className={`${styles.toggleButton} ${category.isActive ? styles.deactivate : styles.activate}`}
                 onClick={() => toggleCategoryStatus(category)}
               >
@@ -346,7 +346,7 @@ export default function AdminCategoriesPage() {
               >
                 저장
               </button>
-              <button data-requires-reauth="true" 
+              <button
                 className={styles.cancelButton}
                 onClick={() => setEditingCategory(null)}
               >

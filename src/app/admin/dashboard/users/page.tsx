@@ -341,7 +341,7 @@ export default function AdminUsersPage() {
               <option value="banned">정지</option>
             </select>
 
-            <button onClick={handleBulkPointGift} className={styles.pointButton}>
+            <button data-requires-reauth="true" onClick={handleBulkPointGift} className={styles.pointButton}>
               일괄 포인트 지급
             </button>
 
@@ -444,7 +444,7 @@ export default function AdminUsersPage() {
                     >
                       상세
                     </button>
-                    <button data-requires-reauth="true" 
+                    <button
                       className={`${styles.actionButton} ${styles.point}`}
                       onClick={() => handlePointManagement(userData)}
                     >
@@ -507,7 +507,7 @@ export default function AdminUsersPage() {
             <div className={styles.modalContent}>
               <div className={styles.modalHeader}>
                 <h3>포인트 관리 - {selectedUser.name}</h3>
-                <button 
+                <button
                   className={styles.closeButton}
                   onClick={() => setShowPointModal(false)}
                 >
@@ -560,7 +560,7 @@ export default function AdminUsersPage() {
                 </div>
               </div>
               <div className={styles.modalFooter}>
-                <button data-requires-reauth="true" 
+                <button
                   className={styles.cancelButton}
                   onClick={() => setShowPointModal(false)}
                 >
@@ -583,7 +583,7 @@ export default function AdminUsersPage() {
             <div className={styles.modalContent}>
               <div className={styles.modalHeader}>
                 <h3>사용자 상세 정보 - {selectedUser.name}</h3>
-                <button 
+                <button
                   className={styles.closeButton}
                   onClick={() => setShowUserDetail(false)}
                 >
@@ -645,7 +645,7 @@ export default function AdminUsersPage() {
                 </div>
               </div>
               <div className={styles.modalFooter}>
-                <button data-requires-reauth="true" 
+                <button
                   className={styles.cancelButton}
                   onClick={() => setShowUserDetail(false)}
                 >

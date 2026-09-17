@@ -207,15 +207,15 @@ export default function CategoryOrderPage() {
 
       <div className={styles.content}>
         <div className={styles.controls}>
-          <button 
-            onClick={resetToDefault} 
+          <button data-requires-reauth="true"
+            onClick={resetToDefault}
             className={styles.resetButton}
             disabled={saving}
           >
             기본 순서로 리셋
           </button>
-          <button 
-            onClick={saveOrder} 
+          <button data-requires-reauth="true"
+            onClick={saveOrder}
             className={styles.saveButton}
             disabled={saving}
           >

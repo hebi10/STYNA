@@ -427,7 +427,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
                     />
                   </div>
                 )}
-                <input
+                <input data-requires-reauth="true"
                   ref={detailInputRef}
                   type="file"
                   accept="image/*"
@@ -625,7 +625,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
                     />
                   </div>
                 )}
-                <input
+                <input data-requires-reauth="true"
                   ref={bannerInputRef}
                   type="file"
                   accept="image/*"
@@ -662,7 +662,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
                     />
                   </div>
                 )}
-                <input
+                <input data-requires-reauth="true"
                   ref={thumbnailInputRef}
                   type="file"
                   accept="image/*"
@@ -705,7 +705,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
                       />
                     </div>
                   )}
-                  <input
+                  <input data-requires-reauth="true"
                     ref={editorialInputRefs[role]}
                     type="file"
                     accept="image/*"

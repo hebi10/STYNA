@@ -357,7 +357,7 @@ export default function AdminQnAPage() {
               >
                 취소
               </button>
-              <button
+              <button data-requires-reauth="true"
                 onClick={handleAnswerSubmit}
                 className={styles.submitButton}
                 disabled={!answerContent.trim()}

@@ -86,7 +86,7 @@ const SizeInput = ({ onAdd, disabled }: InputProps) => {
   };
   
   return (
-    <form data-requires-reauth="true" onSubmit={handleSubmit} className={styles.addInput}>
+    <form onSubmit={handleSubmit} className={styles.addInput}>
       <input
         type="text"
         value={value}
@@ -118,7 +118,7 @@ const ColorInput = ({ onAdd, disabled }: InputProps) => {
   };
   
   return (
-    <form data-requires-reauth="true" onSubmit={handleSubmit} className={styles.addInput}>
+    <form onSubmit={handleSubmit} className={styles.addInput}>
       <input
         type="text"
         value={value}
@@ -150,7 +150,7 @@ const TagInput = ({ onAdd, disabled }: InputProps) => {
   };
   
   return (
-    <form data-requires-reauth="true" onSubmit={handleSubmit} className={styles.addInput}>
+    <form onSubmit={handleSubmit} className={styles.addInput}>
       <input
         type="text"
         value={value}
@@ -725,7 +725,7 @@ function EditProductFormContent({ product, onSave, onCancel }: EditProductFormPr
         <h3 className={styles.sectionTitle}>상품 이미지</h3>
         
         <div className={styles.imageUpload}>
-          <input
+          <input data-requires-reauth="true"
             type="file"
             id="imageUpload"
             multiple
@@ -838,7 +838,7 @@ function EditProductFormContent({ product, onSave, onCancel }: EditProductFormPr
 
       {/* 액션 버튼 */}
       <div className={styles.actions}>
-        <button data-requires-reauth="true"
+        <button
           type="button"
           onClick={onCancel}
           className={styles.cancelButton}
