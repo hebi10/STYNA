@@ -48,6 +48,7 @@ yarn-error.log*
 .pnpm-debug.log*
 *.log
 /artifacts/
+/.playwright-cli/
 /tmp/
 /tmp-edge-profile-single/
 /.gstack/qa-reports/
