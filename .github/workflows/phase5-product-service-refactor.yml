@@ -91,5 +91,6 @@ jobs:
           git add src/shared/services/productService.ts
           git diff --cached --check
           git commit -m "refactor: separate product data responsibilities"
-          git pull --rebase origin chore/styna-improvement-phase-5
+          git restore scripts/phase5-product-service-refactor.js
+          git diff --exit-code
           git push origin HEAD:chore/styna-improvement-phase-5
