@@ -1,0 +1,123 @@
+name: One-time Firebase production deploy
+
+on:
+  push:
+    branches:
+      - chore/styna-production-deploy
+    paths:
+      - .github/workflows/one-time-firebase-deploy.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: styna-firebase-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+    env:
+      FIREBASE_SERVICE_ACCOUNT_HEBIMALL: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_HEBIMALL }}
+      FIREBASE_SERVICE_ACCOUNT_STYNA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STYNA }}
+      FIREBASE_SERVICE_ACCOUNT_GENERIC: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          npm ci
+          npm ci --prefix functions
+          npm install --global firebase-tools
+
+      - name: Configure Firebase authentication
+        shell: pwsh
+        run: |
+          $serviceAccount = @(
+            $env:FIREBASE_SERVICE_ACCOUNT_HEBIMALL,
+            $env:FIREBASE_SERVICE_ACCOUNT_STYNA,
+            $env:FIREBASE_SERVICE_ACCOUNT_GENERIC
+          ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 1
+
+          if ($serviceAccount) {
+            $credentialPath = Join-Path $env:RUNNER_TEMP 'firebase-service-account.json'
+            [System.IO.File]::WriteAllText($credentialPath, $serviceAccount)
+            "GOOGLE_APPLICATION_CREDENTIALS=$credentialPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            Write-Host 'Using Firebase service account authentication.'
+          } elseif (-not [string]::IsNullOrWhiteSpace($env:FIREBASE_TOKEN)) {
+            Write-Host 'Using FIREBASE_TOKEN authentication.'
+          } else {
+            throw 'No Firebase deployment credential is configured. Expected FIREBASE_SERVICE_ACCOUNT_HEBIMALL (preferred) or FIREBASE_TOKEN.'
+          }
+
+      - name: Resolve production Firebase web config
+        shell: pwsh
+        run: |
+          function Convert-FirebaseJson([string]$raw) {
+            $start = $raw.IndexOf('{')
+            if ($start -lt 0) {
+              throw "Firebase CLI did not return JSON: $raw"
+            }
+            return ($raw.Substring($start) | ConvertFrom-Json)
+          }
+
+          $appsRaw = (& firebase apps:list --project hebimall --json | Out-String)
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Unable to list Firebase apps for hebimall.'
+          }
+          $apps = Convert-FirebaseJson $appsRaw
+          $webApps = @($apps.result | Where-Object { $_.platform -eq 'WEB' })
+          if ($webApps.Count -eq 0) {
+            throw 'No Firebase WEB app is registered in hebimall.'
+          }
+
+          $webApp = $webApps | Where-Object { $_.displayName -eq 'hebimall' } | Select-Object -First 1
+          if (-not $webApp) {
+            $webApp = $webApps | Select-Object -First 1
+          }
+
+          $configRaw = (& firebase apps:sdkconfig WEB $webApp.appId --project hebimall --json | Out-String)
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Unable to resolve Firebase WEB SDK configuration.'
+          }
+          $config = Convert-FirebaseJson $configRaw
+          $sdk = $config.result.sdkConfig
+
+          $values = [ordered]@{
+            NEXT_PUBLIC_FIREBASE_API_KEY = $sdk.apiKey
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN = $sdk.authDomain
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID = $sdk.projectId
+            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET = $sdk.storageBucket
+            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = $sdk.messagingSenderId
+            NEXT_PUBLIC_FIREBASE_APP_ID = $sdk.appId
+            NEXT_PUBLIC_ENABLE_DEMO_LOGIN = 'true'
+          }
+
+          foreach ($entry in $values.GetEnumerator()) {
+            if ([string]::IsNullOrWhiteSpace([string]$entry.Value)) {
+              throw "Missing Firebase web config value: $($entry.Key)"
+            }
+            "$($entry.Key)=$($entry.Value)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+
+          Write-Host "Resolved Firebase WEB app: $($webApp.appId)"
+
+      - name: Verify deployment target
+        shell: pwsh
+        run: |
+          firebase use hebimall
+          firebase projects:list --json | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Firebase authentication or project access verification failed.'
+          }
+
+      - name: Deploy Firebase production
+        shell: pwsh
+        run: firebase deploy --project hebimall --non-interactive
