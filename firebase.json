@@ -58,6 +58,10 @@
         "function": "chat"
       },
       {
+        "source": "/api/demo-login",
+        "function": "demoLogin"
+      },
+      {
         "source": "/api/admin/users",
         "function": "adminUsers"
       },
