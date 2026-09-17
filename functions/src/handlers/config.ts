@@ -1,4 +1,5 @@
 import { onRequest } from "firebase-functions/v2/https";
+import { ALLOWED_WEB_ORIGINS } from "../config/httpPolicy";
 import { getEnvironmentConfig, getFirebaseConfig } from "../config/environment";
 
 /**
@@ -9,12 +10,7 @@ import { getEnvironmentConfig, getFirebaseConfig } from "../config/environment";
  */
 export const config = onRequest(
   {
-    cors: [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "https://hebimall.firebaseapp.com",
-      "https://hebimall.web.app",
-    ],
+    cors: [...ALLOWED_WEB_ORIGINS],
     region: "us-central1",
   },
   async (req, res) => {

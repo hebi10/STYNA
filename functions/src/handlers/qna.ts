@@ -1,4 +1,5 @@
 import { onRequest } from "firebase-functions/v2/https";
+import { ALLOWED_WEB_ORIGINS } from "../config/httpPolicy";
 import * as admin from "firebase-admin";
 import type { Response } from "express";
 import {
@@ -31,7 +32,7 @@ function applyNoStoreHeaders(res: Response): void {
 
 export const qna = onRequest(
   {
-    cors: true,
+    cors: [...ALLOWED_WEB_ORIGINS],
     region: "us-central1",
     memory: "256MiB",
     timeoutSeconds: 60,

@@ -1,4 +1,5 @@
 import { onRequest } from "firebase-functions/v2/https";
+import { ALLOWED_WEB_ORIGINS } from "../config/httpPolicy";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import type { Response } from "express";
 import {
@@ -17,7 +18,7 @@ function getDb() {
 
 export const coupon = onRequest(
   {
-    cors: true,
+    cors: [...ALLOWED_WEB_ORIGINS],
     region: "us-central1",
     memory: "256MiB",
     timeoutSeconds: 60,
@@ -83,7 +84,7 @@ export const coupon = onRequest(
       console.error("Coupon API error:", error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : "Internal server error",
+        error: "Internal server error",
       });
     }
   }

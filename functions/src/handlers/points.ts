@@ -1,4 +1,5 @@
 import { onRequest } from "firebase-functions/v2/https";
+import { ALLOWED_WEB_ORIGINS } from "../config/httpPolicy";
 import * as admin from "firebase-admin";
 import type { Response } from "express";
 import { verifyAuthContext, requireRecentAdmin, AuthError } from "../utils/auth";
@@ -12,7 +13,7 @@ import {
 
 export const points = onRequest(
   {
-    cors: true,
+    cors: [...ALLOWED_WEB_ORIGINS],
     region: "us-central1",
     memory: "256MiB",
     timeoutSeconds: 60,
@@ -81,7 +82,7 @@ export const points = onRequest(
       console.error("Points API error:", error);
       res.status(500).json({
         success: false,
-        error: error instanceof Error ? error.message : "Internal server error",
+        error: "Internal server error",
       });
     }
   }

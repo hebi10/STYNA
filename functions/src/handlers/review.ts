@@ -1,4 +1,5 @@
 import { onRequest } from "firebase-functions/v2/https";
+import { ALLOWED_WEB_ORIGINS } from "../config/httpPolicy";
 import * as admin from "firebase-admin";
 import {
   buildReviewDocumentId,
@@ -129,7 +130,7 @@ async function listEligibleOptions(authContext: AuthContext, productId: string) 
 
 export const review = onRequest(
   {
-    cors: true,
+    cors: [...ALLOWED_WEB_ORIGINS],
     region: "us-central1",
     memory: "256MiB",
     timeoutSeconds: 60,

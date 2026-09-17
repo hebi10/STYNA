@@ -1,5 +1,6 @@
 import { getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
+import { ALLOWED_WEB_ORIGINS } from "../config/httpPolicy";
 import { getMenuResponse, getAIFallbackResponse } from "../chatResponses";
 import { buildChatPolicyPrompt } from "../commercePolicy";
 import { secrets } from "../config/environment";
@@ -57,12 +58,7 @@ const CHAT_SESSION_PATTERN = /^[A-Za-z0-9._-]{20,128}$/;
  */
 export const chat = onRequest(
   {
-    cors: [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "https://hebimall.firebaseapp.com",
-      "https://hebimall.web.app",
-    ],
+    cors: [...ALLOWED_WEB_ORIGINS],
     region: "us-central1",
     secrets: [secrets.OPENAI_API_KEY, secrets.CHAT_RATE_LIMIT_SALT],
   },
