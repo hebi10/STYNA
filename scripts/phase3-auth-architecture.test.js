@@ -52,4 +52,20 @@ describe('phase 3 auth architecture contracts', () => {
     expect(shell).toContain('data-requires-reauth');
     expect(shell).not.toContain('저장|수정|삭제|등록|추가|발급|승인|취소|상태 변경|답변|활성|비활성|권한|포인트|순서');
   });
+
+  test.each([
+    'src/app/admin/categories/page.tsx',
+    'src/app/admin/dashboard/products/page.tsx',
+    'src/app/admin/dashboard/products/_components/EditProductForm.tsx',
+    'src/app/admin/dashboard/orders/page.tsx',
+    'src/app/admin/dashboard/users/page.tsx',
+    'src/app/admin/coupons/page.tsx',
+    'src/app/admin/inquiries/page.tsx',
+    'src/app/admin/featured-products/page.tsx',
+    'src/app/admin/events/_components/AdminEventList.tsx',
+    'src/app/admin/events/_components/EventForm.tsx',
+    'src/app/admin/reviews/_components/AdminReviewList.tsx',
+  ])('%s marks mutation controls with explicit reauthentication intent', (relativePath) => {
+    expect(read(relativePath)).toContain('data-requires-reauth="true"');
+  });
 });
