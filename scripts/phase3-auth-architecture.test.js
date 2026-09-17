@@ -27,6 +27,20 @@ describe('phase 3 auth architecture contracts', () => {
     expect(infoEdit).not.toMatch(/queryKey:\s*\[\s*["']user["']/);
   });
 
+  test('logout has an explicit authenticated-user cache cleanup boundary', () => {
+    const cacheBoundary = read('src/shared/utils/authQueryCache.ts');
+    const authProvider = read('src/context/authProvider.tsx');
+
+    expect(cacheBoundary).toContain('clearAuthenticatedUserCache');
+    expect(cacheBoundary).toContain('userKeys.detail(userId)');
+    expect(cacheBoundary).toContain('cartKeys');
+    expect(cacheBoundary).toContain('pointKeys');
+    expect(cacheBoundary).toContain('orderKeys');
+    expect(cacheBoundary).toContain('activityKeys');
+    expect(cacheBoundary).toContain('couponKeys');
+    expect(authProvider).toContain('clearAuthenticatedUserCache');
+  });
+
   test('admin write reauthentication uses explicit intent instead of button-label inference', () => {
     const shell = read('src/app/admin/AdminShell.tsx');
 
