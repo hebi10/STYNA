@@ -37,12 +37,34 @@ jobs:
           NODE
       - name: Apply guarded refactor
         run: node scripts/phase5-product-service-refactor.js
-      - name: Inspect transformed syntax regions
+      - name: Normalize preserved range sentinels
         run: |
-          for range in '145,175' '245,275' '315,395' '455,510' '760,820'; do
-            echo "===== ${range} ====="
-            nl -ba src/shared/services/productService.ts | sed -n "${range}p"
-          done
+          node - <<'NODE'
+          const fs = require('fs');
+          const file = 'src/shared/services/productService.ts';
+          let source = fs.readFileSync(file, 'utf8');
+          const replacements = [
+            ['private static async queryProductsWithClientFallback  private static async queryProductsWithClientFallback', 'private static async queryProductsWithClientFallback'],
+            ['private static toBrandSummaryFromProductGroups  private static toBrandSummaryFromProductGroups', 'private static toBrandSummaryFromProductGroups'],
+            ['let cursor:      let cursor:', 'let cursor:'],
+            ['if (docs.length === 0) {        if (docs.length === 0) {', 'if (docs.length === 0) {'],
+            ['static async updateProduct(productId: string, updates: Partial<Product>): Promise<Product> {  static async updateProduct(productId: string, updates: Partial<Product>): Promise<Product> {', 'static async updateProduct(productId: string, updates: Partial<Product>): Promise<Product> {'],
+            ['static async deleteProduct(productId: string): Promise<void> {  static async deleteProduct(productId: string): Promise<void> {', 'static async deleteProduct(productId: string): Promise<void> {'],
+            ['static async getProductById(productId: string): Promise<Product | null> {  static async getProductById(productId: string): Promise<Product | null> {', 'static async getProductById(productId: string): Promise<Product | null> {'],
+            ['static async getPublicProductsByIds(productIds: string[]): Promise<Product[]> {  static async getPublicProductsByIds(productIds: string[]): Promise<Product[]> {', 'static async getPublicProductsByIds(productIds: string[]): Promise<Product[]> {'],
+            ['static async getBrands(): Promise<string[]> {  static async getBrands(): Promise<string[]> {', 'static async getBrands(): Promise<string[]> {'],
+            ['if (summaries.length > 0) {      if (summaries.length > 0) {', 'if (summaries.length > 0) {'],
+            ['cursor: QueryDocumentSnapshot<DocumentData>;', 'cursor: ProductDocumentCursor;'],
+          ];
+          for (const [from, to] of replacements) {
+            if (!source.includes(from)) throw new Error(`Expected transformed marker not found: ${from}`);
+            source = source.split(from).join(to);
+          }
+          const reviewFields = `const SERVER_OWNED_REVIEW_FIELDS = [\n  'rating',\n  'reviewCount',\n  'reviewSummary',\n  'reviewStatsEventTime',\n  'reviewStatsRunToken',\n  'reviewStatsUpdatedAt',\n  'reviewStatsVersion',\n] as const;\n\n`;
+          if (!source.includes(reviewFields)) throw new Error('legacy review field marker not found');
+          source = source.replace(reviewFields, '');
+          fs.writeFileSync(file, source);
+          NODE
       - name: Typecheck
         run: npm run typecheck
       - name: Lint affected modules
