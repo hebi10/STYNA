@@ -100,14 +100,14 @@ describe('phase 3 auth architecture contracts', () => {
     expect(source).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}onClick=\{onCancel\}/);
   });
 
-  test('event image uploads and persisted submit require reauthentication', () => {
+  test('all event image uploads and persisted submit require reauthentication', () => {
     const source = read('src/app/admin/events/_components/EventForm.tsx');
-    const guardedFileInputs = source.match(/<(?:input)[\s\S]{0,320}?data-requires-reauth="true"[\s\S]{0,320}?type="file"|<(?:input)[\s\S]{0,320}?type="file"[\s\S]{0,320}?data-requires-reauth="true"/g) || [];
+    const guardedFileInputs = source.match(/<input[\s\S]{0,320}?data-requires-reauth="true"[\s\S]{0,320}?type="file"|<input[\s\S]{0,320}?type="file"[\s\S]{0,320}?data-requires-reauth="true"/g) || [];
 
     expect(source).toMatch(/<form\s+data-requires-reauth="true"\s+onSubmit=\{handleSubmit\}/);
-    expect(source).toContain("handleImageUpload(e.target.files[0], 'thumbnail')");
-    expect(source).toContain("handleImageUpload(e.target.files[0], 'content')");
-    expect(guardedFileInputs.length).toBeGreaterThanOrEqual(2);
+    expect(source).toContain("handleImageUpload(file, 'detail')");
+    expect(source).toContain('handleEditorialImageUpload');
+    expect(guardedFileInputs.length).toBeGreaterThanOrEqual(4);
   });
 
   test('user management guards real writes but not read/open/close controls', () => {
@@ -123,8 +123,10 @@ describe('phase 3 auth architecture contracts', () => {
   test('modal entry and cancel controls do not require write reauthentication', () => {
     const coupons = read('src/app/admin/coupons/page.tsx');
     const inquiries = read('src/app/admin/inquiries/page.tsx');
+    const eventForm = read('src/app/admin/events/_components/EventForm.tsx');
 
     expect(coupons).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}setShowCreateForm\(true\)/);
     expect(inquiries).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}setShowAnswerModal\(false\)/);
+    expect(eventForm).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}handleCancel/);
   });
 });
