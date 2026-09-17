@@ -1,0 +1,42 @@
+.region {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  z-index: 5000;
+  width: min(calc(100vw - 32px), 520px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-raised);
+  color: var(--black);
+  box-shadow: none;
+  pointer-events: auto;
+}
+
+.error {
+  border-color: var(--error);
+}
+
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 20px;
+  cursor: pointer;
+}
