@@ -37,6 +37,12 @@ jobs:
           NODE
       - name: Apply guarded refactor
         run: node scripts/phase5-product-service-refactor.js
+      - name: Inspect transformed syntax regions
+        run: |
+          for range in '145,175' '245,275' '315,395' '455,510' '760,820'; do
+            echo "===== ${range} ====="
+            nl -ba src/shared/services/productService.ts | sed -n "${range}p"
+          done
       - name: Typecheck
         run: npm run typecheck
       - name: Lint affected modules
