@@ -1,0 +1,115 @@
+name: Phase 3 Admin Write Intent Migration
+
+on:
+  push:
+    branches:
+      - chore/styna-improvement-phase-3
+    paths:
+      - .github/workflows/phase3-admin-write-intent-migration.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/styna-improvement-phase-3
+      - name: Mark admin mutation controls
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          const files = [
+            'src/app/admin/categories/page.tsx',
+            'src/app/admin/dashboard/products/page.tsx',
+            'src/app/admin/dashboard/products/_components/EditProductForm.tsx',
+            'src/app/admin/dashboard/orders/page.tsx',
+            'src/app/admin/dashboard/users/page.tsx',
+            'src/app/admin/coupons/page.tsx',
+            'src/app/admin/inquiries/page.tsx',
+            'src/app/admin/featured-products/page.tsx',
+            'src/app/admin/events/_components/AdminEventList.tsx',
+            'src/app/admin/events/_components/EventForm.tsx',
+            'src/app/admin/reviews/_components/AdminReviewList.tsx',
+          ];
+
+          const mutationPattern = /(?:handle(?:Save|Delete|Add|Create|Update|Submit|Status|Role|Point|Issue|Answer|Activate|Deactivate|Publish|Approve|Cancel|ToggleStatus|ToggleActive)|(?:delete|update|create|issue|publish|approve|cancel)[A-Z]\w*)/;
+
+          function findTagEnd(text, start) {
+            let braceDepth = 0;
+            let quote = null;
+            let escaped = false;
+            for (let index = start; index < text.length; index += 1) {
+              const char = text[index];
+              if (quote) {
+                if (escaped) {
+                  escaped = false;
+                } else if (char === '\\') {
+                  escaped = true;
+                } else if (char === quote) {
+                  quote = null;
+                }
+                continue;
+              }
+              if (char === '"' || char === "'" || char === '`') {
+                quote = char;
+                continue;
+              }
+              if (char === '{') braceDepth += 1;
+              if (char === '}') braceDepth = Math.max(0, braceDepth - 1);
+              if (char === '>' && braceDepth === 0) return index;
+            }
+            return -1;
+          }
+
+          function annotate(text) {
+            const tagPattern = /<(button|select|form)\b/g;
+            let cursor = 0;
+            let count = 0;
+            let output = '';
+            let match;
+
+            while ((match = tagPattern.exec(text)) !== null) {
+              const start = match.index;
+              const end = findTagEnd(text, start);
+              if (end < 0) break;
+              const tag = text.slice(start, end + 1);
+              const shouldAnnotate = !tag.includes('data-requires-reauth=')
+                && /on(?:Click|Change|Submit)=/.test(tag)
+                && mutationPattern.test(tag);
+
+              output += text.slice(cursor, start);
+              if (shouldAnnotate) {
+                output += tag.replace(`<${match[1]}`, `<${match[1]} data-requires-reauth="true"`);
+                count += 1;
+              } else {
+                output += tag;
+              }
+              cursor = end + 1;
+              tagPattern.lastIndex = end + 1;
+            }
+
+            output += text.slice(cursor);
+            return { output, count };
+          }
+
+          for (const file of files) {
+            const text = fs.readFileSync(file, 'utf8');
+            const { output, count } = annotate(text);
+            if (count === 0 && !text.includes('data-requires-reauth="true"')) {
+              throw new Error(`No admin write intent marker could be added to ${file}`);
+            }
+            fs.writeFileSync(file, output);
+            console.log(`${file}: ${count} marker(s) added`);
+          }
+          NODE
+      - name: Commit migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/admin
+          git commit -m "refactor: mark admin mutation controls explicitly"
+          git push origin HEAD:chore/styna-improvement-phase-3
