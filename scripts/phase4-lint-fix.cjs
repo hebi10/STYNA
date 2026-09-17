@@ -15,7 +15,7 @@ function replaceExactly(relativePath, search, replacement) {
 
 replaceExactly(
   'src/app/orders/cart/page.tsx',
-  "import Button from '../../_components/Button';\n",
+  'import Button from "../../_components/Button";\n',
   '',
 );
 
