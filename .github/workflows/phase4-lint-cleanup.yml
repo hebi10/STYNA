@@ -1,0 +1,36 @@
+name: Phase 4 Lint Cleanup
+
+on:
+  push:
+    branches:
+      - chore/styna-improvement-phase-4
+    paths:
+      - .github/workflows/phase4-lint-cleanup.yml
+      - scripts/phase4-lint-fix.cjs
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/styna-improvement-phase-4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply lint cleanup
+        run: node scripts/phase4-lint-fix.cjs
+      - name: Verify diff
+        run: |
+          git diff --check
+          git diff --exit-code --quiet && { echo "No cleanup changes produced"; exit 1; } || true
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/orders/cart/page.tsx src/app/products/_components/ProductDetailClient.tsx
+          git commit -m "fix: clear phase 4 lint warnings"
+          git push origin HEAD:chore/styna-improvement-phase-4
