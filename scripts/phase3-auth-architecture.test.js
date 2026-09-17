@@ -92,11 +92,22 @@ describe('phase 3 auth architecture contracts', () => {
   test('product form guards storage and save writes but not local-only subforms or cancel', () => {
     const source = read('src/app/admin/dashboard/products/_components/EditProductForm.tsx');
 
-    expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}handleSubmit/);
-    expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}handleImageUpload/);
+    expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}onSubmit=\{handleSubmit\}[\s\S]{0,180}className=\{styles\.form\}/);
+    expect(source).toMatch(/type="file"[\s\S]{0,220}data-requires-reauth="true"|data-requires-reauth="true"[\s\S]{0,220}type="file"/);
+    expect(source).toContain('onUpload={handleImageUpload}');
     expect(source).toMatch(/data-requires-reauth="true"[\s\S]{0,180}handleImageDelete/);
     expect(source).not.toMatch(/data-requires-reauth="true" onSubmit=\{handleSubmit\} className=\{styles\.addInput\}/);
     expect(source).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}onClick=\{onCancel\}/);
+  });
+
+  test('event image uploads and persisted submit require reauthentication', () => {
+    const source = read('src/app/admin/events/_components/EventForm.tsx');
+    const guardedFileInputs = source.match(/<(?:input)[\s\S]{0,320}?data-requires-reauth="true"[\s\S]{0,320}?type="file"|<(?:input)[\s\S]{0,320}?type="file"[\s\S]{0,320}?data-requires-reauth="true"/g) || [];
+
+    expect(source).toMatch(/<form\s+data-requires-reauth="true"\s+onSubmit=\{handleSubmit\}/);
+    expect(source).toContain("handleImageUpload(e.target.files[0], 'thumbnail')");
+    expect(source).toContain("handleImageUpload(e.target.files[0], 'content')");
+    expect(guardedFileInputs.length).toBeGreaterThanOrEqual(2);
   });
 
   test('user management guards real writes but not read/open/close controls', () => {
