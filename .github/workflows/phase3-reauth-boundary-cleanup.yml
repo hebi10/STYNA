@@ -148,14 +148,13 @@ jobs:
             if (tag.includes('handleCancel')) return 'remove';
             return null;
           });
-          if (eventForm.added !== 2) throw new Error('Expected two event image upload markers');
+          if (eventForm.added !== 4) throw new Error('Expected four event image upload markers');
 
-          // Final structural guards before committing.
           const checks = [
-            ['src/app/admin/categories/page.tsx', 'toggleCategoryStatus(category)', true],
-            ['src/app/admin/category-order/page.tsx', 'saveOrder', true],
-            ['src/app/admin/qna/page.tsx', 'handleAnswerSubmit', true],
-            ['src/app/admin/dashboard/users/page.tsx', 'handleBulkPointGift', true],
+            ['src/app/admin/categories/page.tsx', 'toggleCategoryStatus(category)'],
+            ['src/app/admin/category-order/page.tsx', 'saveOrder'],
+            ['src/app/admin/qna/page.tsx', 'handleAnswerSubmit'],
+            ['src/app/admin/dashboard/users/page.tsx', 'handleBulkPointGift'],
           ];
           for (const [file, token] of checks) {
             const source = fs.readFileSync(file, 'utf8');
