@@ -1,0 +1,51 @@
+name: Phase 5 ProductService refactor
+
+on:
+  push:
+    branches:
+      - chore/styna-improvement-phase-5
+    paths:
+      - .github/workflows/phase5-product-service-refactor.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refactor-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/styna-improvement-phase-5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm ci --prefix functions
+      - name: Apply guarded refactor
+        run: node scripts/phase5-product-service-refactor.js
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint affected modules
+        run: >-
+          npx eslint
+          src/shared/services/productService.ts
+          src/shared/services/productDomain.ts
+          src/shared/services/productMapper.ts
+          src/shared/services/productRepository.ts
+          src/shared/services/productService.architecture.test.ts
+          --max-warnings=0
+      - name: Verify product service tests
+        run: >-
+          npm test -- --runInBand
+          src/shared/services/productService.test.ts
+          src/shared/services/productService.architecture.test.ts
+      - name: Commit refactor
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/shared/services/productService.ts
+          git diff --cached --check
+          git commit -m "refactor: separate product data responsibilities"
+          git push origin HEAD:chore/styna-improvement-phase-5
