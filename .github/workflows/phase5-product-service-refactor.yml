@@ -55,6 +55,7 @@ jobs:
             ['static async getBrands(): Promise<string[]> {  static async getBrands(): Promise<string[]> {', 'static async getBrands(): Promise<string[]> {'],
             ['if (summaries.length > 0) {      if (summaries.length > 0) {', 'if (summaries.length > 0) {'],
             ['cursor: QueryDocumentSnapshot<DocumentData>;', 'cursor: ProductDocumentCursor;'],
+            ["  type ClientProductSortValue,\n  type FirestoreTimestampSortValue,\n", ''],
           ];
           for (const [from, to] of replacements) {
             if (source.includes(from)) {
