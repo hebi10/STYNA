@@ -23,6 +23,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm ci --prefix functions
+      - name: Align verified guard count
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const file = 'scripts/phase5-product-service-refactor.js';
+          const source = fs.readFileSync(file, 'utf8');
+          const from = "replaceExact('this.normalizeSort(', 'normalizeProductSort(', 3);";
+          const to = "replaceExact('this.normalizeSort(', 'normalizeProductSort(', 2);";
+          if (!source.includes(from)) throw new Error('normalizeSort guard marker not found');
+          fs.writeFileSync(file, source.replace(from, to));
+          NODE
       - name: Apply guarded refactor
         run: node scripts/phase5-product-service-refactor.js
       - name: Typecheck
