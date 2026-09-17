@@ -375,7 +375,7 @@ function AdminInquiriesPageContent() {
                 {inquiry.answer ? '답변 수정' : '답변하기'}
               </button>
               
-              <select
+              <select data-requires-reauth="true"
                 value={inquiry.status}
                 onChange={(e) => handleStatusChange(inquiry.id, e.target.value as Inquiry['status'])}
                 className={styles.statusSelect}
@@ -423,13 +423,13 @@ function AdminInquiriesPageContent() {
               </div>
             </div>
             <div className={styles.modalActions}>
-              <button
+              <button data-requires-reauth="true"
                 onClick={() => setShowAnswerModal(false)}
                 className={styles.cancelButton}
               >
                 취소
               </button>
-              <button
+              <button data-requires-reauth="true"
                 onClick={handleAnswerSubmit}
                 className={styles.submitButton}
                 disabled={!answerContent.trim()}

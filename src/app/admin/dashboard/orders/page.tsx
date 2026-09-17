@@ -354,7 +354,7 @@ export default function AdminOrdersPage() {
                         상세
                       </button>
                       {order.status === "pending" && (
-                        <button 
+                        <button data-requires-reauth="true" 
                           className={styles.actionButton}
                           onClick={() => handleStatusChange(order.id, "confirmed")}
                         >
@@ -362,7 +362,7 @@ export default function AdminOrdersPage() {
                         </button>
                       )}
                       {order.status === "confirmed" && (
-                        <button 
+                        <button data-requires-reauth="true" 
                           className={styles.actionButton}
                           onClick={() => handleStatusChange(order.id, "shipped")}
                         >
@@ -370,14 +370,14 @@ export default function AdminOrdersPage() {
                         </button>
                       )}
                       {order.status === "shipped" && (
-                        <button 
+                        <button data-requires-reauth="true" 
                           className={styles.actionButton}
                           onClick={() => handleStatusChange(order.id, "delivered")}
                         >
                           완료
                         </button>
                       )}
-                      <button 
+                      <button data-requires-reauth="true" 
                         className={`${styles.actionButton} ${styles.danger}`}
                         onClick={() => handleStatusChange(order.id, "cancelled")}
                         disabled={order.status === "delivered" || order.status === "cancelled"}

@@ -225,7 +225,7 @@ export default function AdminEventList() {
         </label>
 
         <div className={styles.actionButtons}>
-          <Button
+          <Button data-requires-reauth="true"
             variant="outline"
             onClick={handleDeleteEvents}
             disabled={selectedEvents.length === 0}
@@ -296,7 +296,7 @@ export default function AdminEventList() {
                   <Link href={`/admin/events/${event.id}/edit`}>
                     <Button variant="outline" size="sm">수정</Button>
                   </Link>
-                  <Button
+                  <Button data-requires-reauth="true"
                     variant={event.isActive ? "outline" : "primary"}
                     size="sm"
                     onClick={() => handleToggleActive(event.id)}

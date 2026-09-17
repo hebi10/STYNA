@@ -444,28 +444,28 @@ export default function AdminUsersPage() {
                     >
                       상세
                     </button>
-                    <button 
+                    <button data-requires-reauth="true" 
                       className={`${styles.actionButton} ${styles.point}`}
                       onClick={() => handlePointManagement(userData)}
                     >
                       포인트
                     </button>
                     {userData.status === "active" ? (
-                      <button 
+                      <button data-requires-reauth="true" 
                         className={`${styles.actionButton} ${styles.warning}`}
                         onClick={() => handleStatusChange(userData.id, "banned")}
                       >
                         정지
                       </button>
                     ) : userData.status === "banned" ? (
-                      <button 
+                      <button data-requires-reauth="true" 
                         className={styles.actionButton}
                         onClick={() => handleStatusChange(userData.id, "active")}
                       >
                         활성화
                       </button>
                     ) : (
-                      <button 
+                      <button data-requires-reauth="true" 
                         className={styles.actionButton}
                         onClick={() => handleStatusChange(userData.id, "active")}
                       >
@@ -473,21 +473,21 @@ export default function AdminUsersPage() {
                       </button>
                     )}
                     {userData.role === "user" ? (
-                      <button 
+                      <button data-requires-reauth="true" 
                         className={styles.actionButton}
                         onClick={() => handleRoleChange(userData.id, "admin")}
                       >
                         관리자화
                       </button>
                     ) : (
-                      <button 
+                      <button data-requires-reauth="true" 
                         className={styles.actionButton}
                         onClick={() => handleRoleChange(userData.id, "user")}
                       >
                         사용자화
                       </button>
                     )}
-                    <button 
+                    <button data-requires-reauth="true" 
                       className={`${styles.actionButton} ${styles.danger}`}
                       onClick={() => handleDeleteUser(userData.id)}
                     >
@@ -560,13 +560,13 @@ export default function AdminUsersPage() {
                 </div>
               </div>
               <div className={styles.modalFooter}>
-                <button 
+                <button data-requires-reauth="true" 
                   className={styles.cancelButton}
                   onClick={() => setShowPointModal(false)}
                 >
                   취소
                 </button>
-                <button 
+                <button data-requires-reauth="true" 
                   className={styles.confirmButton}
                   onClick={handlePointUpdate}
                 >
@@ -645,7 +645,7 @@ export default function AdminUsersPage() {
                 </div>
               </div>
               <div className={styles.modalFooter}>
-                <button 
+                <button data-requires-reauth="true" 
                   className={styles.cancelButton}
                   onClick={() => setShowUserDetail(false)}
                 >

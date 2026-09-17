@@ -329,7 +329,7 @@ export default function AdminProductsPage() {
                   </span>
                 </td>
                 <td>
-                  <select
+                  <select data-requires-reauth="true"
                     value={product.status || 'active'}
                     onChange={(e) => handleStatusChange(product, e.target.value as 'active' | 'inactive' | 'draft')}
                     className={styles.statusSelect}
@@ -351,7 +351,7 @@ export default function AdminProductsPage() {
                     >
                       수정
                     </Link>
-                    <button
+                    <button data-requires-reauth="true"
                       onClick={() => handleDelete(product.id)}
                       className={styles.deleteButton}
                     >

@@ -226,10 +226,10 @@ export default function AdminCategoriesPage() {
             />
           </div>
           <div className={styles.formActions}>
-            <button className={styles.saveButton} onClick={handleAddCategory}>
+            <button data-requires-reauth="true" className={styles.saveButton} onClick={handleAddCategory}>
               추가
             </button>
-            <button className={styles.cancelButton} onClick={() => setShowAddForm(false)}>
+            <button data-requires-reauth="true" className={styles.cancelButton} onClick={() => setShowAddForm(false)}>
               취소
             </button>
           </div>
@@ -285,7 +285,7 @@ export default function AdminCategoriesPage() {
               >
                 {category.isActive ? '비활성화' : '활성화'}
               </button>
-              <button 
+              <button data-requires-reauth="true" 
                 className={styles.deleteButton}
                 onClick={() => handleDeleteCategory(category.id)}
               >
@@ -340,13 +340,13 @@ export default function AdminCategoriesPage() {
               />
             </div>
             <div className={styles.modalActions}>
-              <button 
+              <button data-requires-reauth="true" 
                 className={styles.saveButton}
                 onClick={() => handleSaveCategory(editingCategory)}
               >
                 저장
               </button>
-              <button 
+              <button data-requires-reauth="true" 
                 className={styles.cancelButton}
                 onClick={() => setEditingCategory(null)}
               >

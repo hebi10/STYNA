@@ -195,7 +195,7 @@ export default function AdminReviewList() {
         </label>
 
         <div className={styles.actionButtons}>
-          <Button
+          <Button data-requires-reauth="true"
             variant="outline"
             onClick={handleDeleteReviews}
             disabled={selectedReviews.length === 0}

@@ -333,7 +333,7 @@ export default function EventForm({ event, isEdit = false }: Props) {
 
   return (
     <div className={styles.container}>
-      <form onSubmit={handleSubmit} className={styles.form}>
+      <form data-requires-reauth="true" onSubmit={handleSubmit} className={styles.form}>
         {/* 기본 정보 */}
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>기본 정보</h3>

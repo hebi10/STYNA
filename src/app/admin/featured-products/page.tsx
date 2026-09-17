@@ -408,7 +408,7 @@ export default function FeaturedProductManagePage() {
           >
             자동 선택 (높은 평점 순)
           </button>
-          <button
+          <button data-requires-reauth="true"
             onClick={handleSave}
             disabled={saving}
             className={styles.saveButton}

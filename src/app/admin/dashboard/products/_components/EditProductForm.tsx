@@ -86,7 +86,7 @@ const SizeInput = ({ onAdd, disabled }: InputProps) => {
   };
   
   return (
-    <form onSubmit={handleSubmit} className={styles.addInput}>
+    <form data-requires-reauth="true" onSubmit={handleSubmit} className={styles.addInput}>
       <input
         type="text"
         value={value}
@@ -118,7 +118,7 @@ const ColorInput = ({ onAdd, disabled }: InputProps) => {
   };
   
   return (
-    <form onSubmit={handleSubmit} className={styles.addInput}>
+    <form data-requires-reauth="true" onSubmit={handleSubmit} className={styles.addInput}>
       <input
         type="text"
         value={value}
@@ -150,7 +150,7 @@ const TagInput = ({ onAdd, disabled }: InputProps) => {
   };
   
   return (
-    <form onSubmit={handleSubmit} className={styles.addInput}>
+    <form data-requires-reauth="true" onSubmit={handleSubmit} className={styles.addInput}>
       <input
         type="text"
         value={value}
@@ -463,7 +463,7 @@ function EditProductFormContent({ product, onSave, onCancel }: EditProductFormPr
   };
 
   return (
-    <form onSubmit={handleSubmit} className={styles.form}>
+    <form data-requires-reauth="true" onSubmit={handleSubmit} className={styles.form}>
       {/* 기본 정보 섹션 */}
       <div className={styles.section}>
         <h3 className={styles.sectionTitle}>기본 정보</h3>
@@ -760,7 +760,7 @@ function EditProductFormContent({ product, onSave, onCancel }: EditProductFormPr
                   >
                     {complexFields.mainImage === url ? '메인' : '메인으로'}
                   </button>
-                  <button
+                  <button data-requires-reauth="true"
                     type="button"
                     onClick={() => handleImageDelete(url, index)}
                     className={styles.deleteButton}
@@ -838,7 +838,7 @@ function EditProductFormContent({ product, onSave, onCancel }: EditProductFormPr
 
       {/* 액션 버튼 */}
       <div className={styles.actions}>
-        <button
+        <button data-requires-reauth="true"
           type="button"
           onClick={onCancel}
           className={styles.cancelButton}

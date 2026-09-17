@@ -181,7 +181,7 @@ export default function AdminCouponsPage() {
     <div className={styles.container}>
       <div className={styles.header}>
         <h1>쿠폰 관리</h1>
-        <button onClick={() => setShowCreateForm(true)} className={styles.createBtn}>
+        <button data-requires-reauth="true" onClick={() => setShowCreateForm(true)} className={styles.createBtn}>
           새 쿠폰 생성
         </button>
       </div>
@@ -226,7 +226,7 @@ export default function AdminCouponsPage() {
                   </div>
                 </div>
                 <div className={styles.cardActions}>
-                  <button 
+                  <button data-requires-reauth="true" 
                     onClick={() => handleToggleStatus(coupon)}
                     className={coupon.isActive ? styles.active : styles.inactive}
                   >
@@ -236,7 +236,7 @@ export default function AdminCouponsPage() {
                     <button onClick={() => openEditForm(coupon)} className={styles.editBtn}>
                       수정
                     </button>
-                    <button onClick={() => handleDeleteCoupon(coupon.id)} className={styles.deleteBtn}>
+                    <button data-requires-reauth="true" onClick={() => handleDeleteCoupon(coupon.id)} className={styles.deleteBtn}>
                       비활성화
                     </button>
                   </div>
@@ -297,7 +297,7 @@ export default function AdminCouponsPage() {
         <div className={styles.modal}>
           <div className={styles.modalContent}>
             <h2>새 쿠폰 생성</h2>
-            <form onSubmit={handleCreateCoupon}>
+            <form data-requires-reauth="true" onSubmit={handleCreateCoupon}>
               <div className={styles.formGroup}>
                 <label>쿠폰명</label>
                 <input
@@ -423,7 +423,7 @@ export default function AdminCouponsPage() {
         <div className={styles.modal}>
           <div className={styles.modalContent}>
             <h2>쿠폰 수정</h2>
-            <form onSubmit={handleUpdateCoupon}>
+            <form data-requires-reauth="true" onSubmit={handleUpdateCoupon}>
               <div className={styles.formGroup}>
                 <label>쿠폰명</label>
                 <input
