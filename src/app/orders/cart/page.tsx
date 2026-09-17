@@ -6,7 +6,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PageHeader from "../../_components/PageHeader";
-import Button from "../../_components/Button";
 import AsyncStatePanel from "../../_components/AsyncStatePanel";
 import { useAuth } from "@/context/authProvider";
 import { useCoupon } from "@/context/couponProvider";

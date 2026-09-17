@@ -217,7 +217,7 @@ export default function ProductDetailClient({ product }: Props) {
     } finally {
       setIsAddingToCart(false);
     }
-  }, [addToCartMutation, product, router, user]);
+  }, [addToCartMutation, product, user]);
 
   const executeBuyNow = useCallback((intent: ProductIntentDraft) => {
     const productPricing = getProductPricing(product);
