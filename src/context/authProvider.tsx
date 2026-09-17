@@ -4,11 +4,12 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { User, UserCredential } from "firebase/auth";
 import { useAuthUser } from "../shared/hooks/useAuthUser";
-import { 
-  logout as firebaseLogout, 
-  loginOneSession as firebaseSignIn, 
-  loginKeepAlive as firebaseLoginKeepAlive, 
-  signUp as firebaseSignUp  
+import {
+  logout as firebaseLogout,
+  loginOneSession as firebaseSignIn,
+  loginKeepAlive as firebaseLoginKeepAlive,
+  loginWithCustomToken as firebaseLoginWithCustomToken,
+  signUp as firebaseSignUp
 } from "../shared/libs/firebase/auth";
 import {
   isUserDataNotFoundError,
@@ -25,9 +26,19 @@ import {
 import { getAuthGuardRedirect } from "../shared/utils/authRouteGuard";
 import { useSignupBonusReconciliation } from "../shared/hooks/useSignupBonusReconciliation";
 
+type DemoLoginRole = "user" | "admin";
+
+interface DemoLoginResponse {
+  success?: boolean;
+  data?: {
+    customToken?: unknown;
+  };
+}
+
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string, keepAlive: boolean) => Promise<UserCredential>;
+  loginDemo: (role: DemoLoginRole) => Promise<UserCredential>;
   logout: () => Promise<void>;
   signUp: (
     email: string,
@@ -53,9 +64,31 @@ function getErrorMessageValue(error: unknown): string | undefined {
   return error instanceof Error ? error.message : undefined;
 }
 
+async function requestDemoCustomToken(role: DemoLoginRole): Promise<string> {
+  const response = await fetch("/api/demo-login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ role }),
+    cache: "no-store",
+  });
+  const payload = await response.json().catch(() => null) as DemoLoginResponse | null;
+  const customToken = payload?.data?.customToken;
+
+  if (!response.ok || payload?.success !== true || typeof customToken !== "string" || !customToken) {
+    throw new Error("DEMO_LOGIN_UNAVAILABLE");
+  }
+
+  return customToken;
+}
+
 const AuthContext = createContext<AuthContextType>({
   user: null,
   login: async () => {
+    throw new Error("AuthProvider is not mounted.");
+  },
+  loginDemo: async () => {
     throw new Error("AuthProvider is not mounted.");
   },
   logout: () => Promise.resolve(),
@@ -86,66 +119,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
 
-  const login = async (email: string, password: string, keepAlive: boolean) => {
+  const validateAuthenticatedAccount = async (userCredential: UserCredential) => {
+    const userDoc = await import("firebase/firestore").then(module =>
+      module.getDoc(module.doc(db, "users", userCredential.user.uid))
+    );
+    const accountData = userDoc.exists() ? userDoc.data() : null;
+
+    if (!hasActiveAccount(accountData)) {
+      if (accountData?.status === "inactive") {
+        throw new Error("ACCOUNT_INACTIVE");
+      }
+
+      if (accountData?.status === "banned") {
+        throw new Error("ACCOUNT_BANNED");
+      }
+
+      throw new Error("ACCOUNT_UNAVAILABLE");
+    }
+
+    queryClient.setQueryData(["user", userCredential.user.uid], accountData);
+    return userCredential;
+  };
+
+  const getLoginErrorMessage = (err: unknown) => {
+    if (getErrorMessageValue(err) === "ACCOUNT_INACTIVE") {
+      return "이용이 중지된 사용자입니다. 관리자에게 문의하세요.";
+    }
+
+    if (getErrorMessageValue(err) === "ACCOUNT_BANNED") {
+      return "정지된 계정입니다. 관리자에게 문의하세요.";
+    }
+
+    if (getErrorMessageValue(err) === "ACCOUNT_UNAVAILABLE") {
+      return "사용할 수 없는 계정입니다. 관리자에게 문의하세요.";
+    }
+
+    if (getErrorMessageValue(err) === "DEMO_LOGIN_UNAVAILABLE") {
+      return "데모 로그인을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.";
+    }
+
+    return getErrorMessage(getAuthErrorCode(err));
+  };
+
+  const runValidatedLogin = async (authenticate: () => Promise<UserCredential>) => {
     isLoginValidatingRef.current = true;
     setIsLoginValidating(true);
     let authenticated = false;
 
     try {
       setError(null);
-      let userCredential;
-      
-      if (keepAlive) {
-        userCredential = await firebaseLoginKeepAlive(email, password);
-      } else {
-        userCredential = await firebaseSignIn(email, password);
-      }
+      const userCredential = await authenticate();
       authenticated = true;
-      
-      // 로그인 성공 후 사용자 상태 확인
-      const userDoc = await import('firebase/firestore').then(module => 
-        module.getDoc(module.doc(db, 'users', userCredential.user.uid))
-      );
-      
-      const accountData = userDoc.exists() ? userDoc.data() : null;
-
-      if (!hasActiveAccount(accountData)) {
-        if (accountData?.status === 'inactive') {
-          throw new Error('ACCOUNT_INACTIVE');
-        }
-
-        if (accountData?.status === 'banned') {
-          throw new Error('ACCOUNT_BANNED');
-        }
-
-        throw new Error('ACCOUNT_UNAVAILABLE');
-      }
-
-      queryClient.setQueryData(['user', userCredential.user.uid], accountData);
-      
-      return userCredential;
+      return await validateAuthenticatedAccount(userCredential);
     } catch (err) {
       if (authenticated) {
         try {
           await firebaseLogout();
         } catch (logoutError) {
-          console.error('로그인 계정 검증 실패 후 로그아웃 실패:', logoutError);
+          console.error("로그인 계정 검증 실패 후 로그아웃 실패:", logoutError);
         }
       }
 
-      let errorMessage;
-      
-      if (getErrorMessageValue(err) === 'ACCOUNT_INACTIVE') {
-        errorMessage = '이용이 중지된 사용자입니다. 관리자에게 문의하세요.';
-      } else if (getErrorMessageValue(err) === 'ACCOUNT_BANNED') {
-        errorMessage = '정지된 계정입니다. 관리자에게 문의하세요.';
-      } else if (getErrorMessageValue(err) === 'ACCOUNT_UNAVAILABLE') {
-        errorMessage = '사용할 수 없는 계정입니다. 관리자에게 문의하세요.';
-      } else {
-        errorMessage = getErrorMessage(getAuthErrorCode(err));
-      }
-      
-      setError(errorMessage);
+      setError(getLoginErrorMessage(err));
       throw err;
     } finally {
       isLoginValidatingRef.current = false;
@@ -153,17 +188,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const login = async (email: string, password: string, keepAlive: boolean) => {
+    return runValidatedLogin(() => (
+      keepAlive
+        ? firebaseLoginKeepAlive(email, password)
+        : firebaseSignIn(email, password)
+    ));
+  };
+
+  const loginDemo = async (role: DemoLoginRole) => {
+    return runValidatedLogin(async () => {
+      const customToken = await requestDemoCustomToken(role);
+      return firebaseLoginWithCustomToken(customToken);
+    });
+  };
+
   const logout = async () => {
     try {
       await firebaseLogout();
-      // Next.js router 대신 window.location을 사용하여 강제 페이지 이동
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         window.location.href = "/auth/login";
       }
     } catch (error) {
       console.error("Logout error:", error);
-      // 에러가 발생해도 로그인 페이지로 이동
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         window.location.href = "/auth/login";
       }
     }
@@ -185,12 +233,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await createProfile(userCredential.user);
       await queryClient.invalidateQueries({
-        queryKey: ['user', userCredential.user.uid],
-        refetchType: 'none',
+        queryKey: ["user", userCredential.user.uid],
+        refetchType: "none",
       });
       await queryClient.refetchQueries({
-        queryKey: ['user', userCredential.user.uid],
-        type: 'active',
+        queryKey: ["user", userCredential.user.uid],
+        type: "active",
       });
 
       return userCredential;
@@ -199,7 +247,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           await firebaseLogout();
         } catch (logoutError) {
-          console.error('회원가입 프로필 실패 후 로그아웃 실패:', logoutError);
+          console.error("회원가입 프로필 실패 후 로그아웃 실패:", logoutError);
         }
       }
 
@@ -257,7 +305,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setIsAdmin(false);
       setIsDemoAdmin(false);
-      void queryClient.invalidateQueries({ queryKey: ['user', user.uid] });
+      void queryClient.invalidateQueries({ queryKey: ["user", user.uid] });
     };
 
     window.addEventListener(AUTH_ACCESS_CHANGED_EVENT, handleAccessChanged);
@@ -298,9 +346,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const blockedStatus = userDataMissing
-      || userData?.status === 'inactive'
-      || userData?.status === 'banned'
-      || userData?.status === 'deleted';
+      || userData?.status === "inactive"
+      || userData?.status === "banned"
+      || userData?.status === "deleted";
 
     setIsAdmin(false);
     setIsDemoAdmin(false);
@@ -309,11 +357,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     let cancelled = false;
-    setError('사용할 수 없는 계정입니다. 관리자에게 문의하세요.');
+    setError("사용할 수 없는 계정입니다. 관리자에게 문의하세요.");
 
     void firebaseLogout().catch((logoutError) => {
       if (!cancelled) {
-        console.error('비활성 계정 로그아웃 실패:', logoutError);
+        console.error("비활성 계정 로그아웃 실패:", logoutError);
       }
     });
 
@@ -322,7 +370,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [isLoginValidating, isProvisioning, loading, user, userData, userDataError, userDataLoading]);
 
-  // 관리자 권한은 Custom Claims와 활성 사용자 문서의 관리자 역할을 모두 확인한다.
   useEffect(() => {
     let cancelled = false;
 
@@ -352,7 +399,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsDemoAdmin(nextIsDemoAdmin);
         }
       } catch (error) {
-        console.error('관리자 권한 토큰 확인 실패:', error);
+        console.error("관리자 권한 토큰 확인 실패:", error);
         if (!cancelled) {
           setIsAdmin(false);
           setIsDemoAdmin(false);
@@ -382,12 +429,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [userDataLoading, loading, adminClaimsLoading, isLoginValidating, isProvisioning]);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, signUp, userData, loading, isUserDataLoading, isAdmin, isDemoAdmin, error, clearError }}>
+    <AuthContext.Provider value={{
+      user,
+      login,
+      loginDemo,
+      logout,
+      signUp,
+      userData,
+      loading,
+      isUserDataLoading,
+      isAdmin,
+      isDemoAdmin,
+      error,
+      clearError,
+    }}>
       {children}
     </AuthContext.Provider>
   );
 }
-
 
 export function useAuth() {
   const context = useContext(AuthContext);
