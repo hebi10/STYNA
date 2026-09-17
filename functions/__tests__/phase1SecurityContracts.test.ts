@@ -27,7 +27,10 @@ describe('phase 1 security contracts', () => {
     const files = [
       'functions/src/index.ts',
       'functions/src/handlers/adminUsers.ts',
+      'functions/src/handlers/chat.ts',
+      'functions/src/handlers/config.ts',
       'functions/src/handlers/coupon.ts',
+      'functions/src/handlers/demoLogin.ts',
       'functions/src/handlers/event.ts',
       'functions/src/handlers/order.ts',
       'functions/src/handlers/points.ts',
@@ -56,5 +59,12 @@ describe('phase 1 security contracts', () => {
     expect(source).toContain('createCustomToken');
     expect(source).not.toContain('testtest');
     expect(source).not.toContain('test01test01');
+  });
+
+  test('server demo login requires a server-only enable flag', () => {
+    const source = read('functions/src/handlers/demoLogin.ts');
+
+    expect(source).toContain('process.env.ENABLE_DEMO_LOGIN === "true"');
+    expect(source).not.toContain('process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN');
   });
 });
