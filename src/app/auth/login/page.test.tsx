@@ -4,6 +4,7 @@ import { useAuth } from '@/context/authProvider';
 
 const replace = jest.fn();
 const login = jest.fn();
+const loginDemo = jest.fn();
 const clearError = jest.fn();
 const initialDemoLoginFlag = process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN;
 
@@ -81,6 +82,7 @@ describe('LoginPage transition feedback', () => {
     window.history.pushState({}, '', '/auth/login');
     (useAuth as jest.Mock).mockReturnValue({
       login,
+      loginDemo,
       error: null,
       clearError,
       user: null,
@@ -126,6 +128,7 @@ describe('LoginPage transition feedback', () => {
     window.history.pushState({}, '', '/auth/login?redirect=/products/product-1%3FresumeIntent%3D1');
     (useAuth as jest.Mock).mockReturnValue({
       login,
+      loginDemo,
       error: null,
       clearError,
       user: { uid: 'user-1' },
@@ -175,15 +178,30 @@ describe('LoginPage transition feedback', () => {
     expect(screen.getByRole('button', { name: '관리자 로그인' })).toBeInTheDocument();
   });
 
-  test('routes the administrator demo login to the admin area', async () => {
+  test('uses the server-issued member demo session without client credentials', async () => {
     process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN = 'true';
-    login.mockResolvedValue(undefined);
+    loginDemo.mockResolvedValue(undefined);
+
+    render(<LoginPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: '일반 회원 로그인' }));
+
+    await waitFor(() => expect(loginDemo).toHaveBeenCalledWith('user'));
+    expect(login).not.toHaveBeenCalled();
+    expect(replace).toHaveBeenCalledWith('/mypage');
+  });
+
+  test('uses the server-issued administrator demo session and routes to admin', async () => {
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN = 'true';
+    loginDemo.mockResolvedValue(undefined);
 
     render(<LoginPage />);
 
     fireEvent.click(screen.getByRole('button', { name: '관리자 로그인' }));
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/admin'));
+    await waitFor(() => expect(loginDemo).toHaveBeenCalledWith('admin'));
+    expect(login).not.toHaveBeenCalled();
+    expect(replace).toHaveBeenCalledWith('/admin');
   });
 
   test.each([
@@ -206,6 +224,7 @@ describe('LoginPage transition feedback', () => {
   test('announces authentication errors', () => {
     (useAuth as jest.Mock).mockReturnValue({
       login,
+      loginDemo,
       error: '이메일 또는 비밀번호를 확인해 주세요.',
       clearError,
       user: null,
