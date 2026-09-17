@@ -1,3 +1,8 @@
+export const userKeys = {
+  all: ['user'] as const,
+  detail: (userId: string) => [...userKeys.all, userId] as const,
+};
+
 export const cartKeys = {
   all: ['cart'] as const,
   lists: () => [...cartKeys.all, 'list'] as const,
