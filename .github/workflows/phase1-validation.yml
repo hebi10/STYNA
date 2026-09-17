@@ -1,0 +1,19 @@
+name: Phase 1 Validation
+
+on:
+  push:
+    branches:
+      - chore/styna-improvement-phase-1
+  workflow_dispatch:
+
+jobs:
+  targeted-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test -- src/app/auth/login/page.test.tsx functions/__tests__/phase1SecurityContracts.test.ts --runInBand
