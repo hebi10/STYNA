@@ -1,44 +1,39 @@
-import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  query,
-  where,
-  writeBatch,
-  orderBy,
-  limit,
-  startAfter,
-  DocumentData,
-  documentId,
-  QueryDocumentSnapshot,
-  QueryConstraint,
-  Timestamp,
-} from 'firebase/firestore';
-import { db } from '@/shared/libs/firebase/firebase';
-import { Product, ProductFilter, ProductSort } from '@/shared/types/product';
+import type { Product, ProductFilter, ProductSort } from '@/shared/types/product';
 import { isFirestorePermissionDenied } from '@/shared/utils/firebaseError';
+import {
+  applyProductQueryClientSide,
+  compareProductToSortKey,
+  createProductClientCursor,
+  filterProductsByKeyword,
+  getActiveProducts,
+  getProductSortValue,
+  isFirestoreTimestampSortValue,
+  normalizeProductSearchTerm,
+  normalizeProductSort,
+  selectBestSellerProducts,
+  selectNewProducts,
+  selectRecommendedProducts,
+  selectReviewPopularProducts,
+  selectSaleProducts,
+  selectTopRatedProducts,
+  sortProducts,
+  type ProductClientCursor,
+} from './productDomain';
+import {
+  cleanProductObject,
+  normalizeProductCategoryId,
+  normalizeProductDocument,
+  withoutServerOwnedReviewStats,
+  type ProductDocumentData,
+} from './productMapper';
+import { ProductRepository, type ProductDocumentCursor } from './productRepository';
 
-export function normalizeProductSearchTerm(value: string): string {
-  return value.normalize('NFKC').trim().replace(/\s+/g, ' ');
-}
+export { normalizeProductSearchTerm } from './productDomain';
+export type { ClientProductSortValue, FirestoreTimestampSortValue } from './productDomain';
 
-export interface FirestoreTimestampSortValue {
-  kind: 'firestore-timestamp';
-  seconds: number;
-  nanoseconds: number;
-}
 
-export type ClientProductSortValue = number | string | FirestoreTimestampSortValue;
-
-export interface ClientProductCursor {
-  kind: 'client-keyset';
-  sort: ProductSort;
-  sortValue: ClientProductSortValue;
-  productId: string;
-}
-
-export type ProductPageCursor = QueryDocumentSnapshot<DocumentData> | ClientProductCursor;
+export type ClientProductCursor = ProductClientCursor;
+export type ProductPageCursor = ProductDocumentCursor | ProductClientCursor;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object');
@@ -53,22 +48,6 @@ function isProductSort(value: unknown): value is ProductSort {
     typeof value.field === 'string'
     && ['price', 'rating', 'createdAt', 'name', 'reviewCount'].includes(value.field)
     && (value.order === 'asc' || value.order === 'desc')
-  );
-}
-
-function isFirestoreTimestampSortValue(value: unknown): value is FirestoreTimestampSortValue {
-  if (!isRecord(value) || value.kind !== 'firestore-timestamp') {
-    return false;
-  }
-
-  return (
-    typeof value.seconds === 'number'
-    && Number.isFinite(value.seconds)
-    && Number.isInteger(value.seconds)
-    && typeof value.nanoseconds === 'number'
-    && Number.isInteger(value.nanoseconds)
-    && value.nanoseconds >= 0
-    && value.nanoseconds < 1_000_000_000
   );
 }
 
@@ -95,7 +74,7 @@ function isClientProductCursor(cursor: unknown): cursor is ClientProductCursor {
   }
 }
 
-function isFirestoreProductCursor(cursor: unknown): cursor is QueryDocumentSnapshot<DocumentData> {
+function isFirestoreProductCursor(cursor: unknown): cursor is ProductDocumentCursor {
   return (
     isRecord(cursor)
     && typeof cursor.id === 'string'
@@ -104,26 +83,7 @@ function isFirestoreProductCursor(cursor: unknown): cursor is QueryDocumentSnaps
   );
 }
 
-function compareFirestoreStrings(left: string, right: string): number {
-  const leftCodePoints = Array.from(left, character => character.codePointAt(0) ?? 0);
-  const rightCodePoints = Array.from(right, character => character.codePointAt(0) ?? 0);
-  const sharedLength = Math.min(leftCodePoints.length, rightCodePoints.length);
-
-  for (let index = 0; index < sharedLength; index += 1) {
-    const difference = leftCodePoints[index] - rightCodePoints[index];
-    if (difference !== 0) {
-      return difference;
-    }
-  }
-
-  return leftCodePoints.length - rightCodePoints.length;
-}
-
 type ProductStatus = Product['status'];
-type ProductDocumentData = Partial<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>> & {
-  createdAt?: unknown;
-  updatedAt?: unknown;
-};
 
 interface ProductDocumentRecord {
   product: Product;
@@ -180,400 +140,18 @@ export interface ProductLoaderOptions {
 
 type ProductPayload = Omit<Product, 'id' | 'createdAt' | 'updatedAt'>;
 
-const SERVER_OWNED_REVIEW_FIELDS = [
-  'rating',
-  'reviewCount',
-  'reviewSummary',
-  'reviewStatsEventTime',
-  'reviewStatsRunToken',
-  'reviewStatsUpdatedAt',
-  'reviewStatsVersion',
-] as const;
-
 export class ProductService {
-  private static readonly PRODUCTS_COLLECTION = 'products';
-  private static readonly BRAND_SUMMARIES_COLLECTION = 'brandSummaries';
   private static readonly DEFAULT_PAGE_SIZE = 24;
   private static readonly KEYWORD_SCAN_MULTIPLIER = 3;
-  private static readonly DEFAULT_SORT: ProductSort = { field: 'createdAt', order: 'desc' };
-
-  private static normalizeDate(value: unknown): Date {
-    if (value instanceof Date) {
-      return value;
-    }
-
-    if (value instanceof Timestamp) {
-      return value.toDate();
-    }
-
-    if (value && typeof (value as { toDate?: () => Date }).toDate === 'function') {
-      return (value as { toDate: () => Date }).toDate();
-    }
-
-    return new Date();
-  }
-
-  private static normalizeCategoryId(
-    data: { category?: string; categoryId?: string },
-    fallbackCategoryId?: string
-  ): string {
-    return data.categoryId || data.category || fallbackCategoryId || '';
-  }
-
-  private static normalizeProduct(
-    id: string,
-    data: ProductDocumentData,
-    fallbackCategoryId?: string
-  ): Product {
-    const categoryId = this.normalizeCategoryId(data, fallbackCategoryId);
-
-    return {
-      id,
-      name: data.name || '',
-      description: data.description || '',
-      price: data.price || 0,
-      originalPrice: data.originalPrice,
-      brand: data.brand || '',
-      category: data.category || categoryId,
-      categoryId,
-      images: Array.isArray(data.images) ? data.images : [],
-      detailImages: Array.isArray(data.detailImages) ? data.detailImages : [],
-      mainImage: data.mainImage,
-      sizes: Array.isArray(data.sizes) ? data.sizes : [],
-      colors: Array.isArray(data.colors) ? data.colors : [],
-      stock: data.stock || 0,
-      rating: data.rating || 0,
-      reviewCount: data.reviewCount || 0,
-      isNew: Boolean(data.isNew),
-      isSale: Boolean(data.isSale),
-      saleRate: data.saleRate,
-      tags: Array.isArray(data.tags) ? data.tags : [],
-      createdAt: this.normalizeDate(data.createdAt),
-      updatedAt: this.normalizeDate(data.updatedAt),
-      status: data.status || 'active',
-      sku: data.sku,
-      details: data.details || {
-        material: '',
-        origin: '',
-        manufacturer: '',
-        precautions: '',
-        sizes: {},
-      },
-    };
-  }
-
-  private static cleanObject<T extends Record<string, unknown>>(obj: T): Partial<T> {
-    const cleaned: Partial<T> = {};
-
-    Object.entries(obj).forEach(([key, value]) => {
-      if (value !== undefined) {
-        cleaned[key as keyof T] = value as T[keyof T];
-      }
-    });
-
-    return cleaned;
-  }
-
-  private static withoutServerOwnedReviewStats<T extends Record<string, unknown>>(
-    data: T,
-  ): Partial<T> {
-    const sanitized = { ...data };
-    for (const field of SERVER_OWNED_REVIEW_FIELDS) {
-      delete sanitized[field];
-    }
-    return sanitized;
-  }
-
-  private static normalizeSort(sort?: ProductSort): ProductSort {
-    if (!sort) {
-      return { ...this.DEFAULT_SORT };
-    }
-
-    return sort;
-  }
-
-  private static getProductSortValue(
-    product: Product,
-    field: ProductSort['field'],
-    rawValue?: unknown,
-  ): ClientProductSortValue {
-    switch (field) {
-      case 'price':
-        return product.price;
-      case 'rating':
-        return product.rating;
-      case 'createdAt':
-        return this.toTimestampSortValue(rawValue, product.createdAt);
-      case 'name':
-        return product.name;
-      case 'reviewCount':
-        return product.reviewCount;
-    }
-  }
-
-  private static toTimestampSortValue(
-    rawValue: unknown,
-    fallbackDate: Date,
-  ): FirestoreTimestampSortValue {
-    if (
-      isRecord(rawValue)
-      && typeof rawValue.seconds === 'number'
-      && Number.isFinite(rawValue.seconds)
-      && Number.isInteger(rawValue.seconds)
-      && typeof rawValue.nanoseconds === 'number'
-      && Number.isInteger(rawValue.nanoseconds)
-      && rawValue.nanoseconds >= 0
-      && rawValue.nanoseconds < 1_000_000_000
-    ) {
-      return {
-        kind: 'firestore-timestamp',
-        seconds: rawValue.seconds,
-        nanoseconds: rawValue.nanoseconds,
-      };
-    }
-
-    const sourceDate = rawValue instanceof Date ? rawValue : fallbackDate;
-    const milliseconds = sourceDate.getTime();
-    const safeMilliseconds = Number.isFinite(milliseconds) ? milliseconds : 0;
-    const seconds = Math.floor(safeMilliseconds / 1000);
-
-    return {
-      kind: 'firestore-timestamp',
-      seconds,
-      nanoseconds: Math.trunc((safeMilliseconds - seconds * 1000) * 1_000_000),
-    };
-  }
-
-  private static compareSortValues(
-    left: ClientProductSortValue,
-    right: ClientProductSortValue,
-  ): number {
-    if (typeof left === 'number' && typeof right === 'number') {
-      return left - right;
-    }
-
-    if (typeof left === 'string' && typeof right === 'string') {
-      return compareFirestoreStrings(left, right);
-    }
-
-    if (isFirestoreTimestampSortValue(left) && isFirestoreTimestampSortValue(right)) {
-      if (left.seconds !== right.seconds) {
-        return left.seconds - right.seconds;
-      }
-
-      return left.nanoseconds - right.nanoseconds;
-    }
-
-    return 0;
-  }
-
-  private static compareProductToSortKey(
-    product: Product,
-    sortValue: ClientProductSortValue,
-    productId: string,
-    sort: ProductSort,
-    rawSortValue?: unknown,
-  ): number {
-    const valueDiff = this.compareSortValues(
-      this.getProductSortValue(product, sort.field, rawSortValue),
-      sortValue
-    );
-    const orderedValueDiff = sort.order === 'asc' ? valueDiff : -valueDiff;
-
-    if (orderedValueDiff !== 0) {
-      return orderedValueDiff;
-    }
-
-    const idDiff = compareFirestoreStrings(product.id, productId);
-    return sort.order === 'asc' ? idDiff : -idDiff;
-  }
-
-  private static createClientProductCursor(
-    product: Product,
-    sort: ProductSort,
-    rawSortValue?: unknown,
-  ): ClientProductCursor {
-    return {
-      kind: 'client-keyset',
-      sort: { ...sort },
-      sortValue: this.getProductSortValue(product, sort.field, rawSortValue),
-      productId: product.id,
-    };
-  }
-
-  private static filterByKeyword(products: Product[], keyword?: string): Product[] {
-    if (!keyword) {
-      return products;
-    }
-
-    const normalizedKeyword = normalizeProductSearchTerm(keyword).toLowerCase();
-    if (!normalizedKeyword) {
-      return products;
-    }
-
-    return products.filter((product) => {
-      return (
-        normalizeProductSearchTerm(product.name).toLowerCase().includes(normalizedKeyword) ||
-        normalizeProductSearchTerm(product.brand || '').toLowerCase().includes(normalizedKeyword) ||
-        normalizeProductSearchTerm(product.description || '').toLowerCase().includes(normalizedKeyword) ||
-        normalizeProductSearchTerm(product.category || '').toLowerCase().includes(normalizedKeyword) ||
-        product.tags.some((tag) => normalizeProductSearchTerm(tag).toLowerCase().includes(normalizedKeyword))
-      );
-    });
-  }
-
-  private static getActiveProducts(products: Product[]): Product[] {
-    return products.filter((product) => product.status === 'active');
-  }
-
-  private static sortByCreatedAtDesc(products: Product[]): Product[] {
-    return [...products].sort((a, b) => {
-      const createdAtDiff = b.createdAt.getTime() - a.createdAt.getTime();
-      return createdAtDiff !== 0 ? createdAtDiff : b.id.localeCompare(a.id);
-    });
-  }
-
-  private static sortByReviewCountDesc(products: Product[]): Product[] {
-    return [...products].sort((a, b) => {
-      const reviewCountDiff = b.reviewCount - a.reviewCount;
-      if (reviewCountDiff !== 0) {
-        return reviewCountDiff;
-      }
-
-      const createdAtDiff = b.createdAt.getTime() - a.createdAt.getTime();
-      return createdAtDiff !== 0 ? createdAtDiff : b.id.localeCompare(a.id);
-    });
-  }
-
-  private static sortByRatingDesc(products: Product[]): Product[] {
-    return [...products].sort((a, b) => {
-      const ratingDiff = b.rating - a.rating;
-      if (ratingDiff !== 0) {
-        return ratingDiff;
-      }
-
-      const reviewCountDiff = b.reviewCount - a.reviewCount;
-      if (reviewCountDiff !== 0) {
-        return reviewCountDiff;
-      }
-
-      const createdAtDiff = b.createdAt.getTime() - a.createdAt.getTime();
-      return createdAtDiff !== 0 ? createdAtDiff : b.id.localeCompare(a.id);
-    });
-  }
-
-  private static selectNewProducts(products: Product[], limitCount: number): Product[] {
-    return this.sortByCreatedAtDesc(products.filter((product) => product.isNew)).slice(0, limitCount);
-  }
-
-  private static selectSaleProducts(products: Product[], limitCount: number): Product[] {
-    return this.sortByCreatedAtDesc(
-      products.filter((product) => product.isSale && product.saleRate && product.saleRate > 0)
-    ).slice(0, limitCount);
-  }
-
-  private static selectBestSellerProducts(products: Product[], limitCount: number): Product[] {
-    return this.sortByReviewCountDesc(
-      products.filter((product) => product.reviewCount > 0)
-    ).slice(0, limitCount);
-  }
-
-  private static selectTopRatedProducts(products: Product[], limitCount: number): Product[] {
-    return this.sortByRatingDesc(
-      products.filter((product) => product.rating >= 4.3)
-    ).slice(0, limitCount);
-  }
-
-  private static selectReviewPopularProducts(products: Product[], limitCount: number): Product[] {
-    return this.sortByReviewCountDesc(
-      products.filter((product) => product.reviewCount >= 10)
-    ).slice(0, limitCount);
-  }
-
-  private static selectRecommendedProducts(products: Product[], limitCount: number): Product[] {
-    return products
-      .filter((product) => product.rating >= 4)
-      .sort((a, b) => {
-        const scoreA = a.rating * 0.4 + Math.min(a.reviewCount / 10, 50) * 0.3 + (a.isNew ? 10 : 0);
-        const scoreB = b.rating * 0.4 + Math.min(b.reviewCount / 10, 50) * 0.3 + (b.isNew ? 10 : 0);
-        const scoreDiff = scoreB - scoreA;
-        return scoreDiff !== 0 ? scoreDiff : b.createdAt.getTime() - a.createdAt.getTime();
-      })
-      .slice(0, limitCount);
-  }
-
-  private static sortProducts(
-    products: Product[],
-    sort: ProductSort,
-    rawSortValues?: ReadonlyMap<string, unknown>,
-  ): Product[] {
-    return [...products].sort((a, b) => this.compareProductToSortKey(
-      a,
-      this.getProductSortValue(b, sort.field, rawSortValues?.get(b.id)),
-      b.id,
-      sort,
-      rawSortValues?.get(a.id),
-    ));
-  }
-
-  private static applyQueryClientSide(
-    products: Product[],
-    queryInput: ProductQueryInput,
-    rawSortValues?: ReadonlyMap<string, unknown>,
-  ): Product[] {
-    const sort = this.normalizeSort(queryInput.sort);
-    const categoryFilter = queryInput.category || queryInput.categoryId;
-
-    let filtered = products;
-
-    if (queryInput.status) {
-      filtered = filtered.filter((product) => product.status === queryInput.status);
-    }
-
-    if (categoryFilter) {
-      const normalizedCategory = this.normalizeCategoryId({ categoryId: categoryFilter });
-      filtered = filtered.filter((product) => this.normalizeCategoryId(product) === normalizedCategory);
-    }
-
-    if (queryInput.brand) {
-      filtered = filtered.filter((product) => product.brand === queryInput.brand);
-    }
-
-    if (typeof queryInput.minPrice === 'number') {
-      filtered = filtered.filter((product) => product.price >= queryInput.minPrice!);
-    }
-
-    if (typeof queryInput.maxPrice === 'number') {
-      filtered = filtered.filter((product) => product.price <= queryInput.maxPrice!);
-    }
-
-    if (queryInput.minRating !== undefined) {
-      filtered = filtered.filter((product) => product.rating >= queryInput.minRating!);
-    }
-
-    if (queryInput.isNew !== undefined) {
-      filtered = filtered.filter((product) => product.isNew === queryInput.isNew);
-    }
-
-    if (queryInput.isSale !== undefined) {
-      filtered = filtered.filter((product) => product.isSale === queryInput.isSale);
-    }
-
-    return this.sortProducts(
-      this.filterByKeyword(filtered, queryInput.keyword),
-      sort,
-      rawSortValues,
-    );
-  }
 
   private static async queryProductsWithClientFallback(queryInput: ProductQueryInput): Promise<ProductQueryResult> {
     const pageSize = Math.max(1, queryInput.limitCount ?? this.DEFAULT_PAGE_SIZE);
-    const sort = this.normalizeSort(queryInput.sort);
+    const sort = normalizeProductSort(queryInput.sort);
     const records = await this.getTopLevelProductRecords(queryInput.status);
     const rawSortValues = new Map(records.map(({ product, data }) => (
       [product.id, data[sort.field as keyof ProductDocumentData]] as const
     )));
-    const products = this.applyQueryClientSide(
+    const products = applyProductQueryClientSide(
       records.map(({ product }) => product),
       queryInput,
       rawSortValues,
@@ -591,7 +169,7 @@ export class ProductService {
     return {
       items,
       nextCursor: hasMore && lastItem
-        ? this.createClientProductCursor(lastItem, sort, rawSortValues.get(lastItem.id))
+        ? createProductClientCursor(lastItem, sort, rawSortValues.get(lastItem.id))
         : undefined,
       hasMore,
     };
@@ -609,7 +187,7 @@ export class ProductService {
       }
 
       const nextIndex = products.findIndex((product) => (
-        this.compareProductToSortKey(
+        compareProductToSortKey(
           product,
           cursor.sortValue,
           cursor.productId,
@@ -625,14 +203,14 @@ export class ProductService {
     }
 
     const cursorData = cursor.data() as ProductDocumentData;
-    const cursorProduct = this.normalizeProduct(cursor.id, cursorData);
-    const cursorSortValue = this.getProductSortValue(
+    const cursorProduct = normalizeProductDocument(cursor.id, cursorData);
+    const cursorSortValue = getProductSortValue(
       cursorProduct,
       sort.field,
       cursorData[sort.field as keyof ProductDocumentData],
     );
     const nextIndex = products.findIndex((product) => (
-      this.compareProductToSortKey(
+      compareProductToSortKey(
         product,
         cursorSortValue,
         cursor.id,
@@ -651,27 +229,21 @@ export class ProductService {
   private static async getTopLevelProductRecords(
     status?: ProductStatus,
   ): Promise<ProductDocumentRecord[]> {
-    const productsCollection = collection(db, this.PRODUCTS_COLLECTION);
-    const productsQuery = status
-      ? query(productsCollection, where('status', '==', status))
-      : productsCollection;
-    const snapshot = await getDocs(productsQuery);
-    return snapshot.docs.map((productDoc) => {
+    const docs = await ProductRepository.listProductDocuments(status);
+    return docs.map((productDoc) => {
       const data = productDoc.data() as ProductDocumentData;
       return {
-        product: this.normalizeProduct(productDoc.id, data),
+        product: normalizeProductDocument(productDoc.id, data),
         data,
       };
     });
   }
 
   private static async getTopLevelProductById(productId: string): Promise<Product | null> {
-    const snapshot = await getDoc(doc(db, this.PRODUCTS_COLLECTION, productId));
-    if (!snapshot.exists()) {
-      return null;
-    }
-
-    return this.normalizeProduct(snapshot.id, snapshot.data());
+    const productDoc = await ProductRepository.getProductDocumentById(productId);
+    return productDoc
+      ? normalizeProductDocument(productDoc.id, productDoc.data as ProductDocumentData)
+      : null;
   }
 
   private static toBrandSummaryFromProductGroups(products: Product[]): BrandSummary[] {
@@ -713,7 +285,7 @@ export class ProductService {
 
   static async queryProducts(queryInput: ProductQueryInput = {}): Promise<ProductQueryResult> {
     const requestedCursor: unknown = queryInput.startAfterDoc;
-    const sort = this.normalizeSort(queryInput.sort);
+    const sort = normalizeProductSort(queryInput.sort);
 
     if (isClientProductCursor(requestedCursor)) {
       return this.queryProductsWithClientFallback(queryInput);
@@ -739,60 +311,28 @@ export class ProductService {
         normalizedPageSize * scanMultiplier + 1
       );
 
-      const constraints: QueryConstraint[] = [];
-      const filters = queryInput.category || queryInput.categoryId;
+      const categoryId = queryInput.category || queryInput.categoryId;
 
-      if (queryInput.status) {
-        constraints.push(where('status', '==', queryInput.status));
-      }
-
-      if (filters) {
-        constraints.push(where('categoryId', '==', this.normalizeCategoryId({ categoryId: filters })));
-      }
-
-      if (queryInput.brand) {
-        constraints.push(where('brand', '==', queryInput.brand));
-      }
-
-      if (typeof queryInput.minPrice === 'number') {
-        constraints.push(where('price', '>=', queryInput.minPrice));
-      }
-
-      if (typeof queryInput.maxPrice === 'number') {
-        constraints.push(where('price', '<=', queryInput.maxPrice));
-      }
-
-      if (queryInput.minRating !== undefined) {
-        constraints.push(where('rating', '>=', queryInput.minRating));
-      }
-
-      if (queryInput.isNew !== undefined) {
-        constraints.push(where('isNew', '==', queryInput.isNew));
-      }
-
-      if (queryInput.isSale !== undefined) {
-        constraints.push(where('isSale', '==', queryInput.isSale));
-      }
-
-      constraints.push(orderBy(sort.field, sort.order));
-      constraints.push(orderBy('__name__', sort.order));
-
-      let cursor: QueryDocumentSnapshot<DocumentData> | null = firestoreCursor;
+      let cursor: ProductDocumentCursor | null = firestoreCursor;
       const collected: Array<{
         product: Product;
-        cursor: QueryDocumentSnapshot<DocumentData>;
+        cursor: ProductDocumentCursor;
       }> = [];
 
       while (true) {
-        const pagedQuery = query(
-          collection(db, this.PRODUCTS_COLLECTION),
-          ...constraints,
-          ...(cursor ? [startAfter(cursor)] : []),
-          limit(queryLimit)
-        );
-
-        const snapshot = await getDocs(pagedQuery);
-        const docs = snapshot.docs;
+        const docs = await ProductRepository.queryProductDocuments({
+          status: queryInput.status,
+          categoryId: categoryId ? normalizeProductCategoryId({ categoryId }) : undefined,
+          brand: queryInput.brand,
+          minPrice: queryInput.minPrice,
+          maxPrice: queryInput.maxPrice,
+          minRating: queryInput.minRating,
+          isNew: queryInput.isNew,
+          isSale: queryInput.isSale,
+          sort,
+          startAfterDoc: cursor,
+          limitCount: queryLimit,
+        });
 
         if (docs.length === 0) {
           return {
@@ -802,8 +342,8 @@ export class ProductService {
         }
 
         for (const productDoc of docs) {
-          const product = this.normalizeProduct(productDoc.id, productDoc.data());
-          if (this.filterByKeyword([product], keyword).length > 0) {
+          const product = normalizeProductDocument(productDoc.id, productDoc.data());
+          if (filterProductsByKeyword([product], keyword).length > 0) {
             collected.push({ product, cursor: productDoc });
           }
         }
@@ -842,14 +382,12 @@ export class ProductService {
 
   static async createProduct(product: ProductPayload): Promise<Product> {
     try {
-      const categoryId = this.normalizeCategoryId(product);
+      const categoryId = normalizeProductCategoryId(product);
       if (!categoryId) {
         throw new Error('category or categoryId is required.');
       }
 
-      const now = Timestamp.now();
-      const productRef = doc(collection(db, this.PRODUCTS_COLLECTION));
-      const productData = this.cleanObject({
+      const productData = cleanProductObject({
         ...product,
         rating: 0,
         reviewCount: 0,
@@ -863,16 +401,10 @@ export class ProductService {
         },
         category: categoryId,
         categoryId,
-        createdAt: now,
-        updatedAt: now,
         status: product.status || 'active',
       });
-
-      const batch = writeBatch(db);
-      batch.set(productRef, productData);
-      await batch.commit();
-
-      return this.normalizeProduct(productRef.id, productData, categoryId);
+      const created = await ProductRepository.createProductDocument(productData as Record<string, unknown>);
+      return normalizeProductDocument(created.id, created.data as ProductDocumentData, categoryId);
     } catch (error) {
       console.error('Failed to create product:', error);
       throw new Error('상품 생성에 실패했습니다.');
@@ -887,32 +419,26 @@ export class ProductService {
       }
 
       const previousCategoryId = existingProduct.categoryId || existingProduct.category;
-      const nextCategoryId = this.normalizeCategoryId(updates, previousCategoryId);
-      const now = Timestamp.now();
-      const hasCategoryUpdate = Object.prototype.hasOwnProperty.call(updates, 'category') ||
-        Object.prototype.hasOwnProperty.call(updates, 'categoryId');
-
-      const updateData = this.cleanObject(this.withoutServerOwnedReviewStats({
+      const nextCategoryId = normalizeProductCategoryId(updates, previousCategoryId);
+      const hasCategoryUpdate = Object.prototype.hasOwnProperty.call(updates, 'category')
+        || Object.prototype.hasOwnProperty.call(updates, 'categoryId');
+      const updateData = cleanProductObject(withoutServerOwnedReviewStats({
         ...updates,
-        ...(hasCategoryUpdate ? {
-          category: nextCategoryId,
-          categoryId: nextCategoryId,
-        } : {}),
-        updatedAt: now,
+        ...(hasCategoryUpdate ? { category: nextCategoryId, categoryId: nextCategoryId } : {}),
       }));
 
-      delete (updateData as Partial<Product>).id;
-      delete (updateData as Partial<Product>).createdAt;
+      delete updateData.id;
+      delete updateData.createdAt;
 
-      const batch = writeBatch(db);
-      batch.set(doc(db, this.PRODUCTS_COLLECTION, productId), updateData, { merge: true });
-      await batch.commit();
-
-      const mergedProduct = {
-        ...existingProduct,
-        ...updateData,
-      };
-      return this.normalizeProduct(productId, mergedProduct, nextCategoryId);
+      const persistedData = await ProductRepository.updateProductDocument(
+        productId,
+        updateData as Record<string, unknown>,
+      );
+      return normalizeProductDocument(
+        productId,
+        { ...existingProduct, ...persistedData } as ProductDocumentData,
+        nextCategoryId,
+      );
     } catch (error) {
       console.error('Failed to update product:', error);
       throw new Error('상품 수정에 실패했습니다.');
@@ -925,10 +451,7 @@ export class ProductService {
       if (!existingProduct) {
         throw new Error('상품을 찾을 수 없습니다.');
       }
-
-      const batch = writeBatch(db);
-      batch.delete(doc(db, this.PRODUCTS_COLLECTION, productId));
-      await batch.commit();
+      await ProductRepository.deleteProductDocument(productId);
     } catch (error) {
       console.error('Failed to delete product:', error);
       throw new Error('상품 삭제에 실패했습니다.');
@@ -946,26 +469,16 @@ export class ProductService {
 
   static async getPublicProductById(productId: string): Promise<Product | null> {
     try {
-      const publicProductQuery = query(
-        collection(db, this.PRODUCTS_COLLECTION),
-        where(documentId(), '==', productId),
-        where('status', '==', 'active'),
-        limit(1),
-      );
-      const snapshot = await getDocs(publicProductQuery);
-      const productDoc = snapshot.docs[0];
-
+      const productDoc = await ProductRepository.getPublicProductDocumentById(productId);
       if (!productDoc) {
         return null;
       }
-
-      const product = this.normalizeProduct(productDoc.id, productDoc.data());
+      const product = normalizeProductDocument(productDoc.id, productDoc.data as ProductDocumentData);
       return product.status === 'active' ? product : null;
     } catch (error) {
       if (isFirestorePermissionDenied(error)) {
         return null;
       }
-
       console.error('Failed to load public product detail:', error);
       throw error;
     }
@@ -1042,7 +555,7 @@ export class ProductService {
   }
 
   static async getSortedProducts(products: Product[], sort: ProductSort): Promise<Product[]> {
-    return this.sortProducts(products, sort);
+    return sortProducts(products, sort);
   }
 
   static async searchProducts(searchQuery: string): Promise<Product[]> {
@@ -1118,13 +631,13 @@ export class ProductService {
     } catch (error) {
       console.error('Failed to load home page products:', error);
       try {
-        const products = this.getActiveProducts(await this.getTopLevelProducts('active'));
+        const products = getActiveProducts(await this.getTopLevelProducts('active'));
 
         return {
-          recommendedProducts: this.selectRecommendedProducts(products, limits.recommended ?? 8),
-          newProducts: this.selectNewProducts(products, limits.new ?? 8),
-          saleProducts: this.selectSaleProducts(products, limits.sale ?? 8),
-          bestSellerProducts: this.selectBestSellerProducts(products, limits.bestSeller ?? 8),
+          recommendedProducts: selectRecommendedProducts(products, limits.recommended ?? 8),
+          newProducts: selectNewProducts(products, limits.new ?? 8),
+          saleProducts: selectSaleProducts(products, limits.sale ?? 8),
+          bestSellerProducts: selectBestSellerProducts(products, limits.bestSeller ?? 8),
         };
       } catch (fallbackError) {
         console.error('Failed to load home page products with fallback:', fallbackError);
@@ -1138,8 +651,8 @@ export class ProductService {
     options: ProductLoaderOptions = {}
   ): Promise<Product[]> {
     try {
-      const products = this.getActiveProducts(await this.getTopLevelProducts('active'));
-      return this.selectNewProducts(products, limitCount);
+      const products = getActiveProducts(await this.getTopLevelProducts('active'));
+      return selectNewProducts(products, limitCount);
     } catch (error) {
       console.error('Failed to load new products:', error);
       if (options.throwOnError) {
@@ -1154,8 +667,8 @@ export class ProductService {
     options: ProductLoaderOptions = {}
   ): Promise<Product[]> {
     try {
-      const products = this.getActiveProducts(await this.getTopLevelProducts('active'));
-      return this.selectSaleProducts(products, limitCount);
+      const products = getActiveProducts(await this.getTopLevelProducts('active'));
+      return selectSaleProducts(products, limitCount);
     } catch (error) {
       console.error('Failed to load sale products:', error);
       if (options.throwOnError) {
@@ -1167,8 +680,8 @@ export class ProductService {
 
   static async getBestSellerProducts(limitCount: number = 8): Promise<Product[]> {
     try {
-      const products = this.getActiveProducts(await this.getTopLevelProducts('active'));
-      return this.selectBestSellerProducts(products, limitCount);
+      const products = getActiveProducts(await this.getTopLevelProducts('active'));
+      return selectBestSellerProducts(products, limitCount);
     } catch (error) {
       console.error('Failed to load best seller products:', error);
       return [];
@@ -1177,8 +690,8 @@ export class ProductService {
 
   static async getTopRatedProducts(limitCount: number = 24): Promise<Product[]> {
     try {
-      const products = this.getActiveProducts(await this.getTopLevelProducts('active'));
-      return this.selectTopRatedProducts(products, limitCount);
+      const products = getActiveProducts(await this.getTopLevelProducts('active'));
+      return selectTopRatedProducts(products, limitCount);
     } catch (error) {
       console.error('Failed to load top rated products:', error);
       return [];
@@ -1190,8 +703,8 @@ export class ProductService {
     options: ProductLoaderOptions = {}
   ): Promise<Product[]> {
     try {
-      const products = this.getActiveProducts(await this.getTopLevelProducts('active'));
-      return this.selectReviewPopularProducts(products, limitCount);
+      const products = getActiveProducts(await this.getTopLevelProducts('active'));
+      return selectReviewPopularProducts(products, limitCount);
     } catch (error) {
       console.error('Failed to load review popular products:', error);
       if (options.throwOnError) {
@@ -1206,8 +719,8 @@ export class ProductService {
     options: ProductLoaderOptions = {}
   ): Promise<Product[]> {
     try {
-      const products = this.getActiveProducts(await this.getTopLevelProducts('active'));
-      return this.selectRecommendedProducts(products, limitCount);
+      const products = getActiveProducts(await this.getTopLevelProducts('active'));
+      return selectRecommendedProducts(products, limitCount);
     } catch (error) {
       console.error('Failed to load recommended products:', error);
       if (options.throwOnError) {
@@ -1219,10 +732,8 @@ export class ProductService {
 
   static async getCategories(): Promise<string[]> {
     try {
-      const snapshot = await getDocs(collection(db, 'categories'));
-      return snapshot.docs
-        .map((categoryDoc) => categoryDoc.id)
-        .sort();
+      const categories = await ProductRepository.listCategoryDocuments();
+      return categories.map((category) => category.id).sort();
     } catch (error) {
       console.error('Failed to load categories:', error);
       return ['accessories', 'bags', 'bottoms', 'shoes', 'tops'];
@@ -1231,11 +742,11 @@ export class ProductService {
 
   static async getCategoriesWithNames(): Promise<{ id: string; name: string }[]> {
     try {
-      const categoriesSnapshot = await getDocs(collection(db, 'categories'));
-      return categoriesSnapshot.docs
-        .map((categoryDoc) => ({
-          id: categoryDoc.id,
-          name: categoryDoc.data().name || categoryDoc.id,
+      const categories = await ProductRepository.listCategoryDocuments();
+      return categories
+        .map((category) => ({
+          id: category.id,
+          name: typeof category.data.name === 'string' ? category.data.name : category.id,
         }))
         .sort((a, b) => a.name.localeCompare(b.name));
     } catch (error) {
@@ -1262,9 +773,9 @@ export class ProductService {
 
   static async getBrandSummaries(): Promise<BrandSummary[]> {
     try {
-      const summarySnapshot = await getDocs(collection(db, this.BRAND_SUMMARIES_COLLECTION));
-      const summaries = summarySnapshot.docs
-        .map((summaryDoc) => this.normalizeBrandSummary(summaryDoc.id, summaryDoc.data()))
+      const summaryDocs = await ProductRepository.listBrandSummaryDocuments();
+      const summaries = summaryDocs
+        .map((summaryDoc) => this.normalizeBrandSummary(summaryDoc.id, summaryDoc.data))
         .filter((summary): summary is BrandSummary => Boolean(summary))
         .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -1272,11 +783,11 @@ export class ProductService {
         return summaries;
       }
 
-      const products = this.getActiveProducts(await this.getTopLevelProducts('active'));
+      const products = getActiveProducts(await this.getTopLevelProducts('active'));
       return this.toBrandSummaryFromProductGroups(products);
     } catch (error) {
       console.warn('Failed to load brand summaries. Falling back to products:', error);
-      const products = this.getActiveProducts(await this.getTopLevelProducts('active'));
+      const products = getActiveProducts(await this.getTopLevelProducts('active'));
       return this.toBrandSummaryFromProductGroups(products);
     }
   }
