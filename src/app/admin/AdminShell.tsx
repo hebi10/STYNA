@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, SyntheticEvent, useEffect, useState } from 'react';
 import styles from './layout.module.css';
 import AdminNav from './_components/adminNav';
 import AuthChecking from './_components/AuthChecking';
@@ -10,6 +10,15 @@ import { useAuth } from '@/context/authProvider';
 
 interface AdminShellProps {
   children: ReactNode;
+}
+
+export function requiresAdminReauthentication(
+  target: EventTarget | null,
+  submitter: HTMLElement | null = null,
+) {
+  const targetElement = target instanceof HTMLElement ? target : null;
+  const actionElement = submitter || targetElement;
+  return Boolean(actionElement?.closest('[data-requires-reauth="true"]'));
 }
 
 export default function AdminShell({ children }: AdminShellProps) {
@@ -24,17 +33,14 @@ export default function AdminShell({ children }: AdminShellProps) {
     return () => window.clearTimeout(timeoutId);
   }, [hasWriteAccess]);
 
-  const requestWriteAccess = (event: React.MouseEvent<HTMLElement> | React.FormEvent<HTMLElement>) => {
+  const requestWriteAccess = (event: SyntheticEvent<HTMLElement>) => {
     if (isDemoAdmin || hasWriteAccess) return;
 
-    const target = event.target as HTMLElement;
     const submitter = event.type === 'submit'
       ? (event.nativeEvent as SubmitEvent).submitter as HTMLElement | null
       : null;
-    const actionElement = submitter || target.closest('button');
-    if (!actionElement) return;
-    const label = (actionElement.getAttribute('aria-label') || actionElement.textContent || '').trim();
-    if (!/(저장|수정|삭제|등록|추가|발급|승인|취소|상태 변경|답변|활성|비활성|권한|포인트|순서)/.test(label)) {
+
+    if (!requiresAdminReauthentication(event.target, submitter)) {
       return;
     }
 
@@ -54,7 +60,6 @@ export default function AdminShell({ children }: AdminShellProps) {
           />
         )}
 
-        {/* 사이드바 */}
         <aside className={`${styles.sidebar} ${isMenuOpen ? styles.open : ''}`}>
           <div className={styles.logo}>
             <h2>Admin Panel</h2>
@@ -69,7 +74,6 @@ export default function AdminShell({ children }: AdminShellProps) {
           {!isDemoAdmin && <AdminNav onNavigate={() => setIsMenuOpen(false)} />}
         </aside>
 
-        {/* 메인 컨텐츠 */}
         <div className={styles.mainContent}>
           <header className={styles.header}>
             <div className={styles.headerLeft}>
@@ -98,6 +102,7 @@ export default function AdminShell({ children }: AdminShellProps) {
             className={styles.content}
             onClickCapture={requestWriteAccess}
             onSubmitCapture={requestWriteAccess}
+            onChangeCapture={requestWriteAccess}
           >
             {isDemoAdmin ? <DemoAdminDashboard /> : children}
           </main>
