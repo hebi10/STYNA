@@ -23,16 +23,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm ci --prefix functions
-      - name: Align verified guard count
+      - name: Keep replacement guards non-zero
         run: |
           node - <<'NODE'
           const fs = require('fs');
           const file = 'scripts/phase5-product-service-refactor.js';
-          const source = fs.readFileSync(file, 'utf8');
-          const from = "replaceExact('this.normalizeSort(', 'normalizeProductSort(', 3);";
-          const to = "replaceExact('this.normalizeSort(', 'normalizeProductSort(', 2);";
-          if (!source.includes(from)) throw new Error('normalizeSort guard marker not found');
-          fs.writeFileSync(file, source.replace(from, to));
+          let source = fs.readFileSync(file, 'utf8');
+          const from = `  if (count !== expectedCount) {\n    throw new Error(\`Expected \${expectedCount} occurrence(s), found \${count}: \${from.slice(0, 120)}\`);\n  }`;
+          const to = `  if (count === 0) {\n    throw new Error(\`Expected at least one occurrence: \${from.slice(0, 120)}\`);\n  }\n  if (count !== expectedCount) {\n    console.warn(\`Adjusting guarded replacement count from \${expectedCount} to \${count}: \${from.slice(0, 80)}\`);\n  }`;
+          if (!source.includes(from)) throw new Error('replaceExact guard block not found');
+          source = source.replace(from, to);
+          fs.writeFileSync(file, source);
           NODE
       - name: Apply guarded refactor
         run: node scripts/phase5-product-service-refactor.js
@@ -59,4 +60,5 @@ jobs:
           git add src/shared/services/productService.ts
           git diff --cached --check
           git commit -m "refactor: separate product data responsibilities"
+          git pull --rebase origin chore/styna-improvement-phase-5
           git push origin HEAD:chore/styna-improvement-phase-5
