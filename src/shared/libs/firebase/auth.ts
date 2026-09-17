@@ -1,9 +1,10 @@
 import { auth } from "./firebase";
-import { 
+import {
   browserSessionPersistence,
-  createUserWithEmailAndPassword, 
-  setPersistence, 
-  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  setPersistence,
+  signInWithCustomToken,
+  signInWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
   confirmPasswordReset,
@@ -26,6 +27,11 @@ export async function loginKeepAlive(email: string, password: string) {
 export async function loginOneSession(email: string, password: string) {
   await setPersistence(auth, browserSessionPersistence);
   return signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function loginWithCustomToken(customToken: string) {
+  await setPersistence(auth, browserSessionPersistence);
+  return signInWithCustomToken(auth, customToken);
 }
 
 // 로그아웃
