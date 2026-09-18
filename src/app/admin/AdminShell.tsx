@@ -60,8 +60,6 @@ export default function AdminShell({ children }: AdminShellProps) {
   };
 
   const requestWriteAccess = (event: SyntheticEvent<HTMLElement>) => {
-    if (isDemoAdmin || hasWriteAccess) return;
-
     const submitter = event.type === 'submit'
       ? (event.nativeEvent as SubmitEvent).submitter as HTMLElement | null
       : null;
@@ -69,6 +67,14 @@ export default function AdminShell({ children }: AdminShellProps) {
     if (!requiresAdminReauthentication(event.target, submitter)) {
       return;
     }
+
+    if (isDemoAdmin) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
+    if (hasWriteAccess) return;
 
     event.preventDefault();
     event.stopPropagation();
@@ -105,7 +111,7 @@ export default function AdminShell({ children }: AdminShellProps) {
               ×
             </button>
           </div>
-          {!isDemoAdmin && <AdminNav onNavigate={closeMenu} />}
+          <AdminNav onNavigate={closeMenu} />
         </aside>
 
         <div className={styles.mainContent}>
@@ -135,6 +141,12 @@ export default function AdminShell({ children }: AdminShellProps) {
               <button className={styles.logoutBtn} onClick={logout}>로그아웃</button>
             </div>
           </header>
+          {isDemoAdmin && (
+            <div className={styles.demoModeBanner} role="status" aria-live="polite">
+              <strong>관리자 체험 모드 · 조회 전용</strong>
+              <span>비식별 샘플 데이터만 표시되며 실제 운영 데이터는 변경할 수 없습니다.</span>
+            </div>
+          )}
           <main
             className={styles.content}
             onClickCapture={requestWriteAccess}
