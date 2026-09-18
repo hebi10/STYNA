@@ -4,6 +4,10 @@ import { ALLOWED_WEB_ORIGINS } from "../config/httpPolicy";
 import { applyNoStoreHeaders } from "../utils/http";
 
 type DemoRole = "user" | "admin";
+type DemoLoginFailureCode =
+  | "demo_auth_lookup_failed"
+  | "demo_profile_lookup_failed"
+  | "demo_token_sign_failed";
 
 interface DemoAccountConfig {
   uid?: string;
@@ -13,6 +17,16 @@ interface DemoAccountConfig {
 interface DemoUserData {
   role?: unknown;
   status?: unknown;
+}
+
+class DemoLoginStageError extends Error {
+  constructor(
+    public readonly code: DemoLoginFailureCode,
+    public readonly cause: unknown,
+  ) {
+    super(code);
+    this.name = "DemoLoginStageError";
+  }
 }
 
 function isDemoLoginEnabled(): boolean {
@@ -70,6 +84,39 @@ async function resolveDemoUser(
   throw new Error("Demo account is not configured.");
 }
 
+async function resolveDemoUserSafely(
+  auth: admin.auth.Auth,
+  config: DemoAccountConfig,
+): Promise<admin.auth.UserRecord> {
+  try {
+    return await resolveDemoUser(auth, config);
+  } catch (error) {
+    throw new DemoLoginStageError("demo_auth_lookup_failed", error);
+  }
+}
+
+async function resolveDemoProfileSafely(uid: string): Promise<DemoUserData | undefined> {
+  try {
+    const userSnapshot = await admin.firestore().collection("users").doc(uid).get();
+    return userSnapshot.exists
+      ? (userSnapshot.data() as DemoUserData | undefined)
+      : undefined;
+  } catch (error) {
+    throw new DemoLoginStageError("demo_profile_lookup_failed", error);
+  }
+}
+
+async function createDemoCustomTokenSafely(
+  auth: admin.auth.Auth,
+  uid: string,
+): Promise<string> {
+  try {
+    return await auth.createCustomToken(uid);
+  } catch (error) {
+    throw new DemoLoginStageError("demo_token_sign_failed", error);
+  }
+}
+
 export const demoLogin = onRequest(
   {
     cors: [...ALLOWED_WEB_ORIGINS],
@@ -103,18 +150,15 @@ export const demoLogin = onRequest(
 
     try {
       const auth = admin.auth();
-      const authUser = await resolveDemoUser(auth, getDemoAccountConfig(role));
-      const userSnapshot = await admin.firestore().collection("users").doc(authUser.uid).get();
-      const userData = userSnapshot.exists
-        ? (userSnapshot.data() as DemoUserData | undefined)
-        : undefined;
+      const authUser = await resolveDemoUserSafely(auth, getDemoAccountConfig(role));
+      const userData = await resolveDemoProfileSafely(authUser.uid);
 
       if (!userData || !hasExpectedDemoAccess(role, authUser.customClaims, userData)) {
         res.status(403).json({ success: false, error: "Demo account is not available." });
         return;
       }
 
-      const customToken = await auth.createCustomToken(authUser.uid);
+      const customToken = await createDemoCustomTokenSafely(auth, authUser.uid);
       res.status(200).json({
         success: true,
         data: {
@@ -123,10 +167,21 @@ export const demoLogin = onRequest(
         },
       });
     } catch (error) {
+      if (error instanceof DemoLoginStageError) {
+        console.error("Demo login stage failed:", error.code, error.cause);
+        res.status(503).json({
+          success: false,
+          error: "Demo login is temporarily unavailable.",
+          code: error.code,
+        });
+        return;
+      }
+
       console.error("Demo login API error:", error);
       res.status(503).json({
         success: false,
         error: "Demo login is temporarily unavailable.",
+        code: "demo_unavailable",
       });
     }
   },
