@@ -1,12 +1,12 @@
 .section {
-  padding: clamp(5rem, 8vw, 7.5rem) 1rem;
+  padding: clamp(4.25rem, 6vw, 6rem) 1rem;
   background: var(--off-white);
 }
 
 .content {
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  gap: clamp(3.5rem, 8vw, 7rem);
+  gap: clamp(2.5rem, 6vw, 5rem);
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -19,31 +19,32 @@
 }
 
 .eyebrow {
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
   color: var(--black);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.18em;
   line-height: 1.2;
 }
 
 .title {
-  max-width: 18ch;
+  max-width: 20ch;
   margin: 0;
   color: var(--text);
-  font-size: clamp(2rem, 3vw, 2.8rem);
+  font-size: clamp(1.75rem, 2.5vw, 2.4rem);
   font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.035em;
+  line-height: 1.16;
+  letter-spacing: -0.03em;
   text-wrap: balance;
 }
 
 .intro {
-  max-width: 32rem;
-  margin: 1.5rem 0 0;
+  max-width: 31rem;
+  margin: 1.1rem 0 0;
   color: var(--text);
-  font-size: 0.95rem;
-  line-height: 1.8;
+  font-size: 0.9rem;
+  line-height: 1.75;
+  text-wrap: pretty;
 }
 
 .guideButton {
@@ -52,14 +53,14 @@
   justify-content: space-between;
   gap: 1.5rem;
   min-height: 44px;
-  margin-top: 2.25rem;
+  margin-top: 1.75rem;
   padding: 0.75rem 1rem;
   border: 1px solid var(--action);
   background: var(--action);
   color: var(--surface-raised);
   cursor: pointer;
   font: inherit;
-  font-size: 0.86rem;
+  font-size: 0.84rem;
   font-weight: 700;
 }
 
@@ -88,9 +89,9 @@
 
 .capability {
   display: grid;
-  grid-template-columns: minmax(8.5rem, 0.38fr) minmax(0, 1fr);
-  gap: clamp(1.5rem, 4vw, 3rem);
-  padding: 1.65rem 0;
+  grid-template-columns: minmax(8.25rem, 0.38fr) minmax(0, 1fr);
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  padding: 1.4rem 0;
   border-bottom: 1px solid color-mix(in srgb, var(--black) 16%, transparent);
 }
 
@@ -103,7 +104,7 @@
 
 .capabilityIndex {
   color: var(--text);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   opacity: 0.5;
@@ -112,8 +113,8 @@
 .capability h3 {
   margin: 0;
   color: var(--black);
-  font-size: 0.92rem;
-  font-weight: 800;
+  font-size: 0.9rem;
+  font-weight: 700;
   line-height: 1.55;
   letter-spacing: -0.02em;
 }
@@ -121,44 +122,27 @@
 .capability p {
   margin: 0;
   color: var(--text);
-  font-size: 0.88rem;
-  line-height: 1.8;
+  font-size: 0.86rem;
+  line-height: 1.75;
 }
 
 .demoCopy p + p {
-  margin-top: 0.7rem;
-}
-
-.capability .benefit {
-  display: flex;
-  gap: 0.75rem;
-  align-items: baseline;
-  margin-top: 1rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.benefitLabel {
-  flex: 0 0 auto;
-  color: var(--black);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  margin-top: 0.65rem;
 }
 
 @media (max-width: 768px) {
   .section {
-    padding: 4.5rem 0.75rem;
+    padding: 3.75rem 0.75rem;
   }
 
   .content {
     grid-template-columns: 1fr;
-    gap: 3rem;
+    gap: 2.5rem;
   }
 
   .title {
-    max-width: 18ch;
-    font-size: clamp(1.9rem, 8vw, 2.6rem);
+    max-width: 20ch;
+    font-size: clamp(1.7rem, 6vw, 2.1rem);
   }
 
   .intro {
@@ -172,22 +156,26 @@
 
 @media (max-width: 480px) {
   .section {
-    padding: 3.75rem 0.625rem;
+    padding: 3rem 0.75rem;
+  }
+
+  .title {
+    font-size: 1.7rem;
+    line-height: 1.2;
+  }
+
+  .intro {
+    margin-top: 0.9rem;
+    font-size: 0.875rem;
   }
 
   .capability {
     grid-template-columns: 1fr;
-    gap: 0.75rem;
-    padding: 1.4rem 0;
+    gap: 0.65rem;
+    padding: 1.25rem 0;
   }
 
   .capabilityHeading {
     grid-template-columns: 1.75rem minmax(0, 1fr);
-  }
-
-  .capability .benefit {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.3rem;
   }
 }

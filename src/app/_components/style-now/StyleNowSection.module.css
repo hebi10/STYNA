@@ -1,7 +1,7 @@
 .section {
-  padding: clamp(4.5rem, 7vw, 6.5rem) 0;
-  background: #fff;
-  border-top: 1px solid #e3e3e3;
+  padding: clamp(4rem, 6vw, 5.5rem) 0;
+  background: var(--surface-raised);
+  border-top: 1px solid var(--line);
 }
 
 .container {
@@ -14,9 +14,9 @@
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   align-items: end;
-  gap: clamp(2rem, 7vw, 6rem);
-  padding-bottom: 1.75rem;
-  border-bottom: 1px solid #161616;
+  gap: clamp(2rem, 5vw, 4.5rem);
+  padding-bottom: 1.35rem;
+  border-bottom: 1px solid var(--black);
 }
 
 .titleBlock {
@@ -24,26 +24,27 @@
 }
 
 .kicker {
-  margin: 0 0 0.85rem;
-  color: #596579;
-  font-size: 0.7rem;
+  margin: 0 0 0.65rem;
+  color: var(--text-subtle);
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.18em;
 }
 
 .titleBlock h2 {
   margin: 0;
-  color: #111;
-  font-size: clamp(2rem, 3vw, 2.75rem);
+  color: var(--black);
+  font-size: clamp(1.75rem, 2.2vw, 2.25rem);
   font-weight: 600;
-  line-height: 1.1;
-  letter-spacing: -0.035em;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 
 .headerCopy {
   display: grid;
-  gap: 0.55rem;
-  max-width: 35rem;
+  gap: 0.35rem;
+  max-width: 32rem;
   justify-self: end;
 }
 
@@ -53,35 +54,36 @@
 }
 
 .headerLead {
-  color: #111;
-  font-size: clamp(1rem, 1.5vw, 1.15rem);
-  font-weight: 600;
-  line-height: 1.65;
-  letter-spacing: -0.02em;
+  color: var(--black);
+  font-size: clamp(0.94rem, 1.1vw, 1.05rem);
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
 }
 
 .headerSubcopy {
-  color: #687386;
-  font-size: 0.84rem;
-  line-height: 1.75;
+  color: var(--text-subtle);
+  font-size: 0.8rem;
+  line-height: 1.7;
 }
 
 .seasonGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
-  margin-top: 1.75rem;
+  margin-top: 1.4rem;
 }
 
 .seasonCard {
   display: block;
   min-width: 0;
-  color: #111;
+  color: var(--black);
   text-decoration: none;
 }
 
 .seasonCard:focus-visible {
-  outline: 2px solid #111;
+  outline: 2px solid var(--black);
   outline-offset: 3px;
 }
 
@@ -89,7 +91,7 @@
   position: relative;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  background: #eceff1;
+  background: var(--off-white);
 }
 
 .cardImage {
@@ -102,8 +104,8 @@
 }
 
 .cardContent {
-  min-height: 126px;
-  padding: 1rem 0 0.25rem;
+  min-height: 118px;
+  padding: 0.9rem 0 0.2rem;
 }
 
 .cardHeading {
@@ -114,31 +116,31 @@
 }
 
 .cardIndex {
-  color: #7b8492;
-  font-size: 0.65rem;
+  color: var(--text-subtle);
+  font-size: 0.64rem;
   font-weight: 700;
   letter-spacing: 0.08em;
 }
 
 .cardSeason {
-  color: #111;
-  font-size: 1rem;
-  font-weight: 800;
+  color: var(--black);
+  font-size: 0.96rem;
+  font-weight: 700;
 }
 
 .cardAction {
-  color: #737c89;
-  font-size: 0.62rem;
+  color: var(--text-subtle);
+  font-size: 0.61rem;
   font-weight: 700;
   letter-spacing: 0.08em;
 }
 
 .cardContent p {
   display: -webkit-box;
-  margin: 0.7rem 0 0 2.2rem;
+  margin: 0.6rem 0 0 2.2rem;
   overflow: hidden;
-  color: #596579;
-  font-size: 0.82rem;
+  color: var(--text-subtle);
+  font-size: 0.8rem;
   line-height: 1.65;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -159,12 +161,12 @@
 
 @media (max-width: 900px) {
   .section {
-    padding: 4.5rem 0;
+    padding: 3.75rem 0;
   }
 
   .sectionHeader {
     grid-template-columns: 1fr;
-    gap: 1.25rem;
+    gap: 1rem;
   }
 
   .headerCopy {
@@ -179,14 +181,14 @@
   }
 
   .titleBlock h2 {
-    font-size: clamp(2rem, 9vw, 2.75rem);
+    font-size: clamp(1.7rem, 6vw, 2.1rem);
   }
 }
 
 @media (max-width: 640px) {
   .seasonGrid {
     grid-template-columns: 1fr;
-    gap: 1.75rem;
+    gap: 1.5rem;
   }
 
   .cardContent {
@@ -197,14 +199,18 @@
 
 @media (max-width: 480px) {
   .section {
-    padding: 3.75rem 0;
+    padding: 3.25rem 0;
   }
 
   .container {
-    padding: 0 0.625rem;
+    padding: 0 0.75rem;
   }
 
-  .headerSubcopy {
-    max-width: 31rem;
+  .titleBlock h2 {
+    font-size: 1.7rem;
+  }
+
+  .headerLead {
+    font-size: 0.92rem;
   }
 }

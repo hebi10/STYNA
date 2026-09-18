@@ -14,10 +14,10 @@ export default function StyleNowSection() {
           </div>
           <div className={styles.headerCopy}>
             <p className={styles.headerLead}>
-              지금 계절에 어울리는 스타일을 시즌별 무드와 함께 살펴보세요.
+              시즌별 무드와 스타일을 한눈에 살펴보세요.
             </p>
             <p className={styles.headerSubcopy}>
-              화보와 대표 상품을 연결해 각 계절의 분위기를 한 장면처럼 구성했습니다.
+              화보와 대표 상품을 연결해 계절별 스타일을 구성했습니다.
             </p>
           </div>
         </header>

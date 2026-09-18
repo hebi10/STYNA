@@ -30,6 +30,16 @@ describe('StyleNowSection CSS', () => {
     expect(result.warnings().map((warning) => warning.text)).toEqual([]);
   });
 
+  test('홈 제목 위계와 1280/768/360 반응형 기준을 유지한다', () => {
+    const css = fs.readFileSync(cssPath, 'utf8');
+
+    expect(css).toContain('max-width: 1200px');
+    expect(css).toContain('font-size: clamp(1.75rem, 2.2vw, 2.25rem)');
+    expect(css).toContain('@media (max-width: 768px)');
+    expect(css).toContain('@media (max-width: 480px)');
+    expect(css).not.toMatch(/#[0-9a-f]{3,8}/i);
+  });
+
   test('모바일 플로팅 도구와 겹치지 않도록 콘텐츠 안전 여백을 둔다', () => {
     const homeCss = fs.readFileSync(cssPath, 'utf8');
     const seasonCss = fs.readFileSync(seasonCssPath, 'utf8');
