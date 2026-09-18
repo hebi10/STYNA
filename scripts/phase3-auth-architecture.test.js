@@ -135,6 +135,31 @@ describe('phase 3 auth architecture contracts', () => {
     expect(source).not.toMatch(/data-requires-reauth="true"[\s\S]{0,180}setShowUserDetail\(false\)/);
   });
 
+
+  test('demo administrator can navigate a synthetic read-only workspace without gaining real admin access', () => {
+    const shell = read('src/app/admin/AdminShell.tsx');
+    const demoWorkspace = read('src/app/admin/_components/DemoAdminDashboard.tsx');
+    const serverAuth = read('functions/src/utils/auth.ts');
+
+    expect(shell).toContain('<AdminNav onNavigate={closeMenu} />');
+    expect(shell).not.toContain('!isDemoAdmin && <AdminNav');
+    expect(shell).toContain('관리자 체험 모드 · 조회 전용');
+    expect(shell).toMatch(/if \(isDemoAdmin\) \{[\s\S]{0,180}event\.preventDefault\(\);[\s\S]{0,180}event\.stopPropagation\(\);/);
+
+    expect(demoWorkspace).toContain('usePathname');
+    expect(demoWorkspace).toContain('/admin/dashboard/products');
+    expect(demoWorkspace).toContain('/admin/dashboard/orders');
+    expect(demoWorkspace).toContain('/admin/dashboard/users');
+    expect(demoWorkspace).toContain('/admin/coupons');
+    expect(demoWorkspace).toContain('/admin/events');
+    expect(demoWorkspace).toContain('비식별 샘플 데이터');
+    expect(demoWorkspace).toContain('disabled');
+
+    expect(serverAuth).toContain('const isAdmin = hasAdminClaim && role === "admin"');
+    expect(serverAuth).toContain('decodedToken.demoAdmin === true && role === "demo_admin"');
+  });
+
+
   test('modal entry and cancel controls do not require write reauthentication', () => {
     const coupons = read('src/app/admin/coupons/page.tsx');
     const inquiries = read('src/app/admin/inquiries/page.tsx');
