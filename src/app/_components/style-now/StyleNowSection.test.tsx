@@ -87,6 +87,10 @@ describe('StyleNowSection', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: '스타일나우' }),
     ).toBeInTheDocument();
+    expect(screen.getByText(
+      '지금 계절에 어울리는 스타일을 시즌별 무드와 함께 살펴보세요.',
+    )).toBeInTheDocument();
+    expect(screen.getByText('VIEW →')).toBeInTheDocument();
 
     for (const season of seasons) {
       const card = screen.getByRole('link', {
