@@ -25,7 +25,10 @@ describe('PortfolioDemoSection', () => {
 
     expect(container.querySelectorAll('section')).toHaveLength(1);
     expect(screen.getByText('PORTFOLIO PROJECT')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '쇼핑 경험과 운영 흐름을 함께 담은 커머스 데모' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '포트폴리오용 데모 사이트입니다' })).toBeInTheDocument();
+    expect(screen.getByText(
+      '실제 쇼핑몰이 아닌 포트폴리오 시연용 서비스입니다. 일부 기능과 데이터는 체험을 위해 동작하므로 이용에 참고해 주세요.',
+    )).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '쇼핑 경험' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '운영 기능' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '데모 안내' })).toBeInTheDocument();
