@@ -28,13 +28,13 @@
 }
 
 .title {
-  max-width: 13ch;
+  max-width: 18ch;
   margin: 0;
   color: var(--text);
-  font-size: clamp(2.5rem, 4.8vw, 4.5rem);
+  font-size: clamp(2rem, 3vw, 2.8rem);
   font-weight: 600;
-  line-height: 1.02;
-  letter-spacing: -0.05em;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
   text-wrap: balance;
 }
 
@@ -157,8 +157,8 @@
   }
 
   .title {
-    max-width: 14ch;
-    font-size: clamp(2.25rem, 10vw, 3.4rem);
+    max-width: 18ch;
+    font-size: clamp(1.9rem, 8vw, 2.6rem);
   }
 
   .intro {
