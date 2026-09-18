@@ -74,7 +74,7 @@
 ## 2026-08-12 공개 관리자 데모와 변경 재인증
 
 - 공개 관리자 데모는 `demo_admin` 사용자 문서 역할과 `demoAdmin: true` custom claim을 함께 사용한다. 이 역할은 엄격 관리자 조건을 만족하지 않으므로 Firestore·Storage·관리 Functions의 관리자 읽기·쓰기를 얻지 못한다.
-- 관리자 셸은 데모 주체일 때 실제 하위 관리 화면을 마운트하지 않고, 실제 데이터 조회 없이 개인정보가 없는 읽기 전용 요약만 표시한다.
+- 관리자 셸은 데모 주체일 때 실제 하위 관리 화면을 마운트하지 않는다. 대신 기존 관리자 내비게이션을 그대로 제공하고 현재 경로에 맞는 비식별 샘플 운영 화면을 렌더링해 상품·주문·사용자·쿠폰·이벤트 등 운영 구조를 확인할 수 있게 한다.
 - 실제 관리자 쓰기는 Firebase 재인증으로 갱신된 ID token의 `auth_time`이 현재 시각 기준 5분 이내인 경우에만 Firestore Rules·Storage Rules·`adminUsers`·`coupon`·`points` Functions에서 허용한다.
 - `npm run provision:demo-admin:dry-run`은 `PORTFOLIO_DEMO_ADMIN_UID`를 우선 사용하고, UID가 없으면 `PORTFOLIO_DEMO_ADMIN_EMAIL` 또는 공개 데모 로그인 계정의 기본 이메일로 대상을 조회한다. UID와 이메일을 함께 지정하면 동일 계정인지 확인하며, 요약과 오류에는 UID·이메일·토큰을 출력하지 않는다.
 - `--execute`는 다른 활성 실제 관리자가 1명 이상 있을 때만 claim·문서 role 변경과 refresh token 폐기를 수행한다. dry-run과 execute 모두 대상 프로젝트를 확인하고, execute와 배포는 승인 후에만 실행한다.
@@ -96,4 +96,13 @@
 - 사용자 문서 React Query 키는 `userKeys.detail(userId)`로 통일했다. 로그인 검증·회원가입 후 갱신·회원정보 수정이 같은 키를 사용하며, 명시적 로그아웃에서는 사용자 문서·장바구니·포인트·주문·활동·쿠폰의 사용자별 캐시를 제거한다.
 - 관리자 쓰기 재인증은 버튼의 한국어 문구를 정규식으로 추측하지 않는다. 실제 Firestore·Functions·Storage 변경을 시작하는 컨트롤에 `data-requires-reauth="true"`를 명시하고 `AdminShell`이 해당 의도만 가로챈다.
 - 상품·이벤트 이미지처럼 선택 즉시 Storage에 업로드되는 입력도 쓰기 경계로 취급한다. 반대로 모달 열기·취소·로컬 폼 상태 편집은 재인증을 요구하지 않는다.
-- `demo_admin`은 계속 실제 관리자 하위 화면을 마운트하지 않는 읽기 전용 데모다. `data-requires-reauth`는 UX 재인증 경계이며 실제 권한 보안은 기존의 최근 `auth_time` 검증과 Firestore/Storage Rules·Functions 권한 검사에 의해 강제된다.
+- `demo_admin`은 실제 관리자 하위 화면과 실제 운영 데이터를 마운트하지 않는 읽기 전용 데모다. 관리자 메뉴 이동 시 `DemoAdminDashboard`가 경로별 비식별 샘플 데이터를 렌더링하며 변경 액션은 disabled 상태로 보여준다. `AdminShell`은 데모 주체의 `data-requires-reauth` 이벤트도 즉시 차단한다. 실제 권한 보안은 demo_admin이 엄격 admin 조건을 만족하지 못하도록 한 Firestore/Storage Rules·Functions 권한 검사에 의해 계속 강제된다.
+
+
+## 2026-09-18 읽기 전용 관리자 체험 확장
+
+- 관리자 데모는 실제 주문·사용자·문의 데이터를 읽지 않는다. 각 관리 메뉴는 비식별 샘플 데이터로 구조와 상태 표현만 재현한다.
+- 데모 계정에서도 실제 관리자 내비게이션을 사용해 대시보드, 카테고리, 상품, 쿠폰, 주문, 사용자, 이벤트, 문의, QnA, 리뷰 화면을 탐색할 수 있다.
+- 상단에는 `관리자 체험 모드 · 조회 전용` 배너를 상시 표시한다.
+- 변경 액션은 숨기지 않고 disabled 상태로 보여 기능 범위를 설명하며, `체험 계정에서는 변경할 수 없습니다` 안내를 제공한다.
+- demo_admin은 서버에서 `isAdmin === false`를 유지한다. 따라서 직접 API 호출이나 DOM 조작으로 실제 관리자 쓰기 권한을 얻을 수 없다.
