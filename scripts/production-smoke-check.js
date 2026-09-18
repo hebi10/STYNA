@@ -62,7 +62,8 @@ async function verifyDemoLogin(role) {
   }
 
   const data = await response.json();
-  if (!data || typeof data.token !== 'string' || data.token.length < 20) {
+  const customToken = data?.data?.customToken;
+  if (typeof customToken !== 'string' || customToken.length < 20) {
     throw new Error('/api/demo-login (' + role + ') did not return a valid custom token');
   }
 
