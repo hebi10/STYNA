@@ -88,6 +88,30 @@
   gap: 0.75rem;
 }
 
+.demoModeBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-muted);
+  color: var(--text-subtle);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.demoModeBanner strong {
+  flex: 0 0 auto;
+  color: var(--black);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.demoModeBanner span {
+  text-align: right;
+}
+
 .header h1 {
   font-size: 1rem;
   font-weight: 600;
@@ -419,6 +443,17 @@
 
   .header h1 {
     font-size: 1.125rem;
+  }
+
+  .demoModeBanner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.7rem 1rem;
+  }
+
+  .demoModeBanner span {
+    text-align: left;
   }
 
   .userInfo {
