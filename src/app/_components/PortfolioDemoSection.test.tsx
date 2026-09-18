@@ -24,11 +24,11 @@ describe('PortfolioDemoSection', () => {
     const { container } = render(<PortfolioDemoSection />);
 
     expect(container.querySelectorAll('section')).toHaveLength(1);
-    expect(screen.getByText('PORTFOLIO DEMO')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '포트폴리오로 구현한 쇼핑몰' })).toBeInTheDocument();
+    expect(screen.getByText('PORTFOLIO PROJECT')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '쇼핑 경험과 운영 흐름을 함께 담은 커머스 데모' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '쇼핑 경험' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '운영 기능' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '데모 환경' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '데모 안내' })).toBeInTheDocument();
     const capabilityList = screen.getByRole('list', { name: '구현 범위' });
     expect(within(capabilityList).getAllByRole('listitem')).toHaveLength(3);
     expect(container.querySelectorAll('article')).toHaveLength(0);
@@ -36,13 +36,13 @@ describe('PortfolioDemoSection', () => {
     expect(screen.getByText(buildDemoDataNotice())).toBeInTheDocument();
     expect(screen.getByText(formatSignupBenefit())).toBeInTheDocument();
     expect(screen.getByText(
-      '상품 탐색, 장바구니, 주문 흐름을 직접 확인할 수 있습니다.',
+      '상품 탐색부터 장바구니와 주문 완료까지 전체 흐름을 확인할 수 있습니다.',
     )).toBeInTheDocument();
     expect(screen.getByText(
-      '관리자 화면에서 상품, 이벤트, 쿠폰 관리 기능을 확인할 수 있습니다.',
+      '관리자 화면에서 상품, 주문, 이벤트, 쿠폰의 운영 구조를 살펴볼 수 있습니다.',
     )).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '구현 범위 자세히 보기' }));
+    fireEvent.click(screen.getByRole('button', { name: '프로젝트 둘러보기' }));
 
     expect(listener).toHaveBeenCalledTimes(1);
     window.removeEventListener(OPEN_SITE_GUIDE_EVENT, listener);
