@@ -61,6 +61,17 @@ describe('phase 1 security contracts', () => {
     expect(source).not.toContain('test01test01');
   });
 
+  test('server demo login returns only stable stage codes for internal failures', () => {
+    const source = read('functions/src/handlers/demoLogin.ts');
+
+    expect(source).toContain('"demo_auth_lookup_failed"');
+    expect(source).toContain('"demo_profile_lookup_failed"');
+    expect(source).toContain('"demo_token_sign_failed"');
+    expect(source).toContain('code: error.code');
+    expect(source).not.toContain('error: String(error)');
+    expect(source).not.toContain('details: error');
+  });
+
   test('server demo login requires a server-only enable flag', () => {
     const source = read('functions/src/handlers/demoLogin.ts');
 
