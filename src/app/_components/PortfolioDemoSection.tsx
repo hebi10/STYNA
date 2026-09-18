@@ -24,7 +24,7 @@ export default function PortfolioDemoSection() {
           <button
             type="button"
             className={styles.guideButton}
-            onClick={openSiteGuide}
+            onClick={() => openSiteGuide('portfolio')}
           >
             프로젝트 둘러보기
             <span aria-hidden="true">→</span>

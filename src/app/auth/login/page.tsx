@@ -178,7 +178,11 @@ export default function LoginPage() {
         </form>
 
         {showDemoLogins && (
-          <section className={styles.demoPanel} aria-labelledby="demo-login-title">
+          <section
+            id="portfolio-demo-login"
+            className={styles.demoPanel}
+            aria-labelledby="demo-login-title"
+          >
             <p className={styles.demoEyebrow}>PORTFOLIO DEMO</p>
             <h3 id="demo-login-title" className={styles.demoTitle}>
               체험 모드로 바로 둘러보기

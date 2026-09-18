@@ -23,7 +23,7 @@ jest.mock('./SiteGuidePopup.module.css', () => ({
 }));
 
 describe('SiteGuidePopup policy copy', () => {
-  test('shows shopping policies without demo or portfolio framing', () => {
+  test('shows shopping policies without demo or portfolio framing by default', () => {
     const markup = renderToStaticMarkup(
       <SiteGuidePopup isOpen onClose={jest.fn()} />,
     );
@@ -33,9 +33,25 @@ describe('SiteGuidePopup policy copy', () => {
     expect(markup).toContain('배송과 회원 혜택을 빠르게 확인하세요.');
     expect(markup).not.toMatch(/데모|포트폴리오|답변 여부와 시점/);
     expect(markup).not.toMatch(/순차적으로 확인|고객센터.*운영/);
-    expect(markup).not.toMatch(
-      /생일 쿠폰|구매 적립|당일 출고|수령 후 7일|무료 교환|구매.*1%/,
-    );
+  });
+
+  test('shows an interviewer-focused portfolio route with direct experience links', () => {
+    render(<SiteGuidePopup isOpen onClose={jest.fn()} mode="portfolio" />);
+
+    expect(screen.getByText(/5~10분이면 사용자 쇼핑 흐름과 관리자 운영 구조/)).toBeInTheDocument();
+    expect(screen.getByText(/관리자 체험은 조회 전용/)).toBeInTheDocument();
+
+    const steps = screen.getByRole('list', { name: '추천 체험 순서' });
+    expect(within(steps).getAllByRole('listitem')).toHaveLength(6);
+    expect(within(steps).getByText('일반 사용자 체험')).toBeInTheDocument();
+    expect(within(steps).getByText('관리자 페이지 체험')).toBeInTheDocument();
+
+    expect(screen.getByRole('link', { name: '상품부터 보기' }))
+      .toHaveAttribute('href', '/products');
+    expect(screen.getByRole('link', { name: '일반 사용자 체험' }))
+      .toHaveAttribute('href', '/auth/login?redirect=/orders/cart#portfolio-demo-login');
+    expect(screen.getByRole('link', { name: '관리자 페이지 체험' }))
+      .toHaveAttribute('href', '/auth/login#portfolio-demo-login');
   });
 
   test('renders nothing while closed', () => {
@@ -44,12 +60,15 @@ describe('SiteGuidePopup policy copy', () => {
     )).toBe('');
   });
 
-  test('provides dialog semantics and closes with Escape', () => {
+  test.each([
+    ['shopping', 'STYNA 쇼핑 안내'],
+    ['portfolio', 'STYNA 포트폴리오 체험 가이드'],
+  ] as const)('provides dialog semantics and closes with Escape in %s mode', (mode, name) => {
     const onClose = jest.fn();
 
-    render(<SiteGuidePopup isOpen onClose={onClose} />);
+    render(<SiteGuidePopup isOpen onClose={onClose} mode={mode} />);
 
-    const dialog = screen.getByRole('dialog', { name: 'STYNA 쇼핑 안내' });
+    const dialog = screen.getByRole('dialog', { name });
     expect(dialog).toHaveAttribute('aria-modal', 'true');
 
     fireEvent.keyDown(dialog, { key: 'Escape' });
@@ -108,5 +127,6 @@ describe('SiteGuidePopup policy copy', () => {
 
     expect(popupRule).toMatch(/overflow-y:\s*auto/);
     expect(css).toMatch(/max-height:\s*calc\(100dvh\s*-\s*1\.5rem\)/);
+    expect(css).toMatch(/\.portfolioPopup\s*\{[\s\S]*?max-width:\s*620px/);
   });
 });

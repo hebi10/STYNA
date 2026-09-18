@@ -12,8 +12,20 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('./SiteGuidePopup', () => ({
   __esModule: true,
-  default: ({ isOpen }: { isOpen: boolean }) => (
-    isOpen ? <div role="dialog" aria-label="쇼핑 안내" /> : null
+  default: ({
+    isOpen,
+    mode = 'shopping',
+  }: {
+    isOpen: boolean;
+    mode?: 'shopping' | 'portfolio';
+  }) => (
+    isOpen ? (
+      <div
+        role="dialog"
+        aria-label={mode === 'portfolio' ? '포트폴리오 체험 가이드' : '쇼핑 안내'}
+        data-mode={mode}
+      />
+    ) : null
   ),
 }));
 
@@ -37,6 +49,19 @@ describe('SiteGuideManager shared guide event', () => {
     });
 
     expect(screen.getByRole('dialog', { name: '쇼핑 안내' })).toBeInTheDocument();
+  });
+
+  test('opens the portfolio experience guide when the project tour requests it', () => {
+    render(<SiteGuideManager />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(OPEN_SITE_GUIDE_EVENT, {
+        detail: { mode: 'portfolio' },
+      }));
+    });
+
+    const dialog = screen.getByRole('dialog', { name: '포트폴리오 체험 가이드' });
+    expect(dialog).toHaveAttribute('data-mode', 'portfolio');
   });
 
   test('opens the popup from the fixed shopping guide trigger', () => {

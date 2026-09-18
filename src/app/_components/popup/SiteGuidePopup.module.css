@@ -28,6 +28,10 @@
   overflow-y: auto;
 }
 
+.portfolioPopup {
+  max-width: 620px;
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -206,4 +210,67 @@
     flex-direction: column;
   }
 
+}
+
+.portfolioNotice {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  background: var(--off-white);
+  color: var(--text-subtle);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.tourList {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.tourList li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.stepIndex {
+  color: var(--text-subtle);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.tourList strong {
+  display: block;
+  color: var(--black);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.tourList p {
+  margin: 0.2rem 0 0;
+  color: var(--text-subtle);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.portfolioLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0 1rem 1rem;
+}
+
+.portfolioLinks .linkButton,
+.portfolioLinks .linkButtonPrimary {
+  flex: 1 1 150px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }

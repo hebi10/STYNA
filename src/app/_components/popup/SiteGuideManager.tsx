@@ -5,16 +5,20 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import SiteGuidePopup from './SiteGuidePopup';
 import styles from './SiteGuideManager.module.css';
-import { OPEN_SITE_GUIDE_EVENT } from '@/shared/utils/siteGuide';
+import {
+  OPEN_SITE_GUIDE_EVENT,
+  type SiteGuideEventDetail,
+  type SiteGuideMode,
+} from '@/shared/utils/siteGuide';
 import { getFloatingUiPolicy } from '@/shared/utils/floatingUi';
 
 const SiteGuideManager: React.FC = () => {
   const pathname = usePathname();
   const floatingUiPolicy = getFloatingUiPolicy(pathname);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [guideMode, setGuideMode] = useState<SiteGuideMode>('shopping');
   const [isClient, setIsClient] = useState(false);
 
-  // 클라이언트 사이드에서만 실행
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -25,7 +29,9 @@ const SiteGuideManager: React.FC = () => {
       return;
     }
 
-    const handleSharedGuideOpen = () => {
+    const handleSharedGuideOpen = (event: Event) => {
+      const customEvent = event as CustomEvent<SiteGuideEventDetail>;
+      setGuideMode(customEvent.detail?.mode === 'portfolio' ? 'portfolio' : 'shopping');
       setIsPopupOpen(true);
     };
 
@@ -41,10 +47,10 @@ const SiteGuideManager: React.FC = () => {
   };
 
   const handleOpenPopup = () => {
+    setGuideMode('shopping');
     setIsPopupOpen(true);
   };
 
-  // 서버 사이드 렌더링에서는 아무것도 렌더링하지 않음
   if (!isClient) {
     return null;
   }
@@ -74,10 +80,10 @@ const SiteGuideManager: React.FC = () => {
         />
       </button>
 
-      {/* 팝업 */}
       <SiteGuidePopup
         isOpen={isPopupOpen}
         onClose={handleClosePopup}
+        mode={guideMode}
       />
     </div>
   );
