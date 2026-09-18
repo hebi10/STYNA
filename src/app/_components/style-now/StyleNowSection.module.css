@@ -1,7 +1,7 @@
 .section {
-  padding: 4.5rem 0;
+  padding: clamp(4.5rem, 7vw, 6.5rem) 0;
   background: #fff;
-  border-top: 1px solid #d8d8d8;
+  border-top: 1px solid #e3e3e3;
 }
 
 .container {
@@ -12,65 +12,77 @@
 
 .sectionHeader {
   display: grid;
-  grid-template-columns: minmax(140px, 0.3fr) minmax(0, 1fr);
-  align-items: flex-end;
-  gap: 2rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid #13233a;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: end;
+  gap: clamp(2rem, 7vw, 6rem);
+  padding-bottom: 1.75rem;
+  border-bottom: 1px solid #161616;
+}
+
+.titleBlock {
+  min-width: 0;
 }
 
 .kicker {
-  margin: 0;
+  margin: 0 0 0.85rem;
   color: #596579;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
 }
 
-.sectionHeading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 2rem;
-}
-
-.sectionHeading h2 {
+.titleBlock h2 {
   margin: 0;
   color: #111;
-  letter-spacing: -0.03em;
+  font-size: clamp(2.6rem, 5vw, 4.4rem);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.05em;
 }
 
-.sectionHeading h2 {
-  font-size: clamp(1.8rem, 3.8vw, 3rem);
-  line-height: 1;
+.headerCopy {
+  display: grid;
+  gap: 0.55rem;
+  max-width: 35rem;
+  justify-self: end;
 }
 
-.sectionHeading > p {
-  max-width: 34rem;
+.headerLead,
+.headerSubcopy {
   margin: 0;
-  color: #596579;
-  font-size: 0.9rem;
-  line-height: 1.7;
+}
+
+.headerLead {
+  color: #111;
+  font-size: clamp(1rem, 1.5vw, 1.15rem);
+  font-weight: 600;
+  line-height: 1.65;
+  letter-spacing: -0.02em;
+}
+
+.headerSubcopy {
+  color: #687386;
+  font-size: 0.84rem;
+  line-height: 1.75;
 }
 
 .seasonGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
-  margin-top: 1.5rem;
+  margin-top: 1.75rem;
 }
 
 .seasonCard {
   display: block;
-  border: 1px solid #d8d8d8;
-  background: #fff;
+  min-width: 0;
   color: #111;
   text-decoration: none;
 }
 
 .seasonCard:focus-visible {
   outline: 2px solid #111;
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 
 .cardImageFrame {
@@ -86,29 +98,48 @@
 }
 
 .seasonCard:hover .cardImage {
-  transform: scale(1.02);
+  transform: scale(1.015);
 }
 
 .cardContent {
-  min-height: 120px;
-  padding: 1rem;
-  border-top: 1px solid #d8d8d8;
+  min-height: 126px;
+  padding: 1rem 0 0.25rem;
+}
+
+.cardHeading {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  align-items: baseline;
+}
+
+.cardIndex {
+  color: #7b8492;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 .cardSeason {
-  display: block;
   color: #111;
   font-size: 1rem;
   font-weight: 800;
 }
 
+.cardAction {
+  color: #737c89;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
 .cardContent p {
   display: -webkit-box;
-  margin: 0.55rem 0 0;
+  margin: 0.7rem 0 0 2.2rem;
   overflow: hidden;
   color: #596579;
   font-size: 0.82rem;
-  line-height: 1.55;
+  line-height: 1.65;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -122,29 +153,23 @@
 @media (max-width: 960px) {
   .seasonGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .seasonGrid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-
-  .cardContent {
-    min-height: auto;
-    padding-right: 6rem;
+    gap: 1.5rem 1rem;
   }
 }
 
 @media (max-width: 900px) {
   .section {
-    padding: 3.5rem 0;
+    padding: 4.5rem 0;
   }
 
   .sectionHeader {
     grid-template-columns: 1fr;
-    gap: 0.8rem;
+    gap: 1.25rem;
+  }
+
+  .headerCopy {
+    max-width: 38rem;
+    justify-self: start;
   }
 }
 
@@ -153,19 +178,33 @@
     padding: 0 0.75rem;
   }
 
-  .sectionHeading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.85rem;
+  .titleBlock h2 {
+    font-size: clamp(2.5rem, 12vw, 3.6rem);
+  }
+}
+
+@media (max-width: 640px) {
+  .seasonGrid {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+
+  .cardContent {
+    min-height: auto;
+    padding-right: 6rem;
   }
 }
 
 @media (max-width: 480px) {
   .section {
-    padding: 3rem 0;
+    padding: 3.75rem 0;
   }
 
   .container {
     padding: 0 0.625rem;
+  }
+
+  .headerSubcopy {
+    max-width: 31rem;
   }
 }
