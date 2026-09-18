@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import LoginPage from './page';
 import { useAuth } from '@/context/authProvider';
@@ -103,7 +105,7 @@ describe('LoginPage transition feedback', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: '로그인' }));
 
-    expect(screen.getByRole('status')).toHaveTextContent('마이페이지 준비 중');
+    expect(screen.getByRole('status')).toHaveTextContent('로그인 확인 중');
     expect(screen.getByRole('status')).toHaveTextContent('계정 정보를 확인하고 있습니다');
   });
 
@@ -151,7 +153,7 @@ describe('LoginPage transition feedback', () => {
     window.history.pushState(
       {},
       '',
-      `/auth/login?redirect=${encodeURIComponent(redirect)}`,
+      '/auth/login?redirect=' + encodeURIComponent(redirect),
     );
     login.mockResolvedValue(undefined);
 
@@ -168,14 +170,17 @@ describe('LoginPage transition feedback', () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/mypage'));
   });
 
-  test('renders portfolio demo login controls only when the public flag is true', () => {
+  test('renders explicit portfolio experience controls only when the public flag is true', () => {
     process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN = 'true';
 
     render(<LoginPage />);
 
-    expect(screen.getByText('포트폴리오 데모 로그인')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '일반 회원 로그인' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '관리자 로그인' })).toBeInTheDocument();
+    expect(screen.getByText('PORTFOLIO DEMO')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '체험 모드로 바로 둘러보기' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '일반 사용자 체험' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '관리자 페이지 체험' })).toBeInTheDocument();
+    expect(screen.getByText(/관리자 체험은 조회 전용입니다/)).toBeInTheDocument();
+    expect(screen.getByText(/실제 결제 및 운영 데이터 변경은 진행되지 않습니다/)).toBeInTheDocument();
   });
 
   test('uses the server-issued member demo session without client credentials', async () => {
@@ -184,24 +189,59 @@ describe('LoginPage transition feedback', () => {
 
     render(<LoginPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: '일반 회원 로그인' }));
+    fireEvent.click(screen.getByRole('button', { name: '일반 사용자 체험' }));
 
     await waitFor(() => expect(loginDemo).toHaveBeenCalledWith('user'));
     expect(login).not.toHaveBeenCalled();
     expect(replace).toHaveBeenCalledWith('/mypage');
   });
 
-  test('uses the server-issued administrator demo session and routes to admin', async () => {
+  test('uses the server-issued administrator demo session and preserves the admin target', async () => {
     process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN = 'true';
     loginDemo.mockResolvedValue(undefined);
 
-    render(<LoginPage />);
+    const authState = {
+      login,
+      loginDemo,
+      error: null,
+      clearError,
+      user: null as { uid: string } | null,
+      loading: false,
+    };
+    (useAuth as jest.Mock).mockImplementation(() => authState);
 
-    fireEvent.click(screen.getByRole('button', { name: '관리자 로그인' }));
+    const { rerender } = render(<LoginPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: '관리자 페이지 체험' }));
 
     await waitFor(() => expect(loginDemo).toHaveBeenCalledWith('admin'));
-    expect(login).not.toHaveBeenCalled();
     expect(replace).toHaveBeenCalledWith('/admin');
+
+    authState.user = { uid: 'demo-admin' };
+    rerender(<LoginPage />);
+
+    await waitFor(() => {
+      expect(replace).toHaveBeenLastCalledWith('/admin');
+    });
+    expect(login).not.toHaveBeenCalled();
+  });
+
+  test('shows role-specific busy feedback and blocks duplicate demo clicks', () => {
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN = 'true';
+    loginDemo.mockReturnValue(new Promise(() => undefined));
+
+    render(<LoginPage />);
+
+    const adminButton = screen.getByRole('button', { name: '관리자 페이지 체험' });
+    const userButton = screen.getByRole('button', { name: '일반 사용자 체험' });
+
+    fireEvent.click(adminButton);
+
+    expect(adminButton).toBeDisabled();
+    expect(userButton).toBeDisabled();
+    expect(adminButton).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('status')).toHaveTextContent('관리자 체험 준비 중');
+    expect(screen.getByRole('status')).toHaveTextContent('조회 전용 관리자 화면');
   });
 
   test.each([
@@ -216,9 +256,9 @@ describe('LoginPage transition feedback', () => {
 
     render(<LoginPage />);
 
-    expect(screen.queryByText('포트폴리오 데모 로그인')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '일반 회원 로그인' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '관리자 로그인' })).not.toBeInTheDocument();
+    expect(screen.queryByText('PORTFOLIO DEMO')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '일반 사용자 체험' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '관리자 페이지 체험' })).not.toBeInTheDocument();
   });
 
   test('announces authentication errors', () => {
@@ -234,5 +274,17 @@ describe('LoginPage transition feedback', () => {
     render(<LoginPage />);
 
     expect(screen.getByRole('alert')).toHaveTextContent('이메일 또는 비밀번호를 확인해 주세요.');
+  });
+
+  test('keeps portfolio demo controls at or above the 44px touch target', () => {
+    const css = readFileSync(
+      resolve(process.cwd(), 'src/app/auth/login/page.module.css'),
+      'utf8',
+    );
+
+    expect(css).toMatch(
+      /\.demoButton\s*\{[\s\S]*?min-height:\s*56px;/,
+    );
+    expect(css).not.toMatch(/\.demoButton\s*\{[\s\S]*?border-radius:/);
   });
 });

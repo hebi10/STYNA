@@ -5,10 +5,12 @@ import Button from "../../_components/Button";
 import Input from "../../_components/Input";
 import styles from "./page.module.css";
 import useInput from "@/shared/hooks/useInput";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/authProvider";
 import { getSafeRedirectTarget } from "@/shared/utils/safeRedirect";
+
+type DemoLoginRole = "user" | "admin";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,60 +26,65 @@ export default function LoginPage() {
       window.location.origin,
     );
   });
+  const postLoginTargetRef = useRef(redirectTarget);
   const [values, onChange] = useInput({
-    id: '',
-    password: '',
+    id: "",
+    password: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCredentialSubmitting, setIsCredentialSubmitting] = useState(false);
+  const [activeDemoRole, setActiveDemoRole] = useState<DemoLoginRole | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
 
   const { login, loginDemo, error, clearError, user, loading } = useAuth();
+  const isSubmitting = isCredentialSubmitting || activeDemoRole !== null;
   const isTransitioning = isSubmitting || (!loading && Boolean(user));
 
+  const transitionTitle = activeDemoRole === "admin"
+    ? "관리자 체험 준비 중"
+    : activeDemoRole === "user"
+      ? "사용자 체험 준비 중"
+      : "로그인 확인 중";
+  const transitionDescription = activeDemoRole === "admin"
+    ? "조회 전용 관리자 화면을 준비하고 있습니다. 잠시만 기다려주세요."
+    : activeDemoRole === "user"
+      ? "쇼핑 흐름을 체험할 계정을 준비하고 있습니다. 잠시만 기다려주세요."
+      : "계정 정보를 확인하고 있습니다. 잠시만 기다려주세요.";
+
   useEffect(() => {
-    setRedirectTarget(getSafeRedirectTarget(
+    const safeTarget = getSafeRedirectTarget(
       new URLSearchParams(window.location.search).get("redirect"),
       window.location.origin,
-    ));
+    );
+    setRedirectTarget(safeTarget);
+    postLoginTargetRef.current = safeTarget;
   }, []);
 
   const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRememberMe(e.target.checked);
   };
 
-  const handleDemoAdminLogin = async () => {
-    setIsSubmitting(true);
+  const handleDemoLogin = async (role: DemoLoginRole) => {
+    const target = role === "admin" ? "/admin" : redirectTarget;
+
+    setActiveDemoRole(role);
+    postLoginTargetRef.current = target;
     clearError();
 
     try {
-      await loginDemo("admin");
+      await loginDemo(role);
       window.scrollTo(0, 0);
-      router.replace("/admin");
+      router.replace(target);
     } catch (error) {
-      console.error("Demo administrator login failed:", error);
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDemoUserLogin = async () => {
-    setIsSubmitting(true);
-    clearError();
-
-    try {
-      await loginDemo("user");
-      window.scrollTo(0, 0);
-      router.replace(redirectTarget);
-    } catch (error) {
-      console.error("Demo member login failed:", error);
-      setIsSubmitting(false);
+      console.error("Demo " + role + " login failed:", error);
+      setActiveDemoRole(null);
     }
   };
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace(redirectTarget);
+      router.replace(postLoginTargetRef.current);
     }
-  }, [user, loading, router, redirectTarget]);
+  }, [user, loading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +93,8 @@ export default function LoginPage() {
       return;
     }
 
-    setIsSubmitting(true);
+    setIsCredentialSubmitting(true);
+    postLoginTargetRef.current = redirectTarget;
     clearError();
 
     try {
@@ -95,7 +103,7 @@ export default function LoginPage() {
       router.replace(redirectTarget);
     } catch (error) {
       console.error("Login failed:", error);
-      setIsSubmitting(false);
+      setIsCredentialSubmitting(false);
     }
   };
 
@@ -105,15 +113,14 @@ export default function LoginPage() {
         {isTransitioning && (
           <div className={styles.transitionOverlay} role="status" aria-live="polite">
             <span className={styles.transitionSpinner} aria-hidden="true" />
-            <strong>마이페이지 준비 중</strong>
-            <p>계정 정보를 확인하고 있습니다. 잠시만 기다려주세요.</p>
+            <strong>{transitionTitle}</strong>
+            <p>{transitionDescription}</p>
           </div>
         )}
 
         <h2 className={styles.title}>로그인</h2>
 
         <form className={styles.form} onSubmit={handleSubmit}>
-
           {error && (
             <div className={styles.errorMessage} role="alert">
               {error}
@@ -163,54 +170,71 @@ export default function LoginPage() {
           <Button
             type="submit"
             size="lg"
-            style={{ width: '100%' }}
+            style={{ width: "100%" }}
             disabled={isSubmitting || !values.id || !values.password}
           >
-            {isSubmitting ? "로그인 중..." : "로그인"}
+            {isCredentialSubmitting ? "로그인 중..." : "로그인"}
           </Button>
         </form>
 
         {showDemoLogins && (
-          <>
-            <div className={styles.divider}>
-              <span className={styles.dividerText}>포트폴리오 데모 로그인</span>
+          <section className={styles.demoPanel} aria-labelledby="demo-login-title">
+            <p className={styles.demoEyebrow}>PORTFOLIO DEMO</p>
+            <h3 id="demo-login-title" className={styles.demoTitle}>
+              체험 모드로 바로 둘러보기
+            </h3>
+            <p className={styles.demoDescription}>
+              별도 계정 입력 없이 일반 쇼핑 흐름과 관리자 화면을 확인할 수 있습니다.
+            </p>
+
+            <div className={styles.demoActions}>
+              <button
+                type="button"
+                className={styles.demoButton}
+                onClick={() => handleDemoLogin("user")}
+                disabled={isSubmitting}
+                aria-label="일반 사용자 체험"
+                aria-busy={activeDemoRole === "user"}
+              >
+                <span className={styles.demoButtonContent}>
+                  <strong>
+                    {activeDemoRole === "user"
+                      ? "사용자 체험 준비 중..."
+                      : "일반 사용자 체험"}
+                  </strong>
+                  <span>상품 탐색 · 장바구니 · 주문 흐름</span>
+                </span>
+                <span className={styles.demoArrow} aria-hidden="true">→</span>
+              </button>
+
+              <button
+                type="button"
+                className={styles.demoButton + " " + styles.demoButtonAdmin}
+                onClick={() => handleDemoLogin("admin")}
+                disabled={isSubmitting}
+                aria-label="관리자 페이지 체험"
+                aria-busy={activeDemoRole === "admin"}
+              >
+                <span className={styles.demoButtonContent}>
+                  <strong>
+                    {activeDemoRole === "admin"
+                      ? "관리자 체험 준비 중..."
+                      : "관리자 페이지 체험"}
+                  </strong>
+                  <span>조회 전용 · 운영 데이터 변경 없음</span>
+                </span>
+                <span className={styles.demoArrow} aria-hidden="true">→</span>
+              </button>
             </div>
 
-            <div className={styles.socialButtons}>
-              <button
-                type="button"
-                className={styles.socialButton}
-                onClick={handleDemoUserLogin}
-                disabled={isSubmitting}
-              >
-                <span
-                  className={`${styles.socialBtn} ${styles.kakaoIcon}`}
-                  aria-hidden="true"
-                >
-                  U
-                </span>
-                {isSubmitting ? "로그인 중..." : "일반 회원 로그인"}
-              </button>
-              <button
-                type="button"
-                className={styles.socialButton}
-                onClick={handleDemoAdminLogin}
-                disabled={isSubmitting}
-              >
-                <span
-                  className={`${styles.socialBtn} ${styles.naverIcon}`}
-                  aria-hidden="true"
-                >
-                  A
-                </span>
-                {isSubmitting ? "로그인 중..." : "관리자 로그인"}
-              </button>
-            </div>
-          </>
+            <p className={styles.demoPolicy}>
+              관리자 체험은 조회 전용입니다. 실제 결제 및 운영 데이터 변경은 진행되지 않습니다.
+            </p>
+          </section>
         )}
 
         <div className={styles.link}>
-          아직 계정이 없으신가요?{' '}
+          아직 계정이 없으신가요?{" "}
           <Link href="/auth/signup" className={styles.linkText}>
             회원가입
           </Link>
