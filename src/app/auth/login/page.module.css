@@ -1,27 +1,305 @@
-.container {
+.page {
+  position: relative;
   width: 100%;
   min-width: 0;
 }
 
-.formWrapper {
+.authLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 440px);
+  gap: 2rem;
+  align-items: stretch;
   width: 100%;
+  min-height: 700px;
+}
+
+.brandPanel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   min-width: 0;
-  position: relative;
+  padding: 3.5rem 3rem;
+  border: 1px solid #d9d9d9;
+  background: #efefef;
+}
+
+.eyebrow,
+.formEyebrow,
+.demoEyebrow {
+  margin: 0;
+  color: #666666;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.heroTitle {
+  margin: 1.25rem 0 0;
+  color: #111111;
+  font-size: clamp(2.75rem, 5vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.heroDescription {
+  max-width: 430px;
+  margin: 1.5rem 0 0;
+  color: #444444;
+  font-size: 0.9375rem;
+  line-height: 1.8;
+}
+
+.featureList {
+  display: grid;
+  gap: 1.25rem;
+  margin: 3rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.featureList li {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.featureIndex {
+  color: #999999;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.featureList strong {
+  display: block;
+  color: #111111;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.featureList p {
+  margin: 0.375rem 0 0;
+  color: #555555;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+.formPanel {
+  display: flex;
+  min-width: 0;
+  border: 1px solid #d9d9d9;
+  background: #ffffff;
+}
+
+.formInner {
+  width: 100%;
+  padding: 3rem 2rem 2.5rem;
+}
+
+.formHeader {
+  margin-bottom: 1.75rem;
+}
+
+.formTitle {
+  margin: 0.5rem 0 0;
+  color: #111111;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.formDescription {
+  margin: 0.75rem 0 0;
+  color: #555555;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.loginInput {
+  min-height: 50px;
+}
+
+.loginStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.rememberMe {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkboxInput {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  cursor: pointer;
+}
+
+.checkboxLabel {
+  color: #555555;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.linkText {
+  color: #111111;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.loginButton {
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffffff;
+}
+
+.loginButton:disabled {
+  border-color: #d0d0d0;
+  background: #d0d0d0;
+  color: #777777;
+}
+
+.demoPanel {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e3e3e3;
+}
+
+.demoHeader {
+  margin-bottom: 1rem;
+}
+
+.demoTitle {
+  margin: 0.5rem 0 0;
+  color: #111111;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.demoDescription {
+  margin: 0.625rem 0 0;
+  color: #555555;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+.demoActions {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.demoButton {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr) 1.25rem;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  min-height: 56px;
+  padding: 0.875rem;
+  border: 1px solid #dddddd;
+  background: #ffffff;
+  color: #111111;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.demoButton:focus-visible {
+  outline: 2px solid #111111;
+  outline-offset: 3px;
+}
+
+.demoButton:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.demoIndex {
+  color: #999999;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.demoButtonContent {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.demoButtonContent strong {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.demoButtonContent span {
+  color: #666666;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.demoArrow {
+  color: #666666;
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.demoPolicy {
+  margin: 1rem 0 0;
+  color: #777777;
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+.link {
+  margin-top: 1.75rem;
+  color: #666666;
+  font-size: 0.875rem;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.errorMessage {
+  padding: 0.75rem;
+  border: 1px solid #e2b8b8;
+  background: #fff8f8;
+  color: #a52a2a;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .transitionOverlay {
   position: absolute;
-  inset: -0.5rem;
+  inset: 0;
   z-index: 5;
   display: grid;
   justify-items: center;
   align-content: center;
   gap: 0.625rem;
-  min-height: calc(100% + 1rem);
+  min-height: 100%;
   padding: 2rem;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid #d9d9d9;
+  background: rgba(255, 255, 255, 0.96);
   color: #111111;
   text-align: center;
 }
@@ -32,10 +310,11 @@
 }
 
 .transitionOverlay p {
+  max-width: 360px;
   margin: 0;
+  color: #666666;
   font-size: 0.875rem;
   line-height: 1.6;
-  color: #666666;
 }
 
 .transitionSpinner {
@@ -53,225 +332,57 @@
   }
 }
 
+@media (max-width: 1024px) {
+  .authLayout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    min-height: auto;
+  }
 
-.title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  text-align: center;
-  color: #111111;
-  margin-bottom: 1.5rem;
+  .brandPanel {
+    min-height: 440px;
+    padding: 2.5rem 1.75rem;
+  }
+
+  .heroTitle {
+    font-size: 2.625rem;
+  }
 }
 
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
+@media (max-width: 768px) {
+  .brandPanel {
+    min-height: auto;
+    padding: 1.75rem 1.25rem;
+  }
 
-.loginStatus {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
+  .heroTitle {
+    font-size: 2rem;
+    line-height: 1.1;
+  }
 
-.rememberMe {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
+  .heroDescription {
+    margin-top: 1rem;
+    font-size: 0.875rem;
+  }
 
-.checkboxInput {
-  cursor: pointer;
-}
+  .featureList {
+    margin-top: 2rem;
+  }
 
-.checkboxLabel {
-  font-size: 0.875rem;
-  color: #444444;
-  cursor: pointer;
-}
+  .formInner {
+    padding: 2rem 1.25rem;
+  }
 
-.inputGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
+  .formTitle {
+    font-size: 1.75rem;
+  }
 
-.label {
-  font-weight: 500;
-  color: #333333;
-}
-
-.input {
-  padding: 0.75rem;
-  border: 1px solid #e5e5e5;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  transition: border-color 0.15s ease;
-}
-
-.input:focus {
-  outline: none;
-  border-color: #1a1a1a;
-}
-
-.button {
-  background-color: #111111;
-  color: white;
-  padding: 0.75rem;
-  border: none;
-  border-radius: 4px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-  margin-top: 0.5rem;
-}
-
-.button:hover {
-  background-color: #333333;
-}
-
-.demoPanel {
-  margin-top: 1.75rem;
-  padding: 1.25rem;
-  border: 1px solid #e5e5e5;
-  background: #fafafa;
-}
-
-.demoEyebrow {
-  margin: 0 0 0.5rem;
-  color: #777777;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-}
-
-.demoTitle {
-  margin: 0;
-  color: #111111;
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.demoDescription {
-  margin: 0.4rem 0 0;
-  color: #666666;
-  font-size: 0.8125rem;
-  line-height: 1.65;
-}
-
-.demoActions {
-  display: grid;
-  gap: 0.625rem;
-  margin-top: 1rem;
-}
-
-.demoButton {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  width: 100%;
-  min-height: 56px;
-  padding: 0.75rem 0.875rem;
-  border: 1px solid #d8d8d8;
-  background: #ffffff;
-  color: #111111;
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.demoButtonAdmin {
-  background: #f4f4f4;
-}
-
-.demoButton:hover:not(:disabled) {
-  border-color: #8f8f8f;
-  background: #f7f7f7;
-}
-
-.demoButton:focus-visible {
-  outline: 2px solid #111111;
-  outline-offset: 3px;
-}
-
-.demoButton:disabled {
-  cursor: wait;
-  opacity: 0.62;
-}
-
-.demoButtonContent {
-  display: grid;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.demoButtonContent strong {
-  font-size: 0.875rem;
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.demoButtonContent span {
-  color: #777777;
-  font-size: 0.75rem;
-  line-height: 1.45;
-}
-
-.demoArrow {
-  flex: 0 0 auto;
-  color: #555555;
-  font-size: 0.95rem;
-}
-
-.demoPolicy {
-  margin: 1rem 0 0;
-  padding-top: 0.875rem;
-  border-top: 1px solid #e4e4e4;
-  color: #777777;
-  font-size: 0.75rem;
-  line-height: 1.6;
-}
-
-.link {
-  text-align: center;
-  margin-top: 1.5rem;
-  font-size: 0.875rem;
-  color: #888888;
-  overflow-wrap: anywhere;
-}
-
-.linkText {
-  color: #111111;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  font-weight: 500;
-}
-
-.linkText:hover {
-  color: #444444;
-}
-
-.errorMessage {
-  border: 1px solid #f0c0c0;
-  color: #c0392b;
-  padding: 0.625rem 0.75rem;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  text-align: center;
-  background-color: #fff8f8;
+  .demoTitle {
+    font-size: 1.25rem;
+  }
 }
 
 @media (max-width: 480px) {
-  .transitionOverlay {
-    inset: -0.25rem;
-    padding: 1.25rem;
-  }
-
   .loginStatus {
     align-items: flex-start;
   }
@@ -282,16 +393,13 @@
     min-width: 0;
   }
 
-  .button,
-  .input {
+  .loginInput,
+  .loginButton,
+  .demoButton {
     min-height: 44px;
   }
 
-  .demoPanel {
-    padding: 1rem;
-  }
-
-  .demoButton {
-    min-height: 56px;
+  .transitionOverlay {
+    padding: 1.25rem;
   }
 }

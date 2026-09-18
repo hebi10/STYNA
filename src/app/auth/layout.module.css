@@ -16,6 +16,18 @@
   border-radius: 2px;
 }
 
+.authCard:has([data-auth-page="login"]) {
+  max-width: 1160px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.authCard:has([data-auth-page="login"]) .logoSection {
+  display: none;
+}
+
 .logoSection {
   text-align: center;
   margin-bottom: 2rem;
