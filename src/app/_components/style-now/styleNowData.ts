@@ -20,6 +20,7 @@ export interface StyleNowSeason {
   label: string;
   title: string;
   description: string;
+  homeDescription?: string;
   tag: string;
   heroAlt: string;
   heroLocalPath: string;
@@ -57,6 +58,8 @@ export const STYLE_NOW_SEASONS: StyleNowSeason[] = [
     title: '가볍게 시작하는 봄',
     description:
       '부드러운 색과 가벼운 소재로 일상에 산뜻한 리듬을 더하는 봄 스타일입니다.',
+    homeDescription:
+      '부드러운 컬러와 가벼운 레이어링으로 일상에 산뜻한 분위기를 더합니다.',
     tag: 'style-now-spring',
     heroAlt: '봄 스타일나우 패션 화보',
     heroLocalPath: '/style-now/spring/style-now-spring-main.webp',
@@ -109,6 +112,8 @@ export const STYLE_NOW_SEASONS: StyleNowSeason[] = [
     title: '빛과 바람을 입는 여름',
     description:
       '통기성 좋은 소재와 맑은 색으로 휴가와 도심의 더운 날을 가볍게 연결합니다.',
+    homeDescription:
+      '가벼운 소재와 시원한 실루엣으로 한여름에도 편안한 스타일을 제안합니다.',
     tag: 'style-now-summer',
     heroAlt: '여름 스타일나우 패션 화보',
     heroLocalPath: '/style-now/summer/style-now-summer-main.webp',
@@ -161,6 +166,8 @@ export const STYLE_NOW_SEASONS: StyleNowSeason[] = [
     title: '겹쳐 입는 가을의 깊이',
     description:
       '차분한 색과 풍부한 표면을 겹쳐 입으며 도시의 선선한 공기에 어울리는 균형을 만듭니다.',
+    homeDescription:
+      '차분한 색감과 깊이 있는 텍스처로 도시적인 계절감을 완성합니다.',
     tag: 'style-now-autumn',
     heroAlt: '가을 스타일나우 패션 화보',
     heroLocalPath: '/style-now/autumn/style-now-autumn-main.webp',
@@ -213,6 +220,8 @@ export const STYLE_NOW_SEASONS: StyleNowSeason[] = [
     title: '온기를 쌓는 겨울',
     description:
       '묵직한 울과 충전재, 깊은 색을 중심으로 추운 계절의 실용성과 단정한 실루엣을 함께 담았습니다.',
+    homeDescription:
+      '묵직한 아우터와 안정감 있는 톤으로 실용적인 겨울 실루엣을 제안합니다.',
     tag: 'style-now-winter',
     heroAlt: '겨울 스타일나우 패션 화보',
     heroLocalPath: '/style-now/winter/style-now-winter-main.webp',
