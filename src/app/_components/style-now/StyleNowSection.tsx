@@ -8,18 +8,22 @@ export default function StyleNowSection() {
     <section className={styles.section} aria-labelledby="style-now-title">
       <div className={styles.container}>
         <header className={styles.sectionHeader}>
-          <p className={styles.kicker}>STYLE NOW</p>
-          <div className={styles.sectionHeading}>
+          <div className={styles.titleBlock}>
+            <p className={styles.kicker}>STYLE NOW</p>
             <h2 id="style-now-title">스타일나우</h2>
-            <p>
-              계절을 선택해 모델 화보와 대표 상품, 지금 입기 좋은
-              스타일을 한 화면에서 살펴보세요.
+          </div>
+          <div className={styles.headerCopy}>
+            <p className={styles.headerLead}>
+              지금 계절에 어울리는 스타일을 시즌별 무드와 함께 살펴보세요.
+            </p>
+            <p className={styles.headerSubcopy}>
+              화보와 대표 상품을 연결해 각 계절의 분위기를 한 장면처럼 구성했습니다.
             </p>
           </div>
         </header>
 
         <div className={styles.seasonGrid}>
-          {STYLE_NOW_SEASONS.map((season) => (
+          {STYLE_NOW_SEASONS.map((season, index) => (
             <Link
               key={season.key}
               href={`/style-now/${season.key}`}
@@ -36,8 +40,16 @@ export default function StyleNowSection() {
                 />
               </div>
               <div className={styles.cardContent}>
-                <span className={styles.cardSeason}>{season.label}</span>
-                <p>{season.description}</p>
+                <div className={styles.cardHeading}>
+                  <span className={styles.cardIndex}>
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span className={styles.cardSeason}>{season.label}</span>
+                  <span className={styles.cardAction} aria-hidden="true">
+                    VIEW →
+                  </span>
+                </div>
+                <p>{season.homeDescription ?? season.description}</p>
               </div>
             </Link>
           ))}
