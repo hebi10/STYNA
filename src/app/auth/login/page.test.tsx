@@ -285,6 +285,6 @@ describe('LoginPage transition feedback', () => {
     expect(css).toMatch(
       /\.demoButton\s*\{[\s\S]*?min-height:\s*56px;/,
     );
-    expect(css).not.toMatch(/\.demoButton\s*\{[\s\S]*?border-radius:/);
+    expect(css).not.toMatch(/\.demoButton\s*\{[^}]*border-radius:/);
   });
 });
