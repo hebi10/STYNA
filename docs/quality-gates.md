@@ -141,3 +141,12 @@
 - 실제 브라우저에서는 `390×844`, `768×1024`, `1440×900`에서 주요 쇼핑 경로의 가로 overflow·깨진 이미지 없음, 모바일 주요 조작부 44px, SHOP disclosure와 Escape·focus·scroll 복원, FAQ 단일 H1과 단색 H2를 확인했다.
 - 브라우저 세션 종료 뒤 정적 리뷰에서 추가로 발견한 동적 카테고리 CSS와 floating UI inert 보완은 컴포넌트·CSS 계약 테스트, 타입체크, lint, production build, 두 독립 리뷰로 검증했다.
 - Next의 다중 lockfile workspace-root warning은 기존과 같으며, lockfile 삭제나 설정 변경은 승인 범위 밖이라 수행하지 않았다.
+
+## 2026-09-18 포트폴리오 데모 최종 QA
+
+- GitHub Actions production build는 이제 `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=false`와 `true` 두 변형을 matrix로 모두 빌드한다. 일반 운영 화면과 포트폴리오 체험 UI가 각각 production compile을 통과해야 한다.
+- `scripts/portfolio-deployment-contract.test.js`는 Firebase Hosting의 `/api/demo-login -> demoLogin` rewrite, `deploy:firebase`의 전체 verify 선행 계약, production smoke 스크립트의 토큰 비노출 계약을 검증한다.
+- `npm run smoke:production`은 기본적으로 `https://hebimall.web.app`의 홈과 로그인 페이지에서 최종 포트폴리오 문구를 확인한다.
+- 실제 Custom Token 발급까지 확인하려면 배포 후 `STYNA_SMOKE_DEMO_LOGIN=true` 환경으로 `npm run smoke:production`을 실행한다. 토큰 값 자체는 출력하지 않는다.
+- 배포 전 자동 품질 게이트는 `quality`, `rules`, demo-login false build, demo-login true build가 모두 성공해야 한다.
+- 실제 Firebase 배포는 인증된 Firebase CLI 세션이 있는 환경에서 `firebase use hebimall` 확인 후 `npm run deploy:firebase`로 수행한다.

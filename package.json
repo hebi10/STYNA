@@ -92,7 +92,8 @@
     "test": "jest --runInBand",
     "test:functions": "jest --runInBand functions/__tests__",
     "test:rules": "node scripts/run-rules-tests.js",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "smoke:production": "node scripts/production-smoke-check.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.84.1",

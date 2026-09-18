@@ -43,7 +43,14 @@ jobs:
       - run: npm run test:rules
 
   build:
+    name: build (demo-login=${{ matrix.demo_login }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        demo_login:
+          - 'false'
+          - 'true'
     env:
       NEXT_PUBLIC_FIREBASE_API_KEY: ci-api-key
       NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci-project.firebaseapp.com
@@ -51,7 +58,7 @@ jobs:
       NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-project.firebasestorage.app
       NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '000000000000'
       NEXT_PUBLIC_FIREBASE_APP_ID: '1:000000000000:web:0000000000000000000000'
-      NEXT_PUBLIC_ENABLE_DEMO_LOGIN: 'false'
+      NEXT_PUBLIC_ENABLE_DEMO_LOGIN: ${{ matrix.demo_login }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
