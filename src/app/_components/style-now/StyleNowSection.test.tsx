@@ -90,7 +90,7 @@ describe('StyleNowSection', () => {
     expect(screen.getByText(
       '지금 계절에 어울리는 스타일을 시즌별 무드와 함께 살펴보세요.',
     )).toBeInTheDocument();
-    expect(screen.getByText('VIEW →')).toBeInTheDocument();
+    expect(screen.getAllByText('VIEW →')).toHaveLength(4);
 
     for (const season of seasons) {
       const card = screen.getByRole('link', {
