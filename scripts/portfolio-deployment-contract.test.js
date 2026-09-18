@@ -32,7 +32,9 @@ describe('portfolio production deployment contract', () => {
     expect(smoke).toContain('일반 사용자 체험');
     expect(smoke).toContain('관리자 페이지 체험');
     expect(smoke).toContain("STYNA_SMOKE_DEMO_LOGIN === 'true'");
+    expect(smoke).toContain("const customToken = data?.data?.customToken;");
     expect(smoke).not.toContain('console.log(data.token)');
+    expect(smoke).not.toContain('console.log(customToken)');
     expect(smoke).not.toContain('console.log(token)');
   });
 
